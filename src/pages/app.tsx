@@ -14,6 +14,10 @@ import Invite from "./invite/Invite";
 const Login = lazy(() => import("./login/Login"));
 const ConfirmDelete = lazy(() => import("./login/ConfirmDelete"));
 const RevoltApp = lazy(() => import("./RevoltApp"));
+const Landing = lazy(() => import("./landing/Landing"));
+
+const IS_HUB =
+    typeof window !== "undefined" && window.location.hostname === "hub2.apricotter.com";
 
 const LoadSuspense: React.FC = ({ children }) => (
     // @ts-expect-error Typing issue between Preact and Preact.
@@ -57,11 +61,26 @@ export function App() {
                         </CheckAuth>
                     </Route>
                     <Route path="/">
-                        <CheckAuth auth>
-                            <LoadSuspense>
-                                <RevoltApp />
-                            </LoadSuspense>
-                        </CheckAuth>
+                        {IS_HUB ? (
+                            <>
+                                <CheckAuth blockRender>
+                                    <LoadSuspense>
+                                        <Landing />
+                                    </LoadSuspense>
+                                </CheckAuth>
+                                <CheckAuth auth blockRender>
+                                    <LoadSuspense>
+                                        <RevoltApp />
+                                    </LoadSuspense>
+                                </CheckAuth>
+                            </>
+                        ) : (
+                            <CheckAuth auth>
+                                <LoadSuspense>
+                                    <RevoltApp />
+                                </LoadSuspense>
+                            </CheckAuth>
+                        )}
                     </Route>
                 </Switch>
             </Context>
