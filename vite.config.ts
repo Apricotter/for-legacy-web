@@ -114,7 +114,6 @@ export default defineConfig({
             preventAssignment: true,
         }) as any,
     ],
-    base: "/hub/",
     build: {
         sourcemap: true,
         rollupOptions: {
