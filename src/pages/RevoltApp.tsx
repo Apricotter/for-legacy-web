@@ -19,6 +19,7 @@ import Discover from "./discover/Discover";
 import Friends from "./friends/Friends";
 import Home from "./home/Home";
 import InviteBot from "./invite/InviteBot";
+import Admin from "./admin/Admin";
 import ChannelSettings from "./settings/ChannelSettings";
 import ServerSettings from "./settings/ServerSettings";
 import Settings from "./settings/Settings";
@@ -98,7 +99,8 @@ export default function App() {
     const inSpecial =
         (path.startsWith("/friends") && isTouchscreenDevice) ||
         path.startsWith("/invite") ||
-        path.includes("/settings");
+        path.includes("/settings") ||
+        path.startsWith("/admin");
 
     const alert = useSystemAlert();
     const [statusBar, setStatusBar] = useState(false);
@@ -206,6 +208,12 @@ export default function App() {
                                 path="/channel/:channel"
                                 component={Channel}
                             />
+
+                            <Route
+                                path="/admin/:page"
+                                component={Admin}
+                            />
+                            <Route path="/admin" component={Admin} />
 
                             <Route
                                 path="/settings/:page"
