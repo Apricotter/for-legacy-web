@@ -62,7 +62,7 @@ export default observer(() => {
                 <ServerList
                     client={client}
                     active={server_id}
-                    createServer={createServer}
+                    createServer={client?.user?.privileged ? createServer : undefined}
                     permit={state.notifications}
                     home={state.layout.getLastHomePath}
                     servers={state.ordering.orderedServers}
