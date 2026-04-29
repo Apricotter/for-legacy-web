@@ -124,7 +124,10 @@ export function FormCreate() {
                 }>
                 <FormField type="email" register={register} showOverline />
                 <FormField type="password" register={register} showOverline />
-                {!prefilledCode && <FormField type="invite" register={register} showOverline />}
+                {prefilledCode
+                    ? <input type="hidden" {...register("entry_code")} />
+                    : <FormField type="invite" register={register} showOverline />
+                }
                 {error && (
                     <p style={{ fontSize: "0.8em", color: "var(--error)" }}>{error}</p>
                 )}
