@@ -51,19 +51,16 @@ export function FormCreate() {
                 .replace(/[^\p{L}\d_.\-]/gu, "")
                 .slice(0, 32) || "user";
 
-            // 1. Create account
-            let r = await fetch(`${API}/auth/account/create`, {
+            // 1. Create account (may already exist — OperationFailed is authifier's
+            //    intentionally vague response for duplicate email, so we fall through to login)
+            await fetch(`${API}/auth/account/create`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: data.email, password: data.password }),
             });
-            if (!r.ok) {
-                const j = await r.json().catch(() => ({}));
-                throw new Error(j.type ?? "Account creation failed");
-            }
 
             // 2. Login
-            r = await fetch(`${API}/auth/session/login`, {
+            let r = await fetch(`${API}/auth/session/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: data.email, password: data.password }),
