@@ -38,6 +38,11 @@ export function FormCreate() {
         setLoading(true);
         setError(undefined);
         try {
+            const username = data.email
+                .split("@")[0]
+                .replace(/[^\p{L}\d_.\-]/gu, "")
+                .slice(0, 32) || "user";
+
             // 1. Create account
             let r = await fetch(`${API}/auth/account/create`, {
                 method: "POST",
@@ -69,7 +74,7 @@ export function FormCreate() {
                     "x-session-token": token,
                 },
                 body: JSON.stringify({
-                    username: data.username,
+                    username,
                     entry_code: data.entry_code,
                 }),
             });
@@ -110,7 +115,6 @@ export function FormCreate() {
                     handleSubmit(onSubmit) as unknown as JSX.GenericEventHandler<HTMLFormElement>
                 }>
                 <FormField type="email" register={register} showOverline />
-                <FormField type="username" register={register} showOverline />
                 <FormField type="password" register={register} showOverline />
                 {!prefilledCode && <FormField type="invite" register={register} showOverline />}
                 {error && (
