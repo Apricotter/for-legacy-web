@@ -1,9 +1,12 @@
 import { observer } from "mobx-react-lite";
+import { useHistory } from "react-router-dom";
 import styled from "styled-components/macro";
 
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 
 import { useClient } from "../../../controllers/client/ClientController";
+
+// --- Styled components ---
 
 const Title = styled.h1`
     margin-bottom: 20px;
@@ -37,10 +40,7 @@ const Input = styled.input`
     color: var(--foreground);
     font-size: 14px;
     outline: none;
-
-    &:focus {
-        border-color: var(--accent);
-    }
+    &:focus { border-color: var(--accent); }
 `;
 
 const Select = styled.select`
@@ -51,10 +51,7 @@ const Select = styled.select`
     color: var(--foreground);
     font-size: 14px;
     outline: none;
-
-    &:focus {
-        border-color: var(--accent);
-    }
+    &:focus { border-color: var(--accent); }
 `;
 
 const Textarea = styled.textarea`
@@ -67,10 +64,7 @@ const Textarea = styled.textarea`
     outline: none;
     resize: vertical;
     min-height: 80px;
-
-    &:focus {
-        border-color: var(--accent);
-    }
+    &:focus { border-color: var(--accent); }
 `;
 
 const Button = styled.button<{ primary?: boolean }>`
@@ -82,15 +76,8 @@ const Button = styled.button<{ primary?: boolean }>`
     cursor: pointer;
     background: ${(p) => (p.primary ? "var(--accent)" : "var(--secondary-background)")};
     color: ${(p) => (p.primary ? "white" : "var(--foreground)")};
-
-    &:hover {
-        filter: brightness(1.1);
-    }
-
-    &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
+    &:hover { filter: brightness(1.1); }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 const Actions = styled.div`
@@ -132,30 +119,80 @@ const Hint = styled.span`
     color: var(--secondary-foreground);
 `;
 
-const emptyForm = {
-    clientName: "",
-    clientType: "Author",
-    email: "",
-    website: "",
-    instagram: "",
-    google: "",
-    notes: "",
+// --- Schema ---
+
+type FieldType = "text" | "email" | "url" | "textarea" | "select";
+
+interface FieldDef {
+    key: string;
+    label: string;
+    type: FieldType;
+    required?: boolean;
+    options?: string[];
+    placeholder?: string;
+}
+
+interface VerticalSchema {
+    label: string;
+    nameField: string;
+    fields: FieldDef[];
+}
+
+const VERTICAL_SCHEMAS: Record<string, VerticalSchema> = {
+    author: {
+        label: "Author",
+        nameField: "name",
+        fields: [
+            { key: "name", label: "Author Name", type: "text", required: true },
+            { key: "email", label: "Email", type: "email", required: true },
+            { key: "website", label: "Website URL", type: "url" },
+            { key: "kdp", label: "Amazon KDP URL", type: "url" },
+            { key: "instagram", label: "Instagram Handle", type: "text", placeholder: "@handle" },
+            { key: "tiktok", label: "TikTok Handle", type: "text", placeholder: "@handle" },
+            { key: "facebook", label: "Facebook Page URL", type: "url" },
+            { key: "notes", label: "Notes", type: "textarea" },
+        ],
+    },
+    home_services: {
+        label: "Home Services",
+        nameField: "businessName",
+        fields: [
+            { key: "businessName", label: "Business Name", type: "text", required: true },
+            { key: "ownerName", label: "Owner Name", type: "text", required: true },
+            { key: "email", label: "Email", type: "email", required: true },
+            { key: "serviceType", label: "Service Type", type: "text", placeholder: "e.g. Landscaping, Plumbing, Roofing" },
+            { key: "googleBusiness", label: "Google Business URL", type: "url" },
+            { key: "facebook", label: "Facebook Page URL", type: "url" },
+            { key: "instagram", label: "Instagram Handle", type: "text", placeholder: "@handle" },
+            { key: "serviceArea", label: "Service Area / City", type: "text" },
+            { key: "website", label: "Website URL", type: "url" },
+            { key: "notes", label: "Notes", type: "textarea" },
+        ],
+    },
 };
 
-export default observer(() => {
+// --- DynamicForm ---
+
+interface DynamicFormProps {
+    vertical: string;
+    onSuccess: (url: string, name: string) => void;
+}
+
+function DynamicForm({ vertical, onSuccess }: DynamicFormProps) {
     const client = useClient();
-    const [fields, setFields] = useState(emptyForm);
+    const schema = VERTICAL_SCHEMAS[vertical];
+    const [fields, setFields] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [inviteUrl, setInviteUrl] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
 
-    function set(key: keyof typeof emptyForm) {
+    useEffect(() => {
+        setFields({});
+        setError(null);
+    }, [vertical]);
+
+    function set(key: string) {
         return (e: Event) =>
-            setFields((f) => ({
-                ...f,
-                [key]: (e.target as HTMLInputElement).value,
-            }));
+            setFields((f) => ({ ...f, [key]: (e.target as HTMLInputElement).value }));
     }
 
     async function handleSubmit(e: Event) {
@@ -166,6 +203,8 @@ export default observer(() => {
         try {
             const token = (client as any)?.session?.token;
             const apiUrl = import.meta.env.VITE_API_URL ?? "";
+            const { email, ...rest } = fields;
+            const metadata = Object.keys(rest).length > 0 ? rest : undefined;
 
             const resp = await fetch(`${apiUrl}/admin/invitations`, {
                 method: "POST",
@@ -173,7 +212,7 @@ export default observer(() => {
                     "Content-Type": "application/json",
                     ...(token ? { "X-Session-Token": token } : {}),
                 },
-                body: JSON.stringify({ max_uses: 1 }),
+                body: JSON.stringify({ email, vertical, metadata }),
             });
 
             if (!resp.ok) {
@@ -182,18 +221,65 @@ export default observer(() => {
             }
 
             const data = await resp.json();
-            const code = data.code ?? data._id ?? data.id;
-            if (!code) throw new Error("No invite code in response");
-
-            const appUrl =
-                import.meta.env.VITE_APP_URL ?? "https://app.apricotter.com";
-            setInviteUrl(`${appUrl}/invite/${code}`);
+            if (!data.signup_url) throw new Error("No signup URL in response");
+            onSuccess(data.signup_url, fields[schema.nameField] ?? email);
         } catch (err: any) {
             setError(err?.message ?? String(err));
         } finally {
             setLoading(false);
         }
     }
+
+    return (
+        <Form onSubmit={handleSubmit}>
+            {error && <ErrorMsg>{error}</ErrorMsg>}
+            {schema.fields.map((field) => (
+                <Field key={field.key}>
+                    <Label>{field.label}{field.required && " *"}</Label>
+                    {field.type === "textarea" ? (
+                        <Textarea
+                            value={fields[field.key] ?? ""}
+                            onInput={set(field.key)}
+                            placeholder={field.placeholder}
+                        />
+                    ) : field.type === "select" ? (
+                        <Select
+                            value={fields[field.key] ?? ""}
+                            onChange={set(field.key)}
+                            required={field.required}>
+                            <option value="">Select...</option>
+                            {field.options?.map((opt) => (
+                                <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                        </Select>
+                    ) : (
+                        <Input
+                            type={field.type}
+                            required={field.required}
+                            value={fields[field.key] ?? ""}
+                            onInput={set(field.key)}
+                            placeholder={field.placeholder}
+                        />
+                    )}
+                </Field>
+            ))}
+            <Actions>
+                <Button type="submit" primary disabled={loading}>
+                    {loading ? "Creating..." : "Create Invite"}
+                </Button>
+            </Actions>
+        </Form>
+    );
+}
+
+// --- NewClient (outer shell) ---
+
+export default observer(() => {
+    const history = useHistory();
+    const [selectedVertical, setSelectedVertical] = useState<string | null>(null);
+    const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+    const [inviteName, setInviteName] = useState("");
+    const [copied, setCopied] = useState(false);
 
     function copyLink() {
         if (!inviteUrl) return;
@@ -204,9 +290,9 @@ export default observer(() => {
     }
 
     function reset() {
-        setFields(emptyForm);
+        setSelectedVertical(null);
         setInviteUrl(null);
-        setError(null);
+        setInviteName("");
         setCopied(false);
     }
 
@@ -215,7 +301,12 @@ export default observer(() => {
             <SuccessBox>
                 <Title>Invite created</Title>
                 <div>
-                    <strong>{fields.clientName}</strong> ({fields.clientType})
+                    <strong>{inviteName}</strong>
+                    {selectedVertical && VERTICAL_SCHEMAS[selectedVertical] && (
+                        <span style={{ color: "var(--secondary-foreground)", marginLeft: 8 }}>
+                            ({VERTICAL_SCHEMAS[selectedVertical].label})
+                        </span>
+                    )}
                 </div>
                 <Field>
                     <Label>Invite link</Label>
@@ -229,7 +320,10 @@ export default observer(() => {
                 </Field>
                 <Actions>
                     <Button type="button" primary onClick={reset}>
-                        Register Another
+                        Invite Another
+                    </Button>
+                    <Button type="button" onClick={() => history.push("/admin/clients")}>
+                        Back to Clients
                     </Button>
                 </Actions>
             </SuccessBox>
@@ -238,88 +332,40 @@ export default observer(() => {
 
     return (
         <>
-            <Title>New Client</Title>
-            <Form onSubmit={handleSubmit}>
-                {error && <ErrorMsg>{error}</ErrorMsg>}
-
-                <Field>
-                    <Label>Client Name *</Label>
-                    <Input
-                        type="text"
-                        required
-                        value={fields.clientName}
-                        onInput={set("clientName")}
-                        placeholder="Jane Smith"
-                    />
-                </Field>
-
+            <Button
+                type="button"
+                style={{ marginBottom: 16 }}
+                onClick={() => history.push("/admin/clients")}>
+                ← Back to Clients
+            </Button>
+            <Title>Invite Prospect</Title>
+            <Form as="div">
                 <Field>
                     <Label>Client Type *</Label>
                     <Select
-                        required
-                        value={fields.clientType}
-                        onChange={set("clientType")}>
-                        <option value="Author">Author</option>
-                        <option value="Home Services">Home Services</option>
+                        value={selectedVertical ?? ""}
+                        onChange={(e: Event) => {
+                            const val = (e.target as HTMLSelectElement).value;
+                            setSelectedVertical(val || null);
+                        }}>
+                        <option value="" disabled>Select a client type...</option>
+                        {Object.entries(VERTICAL_SCHEMAS).map(([key, schema]) => (
+                            <option key={key} value={key}>{schema.label}</option>
+                        ))}
                     </Select>
                 </Field>
-
-                <Field>
-                    <Label>Email Address *</Label>
-                    <Input
-                        type="email"
-                        required
-                        value={fields.email}
-                        onInput={set("email")}
-                        placeholder="client@example.com"
-                    />
-                </Field>
-
-                <Field>
-                    <Label>Website URL</Label>
-                    <Input
-                        type="text"
-                        value={fields.website}
-                        onInput={set("website")}
-                        placeholder="https://example.com"
-                    />
-                </Field>
-
-                <Field>
-                    <Label>Instagram Handle</Label>
-                    <Input
-                        type="text"
-                        value={fields.instagram}
-                        onInput={set("instagram")}
-                        placeholder="@handle"
-                    />
-                </Field>
-
-                <Field>
-                    <Label>Google Business</Label>
-                    <Input
-                        type="text"
-                        value={fields.google}
-                        onInput={set("google")}
-                        placeholder="Business name or URL"
-                    />
-                </Field>
-
-                <Field>
-                    <Label>Notes</Label>
-                    <Textarea
-                        value={fields.notes}
-                        onInput={set("notes")}
-                        placeholder="Any context for this client..."
-                    />
-                </Field>
-
-                <Actions>
-                    <Button type="submit" primary disabled={loading}>
-                        {loading ? "Creating..." : "Create Invite"}
-                    </Button>
-                </Actions>
             </Form>
+            {selectedVertical && (
+                <div style={{ marginTop: 24 }}>
+                    <DynamicForm
+                        vertical={selectedVertical}
+                        onSuccess={(url, name) => {
+                            setInviteUrl(url);
+                            setInviteName(name);
+                        }}
+                    />
+                </div>
+            )}
         </>
     );
 });
