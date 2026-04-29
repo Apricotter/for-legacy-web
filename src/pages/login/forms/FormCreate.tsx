@@ -24,6 +24,7 @@ export function FormCreate() {
     const [done, setDone] = useState(false);
 
     const prefilledCode = getParam("code");
+    if (prefilledCode) sessionStorage.setItem("invite_code", prefilledCode);
 
     const { handleSubmit, register, setValue } = useForm<FormInputs>({
         defaultValues: {
