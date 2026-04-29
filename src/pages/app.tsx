@@ -1,4 +1,4 @@
-import { Route, Switch } from "react-router-dom";
+import { Redirect, Route, Switch } from "react-router-dom";
 
 import { lazy, Suspense } from "preact/compat";
 
@@ -53,6 +53,12 @@ export function App() {
                             <Invite />
                         </CheckAuth>
                     </Route>
+                    <Route
+                        path="/signup"
+                        render={({ location }) => (
+                            <Redirect to={`/login/create${location.search}`} />
+                        )}
+                    />
                     <Route path="/login">
                         <CheckAuth>
                             <LoadSuspense>
