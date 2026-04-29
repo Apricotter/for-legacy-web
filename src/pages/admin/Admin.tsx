@@ -1,14 +1,67 @@
-import { UserPlus } from "@styled-icons/boxicons-regular";
+import { Group } from "@styled-icons/boxicons-regular";
 import { observer } from "mobx-react-lite";
-import { Route, Switch, useHistory } from "react-router-dom";
+import { Link, Route, Switch, useLocation } from "react-router-dom";
+import styled from "styled-components/macro";
 
 import { useClient } from "../../controllers/client/ClientController";
-import { GenericSettings } from "../settings/GenericSettings";
+import ClientList from "./panes/ClientList";
 import NewClientPane from "./panes/NewClient";
 
+const Layout = styled.div`
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    width: 100%;
+    background: var(--primary-background);
+`;
+
+const Sidebar = styled.div`
+    width: 218px;
+    flex-shrink: 0;
+    background: var(--secondary-background);
+    display: flex;
+    flex-direction: column;
+    padding: 16px 8px;
+    gap: 2px;
+`;
+
+const SidebarLabel = styled.div`
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--secondary-foreground);
+    padding: 4px 8px 8px;
+    letter-spacing: 0.04em;
+`;
+
+const NavItem = styled(Link)<{ active?: boolean }>`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    font-weight: 500;
+    color: ${(p) => (p.active ? "var(--foreground)" : "var(--secondary-foreground)")};
+    background: ${(p) => (p.active ? "var(--tertiary-background)" : "transparent")};
+    text-decoration: none;
+
+    &:hover {
+        background: var(--tertiary-background);
+        color: var(--foreground);
+    }
+`;
+
+const Content = styled.div`
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 40px 48px;
+`;
+
 export default observer(() => {
-    const history = useHistory();
     const client = useClient();
+    const { pathname } = useLocation();
 
     if (!client?.user?.privileged) {
         return (
@@ -18,34 +71,32 @@ export default observer(() => {
         );
     }
 
-    function switchPage(to?: string) {
-        history.replace(to ? `/admin/${to}` : `/admin`);
-    }
+    const onClients =
+        pathname === "/admin" ||
+        pathname.startsWith("/admin/clients");
 
     return (
-        <GenericSettings
-            pages={[
-                {
-                    id: "clients",
-                    icon: <UserPlus size={20} />,
-                    title: "Clients",
-                    hideTitle: true,
-                },
-            ]}
-            children={
+        <Layout>
+            <Sidebar>
+                <SidebarLabel>Admin</SidebarLabel>
+                <NavItem to="/admin/clients" active={onClients}>
+                    <Group size={16} />
+                    Clients
+                </NavItem>
+            </Sidebar>
+            <Content>
                 <Switch>
-                    <Route path="/admin/clients">
+                    <Route path="/admin/clients/new">
                         <NewClientPane />
+                    </Route>
+                    <Route path="/admin/clients">
+                        <ClientList />
                     </Route>
                     <Route>
-                        <NewClientPane />
+                        <ClientList />
                     </Route>
                 </Switch>
-            }
-            defaultPage="clients"
-            switchPage={switchPage}
-            category="pages"
-            showExitButton
-        />
+            </Content>
+        </Layout>
     );
 });
