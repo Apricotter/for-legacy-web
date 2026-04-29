@@ -1,5 +1,5 @@
 import { useForm, SubmitHandler } from "react-hook-form";
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { Button, Preloader } from "@revoltchat/ui";
 import styles from "../Login.module.scss";
 import FormField from "../FormField";
@@ -25,7 +25,7 @@ export function FormCreate() {
 
     const prefilledCode = getParam("code");
 
-    const { handleSubmit, register } = useForm<FormInputs>({
+    const { handleSubmit, register, setValue } = useForm<FormInputs>({
         defaultValues: {
             email: getParam("email"),
             password: "",
@@ -33,6 +33,14 @@ export function FormCreate() {
             entry_code: prefilledCode,
         },
     });
+
+    useEffect(() => {
+        if (!prefilledCode) return;
+        fetch(`${API}/admin/invitations/${prefilledCode}/check`)
+            .then((r) => r.ok ? r.json() : null)
+            .then((data) => { if (data?.email) setValue("email", data.email); })
+            .catch(() => undefined);
+    }, [prefilledCode]);
 
     const onSubmit: SubmitHandler<FormInputs> = async (data) => {
         setLoading(true);
