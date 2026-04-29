@@ -212,7 +212,7 @@ function DynamicForm({ vertical, onSuccess }: DynamicFormProps) {
                     "Content-Type": "application/json",
                     ...(token ? { "X-Session-Token": token } : {}),
                 },
-                body: JSON.stringify({ email, vertical, metadata }),
+                body: JSON.stringify({ email, vertical, metadata, signup_base: `${window.location.origin}/signup` }),
             });
 
             if (!resp.ok) {
