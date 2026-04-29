@@ -81,7 +81,7 @@ export function FormCreate() {
                 },
                 body: JSON.stringify({
                     username,
-                    entry_code: data.entry_code,
+                    entry_code: prefilledCode || data.entry_code,
                 }),
             });
             if (!r.ok) {
