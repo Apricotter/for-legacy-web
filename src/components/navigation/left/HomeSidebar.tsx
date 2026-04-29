@@ -4,7 +4,6 @@ import {
     UserDetail,
     Wrench,
     Notepad,
-    Shield,
 } from "@styled-icons/boxicons-solid";
 import { observer } from "mobx-react-lite";
 import { Link, useLocation, useParams } from "react-router-dom";
@@ -126,14 +125,7 @@ export default observer(() => {
                         </ButtonItem>
                     </Link>
                 )}
-                {client?.user?.privileged && (
-                    <Link to="/admin">
-                        <ButtonItem active={pathname.startsWith("/admin")}>
-                            <Shield size={20} />
-                            <span>Admin</span>
-                        </ButtonItem>
-                    </Link>
-                )}
+
                 <Category>
                     <Text id="app.main.categories.conversations" />
                     <IconButton
