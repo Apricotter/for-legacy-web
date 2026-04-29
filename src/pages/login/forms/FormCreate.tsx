@@ -23,12 +23,14 @@ export function FormCreate() {
     const [error, setError] = useState<string | undefined>(undefined);
     const [done, setDone] = useState(false);
 
+    const prefilledCode = getParam("code");
+
     const { handleSubmit, register } = useForm<FormInputs>({
         defaultValues: {
             email: getParam("email"),
             password: "",
             username: "",
-            entry_code: getParam("code"),
+            entry_code: prefilledCode,
         },
     });
 
@@ -110,7 +112,7 @@ export function FormCreate() {
                 <FormField type="email" register={register} showOverline />
                 <FormField type="username" register={register} showOverline />
                 <FormField type="password" register={register} showOverline />
-                <FormField type="invite" register={register} showOverline />
+                {!prefilledCode && <FormField type="invite" register={register} showOverline />}
                 {error && (
                     <p style={{ fontSize: "0.8em", color: "var(--error)" }}>{error}</p>
                 )}
