@@ -134,9 +134,8 @@ export default observer(() => {
             .finally(() => setLoading(false));
     }, []);
 
-    function copyLink(code: string, email: string) {
-        const encoded = encodeURIComponent(email);
-        navigator.clipboard.writeText(`${window.location.origin}/signup?code=${code}&email=${encoded}`).then(() => {
+    function copyLink(code: string) {
+        navigator.clipboard.writeText(`${window.location.origin}/signup?code=${code}`).then(() => {
             setCopied(code);
             setTimeout(() => setCopied(null), 2000);
         });
@@ -184,7 +183,7 @@ export default observer(() => {
                                 <Td>{formatDate(r.created_at)}</Td>
                                 <Td>
                                     {!r.used && (
-                                        <CopyBtn onClick={() => copyLink(r.code, r.email)}>
+                                        <CopyBtn onClick={() => copyLink(r.code)}>
                                             {copied === r.code ? "Copied!" : "Copy link"}
                                         </CopyBtn>
                                     )}
