@@ -134,9 +134,9 @@ export default observer(() => {
             .finally(() => setLoading(false));
     }, []);
 
-    function copyLink(code: string) {
-        const appUrl = import.meta.env.VITE_APP_URL ?? "https://app.apricotter.com";
-        navigator.clipboard.writeText(`${appUrl}/signup?code=${code}`).then(() => {
+    function copyLink(code: string, email: string) {
+        const encoded = encodeURIComponent(email);
+        navigator.clipboard.writeText(`${window.location.origin}/signup?code=${code}&email=${encoded}`).then(() => {
             setCopied(code);
             setTimeout(() => setCopied(null), 2000);
         });
@@ -184,7 +184,7 @@ export default observer(() => {
                                 <Td>{formatDate(r.created_at)}</Td>
                                 <Td>
                                     {!r.used && (
-                                        <CopyBtn onClick={() => copyLink(r.code)}>
+                                        <CopyBtn onClick={() => copyLink(r.code, r.email)}>
                                             {copied === r.code ? "Copied!" : "Copy link"}
                                         </CopyBtn>
                                     )}
