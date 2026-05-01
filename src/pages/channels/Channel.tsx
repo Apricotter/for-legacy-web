@@ -139,17 +139,6 @@ const TextChannel = observer(({ channel }: { channel: ChannelI }) => {
     const layout = useApplicationState().layout;
     const history = useHistory();
 
-    // If this is start-here and has no messages, trigger Otto's greeting
-    useEffect(() => {
-        if (
-            channel.channel_type === "TextChannel" &&
-            (channel as any).name === "start-here" &&
-            !channel.last_message_id
-        ) {
-            channel.sendMessage({ content: "hi" }).catch(() => undefined);
-        }
-    }, [channel._id]);
-
     // Detect ONBOARDING_COMPLETE signal from Otto and redirect to home
     useEffect(() => {
         const client = channel.client;
