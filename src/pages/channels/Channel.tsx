@@ -3,7 +3,7 @@ import { Ghost } from "@styled-icons/boxicons-solid";
 import dayjs from "dayjs";
 import { reaction } from "mobx";
 import { observer } from "mobx-react-lite";
-import { Redirect, useParams } from "react-router-dom";
+import { Redirect, useHistory, useParams } from "react-router-dom";
 import { Channel as ChannelI } from "revolt.js";
 import styled from "styled-components/macro";
 
@@ -137,6 +137,24 @@ export const Channel = observer(
 
 const TextChannel = observer(({ channel }: { channel: ChannelI }) => {
     const layout = useApplicationState().layout;
+    const history = useHistory();
+
+    // Detect ONBOARDING_COMPLETE signal from Otto and redirect to home
+    useEffect(() => {
+        const client = channel.client;
+        function handleMsg(msg: any) {
+            if (
+                msg.channel_id === channel._id &&
+                msg.author?.bot !== null &&
+                typeof msg.content === "string" &&
+                msg.content.includes("ONBOARDING_COMPLETE")
+            ) {
+                history.push("/");
+            }
+        }
+        client.addListener("message", handleMsg);
+        return () => client.removeListener("message", handleMsg);
+    }, [channel, history]);
 
     // Store unread location.
     const [lastId, setLastId] = useState<string | undefined>(undefined);
