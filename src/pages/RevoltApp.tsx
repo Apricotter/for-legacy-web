@@ -4,6 +4,7 @@ import styled, { css } from "styled-components/macro";
 
 import { useEffect, useState } from "preact/hooks";
 
+import { useClient } from "../controllers/client/ClientController";
 import ContextMenus from "../lib/ContextMenus";
 import { isTouchscreenDevice } from "../lib/isTouchscreenDevice";
 
@@ -102,6 +103,9 @@ export default function App() {
         path.includes("/settings") ||
         path.startsWith("/admin");
 
+    const client = useClient();
+    const isPrivileged = client?.user?.privileged === true;
+
     const alert = useSystemAlert();
     const [statusBar, setStatusBar] = useState(false);
     useEffect(() => setStatusBar(true), [alert]);
@@ -148,7 +152,7 @@ export default function App() {
                         (alert && statusBar ? " - 40px)" : "")
                     }
                     leftPanel={
-                        inSpecial
+                        inSpecial || (!isPrivileged && path === "/")
                             ? undefined
                             : { width: 290, component: <LeftSidebar /> }
                     }
