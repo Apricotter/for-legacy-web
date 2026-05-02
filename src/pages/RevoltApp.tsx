@@ -21,6 +21,7 @@ import Friends from "./friends/Friends";
 import Home from "./home/Home";
 import InviteBot from "./invite/InviteBot";
 import Admin from "./admin/Admin";
+import BookProcessing from "./books/BookProcessing";
 import ChannelSettings from "./settings/ChannelSettings";
 import ServerSettings from "./settings/ServerSettings";
 import Settings from "./settings/Settings";
@@ -101,7 +102,8 @@ export default function App() {
         (path.startsWith("/friends") && isTouchscreenDevice) ||
         path.startsWith("/invite") ||
         path.includes("/settings") ||
-        path.startsWith("/admin");
+        path.startsWith("/admin") ||
+        path.endsWith("/books");
 
     const client = useClient();
     const isPrivileged = client?.user?.privileged === true;
@@ -207,6 +209,7 @@ export default function App() {
                                 path="/server/:server/channel/:channel"
                                 component={Channel}
                             />
+                            <Route path="/server/:server/books" component={BookProcessing} />
                             <Route path="/server/:server" component={Channel} />
                             <Route
                                 path="/channel/:channel"
