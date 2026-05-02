@@ -249,6 +249,54 @@ function OttoFormBlock({ raw }: { raw: string }) {
     );
 }
 
+const ThinkingDetails = styled.details`
+    margin: 4px 0;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--tertiary-background);
+    background: var(--secondary-background);
+    font-size: 13px;
+
+    summary {
+        padding: 6px 10px;
+        cursor: pointer;
+        font-weight: 600;
+        color: var(--secondary-foreground);
+        user-select: none;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        &::before {
+            content: "▶";
+            font-size: 9px;
+            transition: transform 0.15s;
+        }
+    }
+
+    &[open] summary::before {
+        transform: rotate(90deg);
+    }
+`;
+
+const ThinkingBody = styled.div`
+    padding: 8px 12px;
+    color: var(--tertiary-foreground);
+    white-space: pre-wrap;
+    font-size: 12px;
+    line-height: 1.5;
+    border-top: 1px solid var(--tertiary-background);
+`;
+
+function ThinkingBlock({ raw }: { raw: string }) {
+    return (
+        <ThinkingDetails>
+            <summary>Otto's Thoughts</summary>
+            <ThinkingBody>{raw.trim()}</ThinkingBody>
+        </ThinkingDetails>
+    );
+}
+
 function extractText(node: any): string {
     if (typeof node === "string") return node;
     if (Array.isArray(node)) return node.map(extractText).join("");
@@ -273,6 +321,11 @@ export const RenderCodeblock: React.FC<{ class: string }> = ({
     // Otto interactive form block
     if (lang === "form") {
         return <OttoFormBlock raw={extractText(children)} />;
+    }
+
+    // Otto thinking block — collapsible reasoning display
+    if (lang === "thinking") {
+        return <ThinkingBlock raw={extractText(children)} />;
     }
 
     const onCopy = useCallback(() => {
