@@ -1,10 +1,11 @@
-import { Cog, Group } from "@styled-icons/boxicons-regular";
+import { Cog, FolderOpen, Group } from "@styled-icons/boxicons-regular";
 import { observer } from "mobx-react-lite";
 import { Link, Route, Switch, useLocation } from "react-router-dom";
 import styled from "styled-components/macro";
 
 import { useClient } from "../../controllers/client/ClientController";
 import ClientList from "./panes/ClientList";
+import Files from "./panes/Files";
 import Jobs from "./panes/Jobs";
 import NewClientPane from "./panes/NewClient";
 
@@ -76,6 +77,7 @@ export default observer(() => {
         pathname === "/admin" ||
         pathname.startsWith("/admin/clients");
     const onJobs = pathname.startsWith("/admin/jobs");
+    const onFiles = pathname.startsWith("/admin/files");
 
     return (
         <Layout>
@@ -89,6 +91,10 @@ export default observer(() => {
                     <Cog size={16} />
                     Jobs
                 </NavItem>
+                <NavItem to="/admin/files" active={onFiles}>
+                    <FolderOpen size={16} />
+                    Files
+                </NavItem>
             </Sidebar>
             <Content>
                 <Switch>
@@ -100,6 +106,9 @@ export default observer(() => {
                     </Route>
                     <Route path="/admin/jobs">
                         <Jobs />
+                    </Route>
+                    <Route path="/admin/files">
+                        <Files />
                     </Route>
                     <Route>
                         <ClientList />
