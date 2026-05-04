@@ -78,17 +78,32 @@ const NudgeWrap = styled.div<{ $visible: boolean }>`
 `;
 
 function HiNudge({ channel }: { channel: ChannelI }) {
-    const [visible, setVisible] = useState(true);
-    const [mounted, setMounted] = useState(true);
+    const [visible, setVisible] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const dismissed = useRef(false);
 
-    const isStartChannel = channel.name?.toLowerCase().startsWith("start") && !channel.last_message_id;
+    const isStartChannel = channel.name?.toLowerCase().startsWith("start");
+
+    useEffect(() => {
+        if (!isStartChannel) return;
+        const userId = channel.client.user?._id;
+        channel.fetchMessagesWithUsers({ limit: 100 }).then(({ messages }) => {
+            const hasSent = messages.some((m: any) => m.author_id === userId && !m.author?.bot);
+            if (!hasSent) {
+                setMounted(true);
+                setVisible(true);
+            }
+        }).catch(() => {
+            setMounted(true);
+            setVisible(true);
+        });
+    }, [channel, isStartChannel]);
 
     useEffect(() => {
         if (!isStartChannel) return;
         function onMsg(msg: any) {
             if (dismissed.current) return;
-            if (msg.channel_id === channel._id && !msg.author?.bot) {
+            if (msg.channel_id === channel._id && msg.author_id === channel.client.user?._id && !msg.author?.bot) {
                 dismissed.current = true;
                 setVisible(false);
                 setTimeout(() => setMounted(false), 400);
