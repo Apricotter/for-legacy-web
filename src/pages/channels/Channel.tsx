@@ -82,7 +82,7 @@ function HiNudge({ channel }: { channel: ChannelI }) {
     const [mounted, setMounted] = useState(true);
     const dismissed = useRef(false);
 
-    const isStartChannel = channel.name?.toLowerCase().startsWith("start");
+    const isStartChannel = channel.name?.toLowerCase().startsWith("start") && !channel.last_message_id;
 
     useEffect(() => {
         if (!isStartChannel) return;
