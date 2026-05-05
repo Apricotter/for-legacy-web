@@ -52,18 +52,34 @@ const Lang = styled.div`
 const FormWrap = styled.div`
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 14px 16px;
+    gap: 14px;
+    padding: 0;
     background: var(--secondary-background);
-    border: 1px solid rgba(255, 160, 60, 0.25);
+    border: 1px solid var(--tertiary-background);
+    border-top: 3px solid var(--accent);
     border-radius: var(--border-radius);
     max-width: 480px;
+    overflow: hidden;
+`;
+
+const FormTitle = styled.div`
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--foreground);
+    padding: 12px 16px 0;
+`;
+
+const FormBody = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 16px 16px;
 `;
 
 const FormField = styled.div`
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 5px;
 `;
 
 const FormLabel = styled.label`
@@ -71,53 +87,117 @@ const FormLabel = styled.label`
     font-weight: 700;
     text-transform: uppercase;
     color: var(--secondary-foreground);
-    letter-spacing: 0.8px;
+    letter-spacing: 0.7px;
 `;
 
-const FormInput = styled.input`
-    padding: 7px 10px;
-    border-radius: var(--border-radius);
+const inputBase = `
+    padding: 8px 11px;
+    border-radius: calc(var(--border-radius) / 1.5);
     background: var(--background);
-    border: 1px solid var(--tertiary-background);
+    border: 1.5px solid var(--tertiary-background);
     color: var(--foreground);
     font-size: 13px;
     outline: none;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
     &:focus {
         border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(255, 160, 60, 0.12);
+    }
+    &::placeholder {
+        color: var(--tertiary-foreground);
+        opacity: 0.7;
     }
 `;
+
+const FormInput = styled.input`${inputBase}`;
 
 const FormTextarea = styled.textarea`
-    padding: 7px 10px;
-    border-radius: var(--border-radius);
-    background: var(--background);
-    border: 1px solid var(--tertiary-background);
-    color: var(--foreground);
-    font-size: 13px;
-    outline: none;
+    ${inputBase}
     resize: vertical;
-    min-height: 70px;
-    &:focus {
-        border-color: var(--accent);
-    }
+    min-height: 80px;
+    line-height: 1.5;
 `;
 
 const FormSelect = styled.select`
-    padding: 7px 10px;
-    border-radius: var(--border-radius);
-    background: var(--background);
-    border: 1px solid var(--tertiary-background);
+    ${inputBase}
+    cursor: pointer;
+    appearance: auto;
+`;
+
+const RadioGroup = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+`;
+
+const RadioChip = styled.label<{ checked: boolean }>`
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1.5px solid ${p => p.checked ? "var(--accent)" : "var(--tertiary-background)"};
+    background: ${p => p.checked ? "rgba(255,160,60,0.12)" : "var(--background)"};
+    color: ${p => p.checked ? "var(--accent)" : "var(--secondary-foreground)"};
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s, color 0.12s;
+    user-select: none;
+    input { display: none; }
+    &:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+`;
+
+const FormDivider = styled.div`
+    height: 1px;
+    background: var(--tertiary-background);
+    margin: 0 -16px;
+    width: calc(100% + 32px);
+`;
+
+const QuestionHeader = styled.div`
+    font-size: 15px;
+    font-weight: 700;
     color: var(--foreground);
+    letter-spacing: 0.2px;
+`;
+
+const QuestionRule = styled.div`
+    height: 2px;
+    background: var(--accent);
+    border-radius: 1px;
+    margin: 4px 0 8px;
+    opacity: 0.5;
+`;
+
+const QuestionDesc = styled.div`
     font-size: 13px;
-    outline: none;
+    color: var(--secondary-foreground);
+    line-height: 1.5;
+    margin-bottom: 8px;
+`;
+
+const QuestionInput = styled.input`
+    ${inputBase}
+    font-size: 15px;
+    padding: 11px 14px;
+    caret-color: var(--accent);
+    caret-shape: bar;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(255, 160, 60, 0.1);
     &:focus {
         border-color: var(--accent);
+        box-shadow: 0 0 0 4px rgba(255, 160, 60, 0.18);
     }
 `;
 
 const FormSubmit = styled.button`
     align-self: flex-start;
-    padding: 8px 18px;
+    padding: 8px 20px;
     border-radius: var(--border-radius);
     background: var(--accent);
     color: #080c18;
@@ -125,32 +205,43 @@ const FormSubmit = styled.button`
     font-weight: 700;
     border: none;
     cursor: pointer;
-    &:hover {
+    transition: opacity 0.15s, transform 0.1s;
+    &:hover:not(:disabled) {
         opacity: 0.88;
+        transform: translateY(-1px);
+    }
+    &:active:not(:disabled) {
+        transform: translateY(0);
     }
     &:disabled {
-        opacity: 0.5;
+        opacity: 0.45;
         cursor: not-allowed;
     }
 `;
 
 const FormSuccess = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 7px;
     font-size: 13px;
     color: #4ade80;
     font-weight: 600;
-    padding: 4px 0;
+    padding: 10px 16px;
 `;
 
 interface OttoFormField {
-    type: "text" | "textarea" | "combo" | "radio" | "checkbox" | "file" | "select";
+    type: "text" | "textarea" | "combo" | "radio" | "checkbox" | "file" | "select" | "question";
     key: string;
     field: string;
+    description?: string;
     value?: string;
+    placeholder?: string;
     options?: string[];
     choices?: string[];
 }
 
 interface OttoFormSchema {
+    title?: string;
     fields: OttoFormField[];
     submit?: string;
 }
@@ -198,53 +289,76 @@ function OttoFormBlock({ raw }: { raw: string }) {
     }
 
     if (submitted) {
-        return <FormSuccess>✓ Got it — Otto will continue shortly.</FormSuccess>;
+        return (
+            <FormWrap>
+                <FormSuccess>✓ Got it — Otto will continue shortly.</FormSuccess>
+            </FormWrap>
+        );
     }
 
     return (
         <FormWrap>
-            {schema.fields.map((field) => (
-                <FormField key={field.key}>
-                    <FormLabel>{field.field}</FormLabel>
-                    {field.type === "textarea" ? (
-                        <FormTextarea
-                            value={values[field.key] ?? ""}
-                            onInput={set(field.key)}
-                        />
-                    ) : field.type === "combo" || field.type === "select" ? (
-                        <FormSelect value={values[field.key] ?? ""} onChange={set(field.key)}>
-                            <option value="">Select...</option>
-                            {(field.options ?? field.choices ?? []).map((opt) => (
-                                <option key={opt} value={opt}>{opt}</option>
-                            ))}
-                        </FormSelect>
-                    ) : field.type === "radio" ? (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                            {(field.choices ?? []).map((choice) => (
-                                <label key={choice} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-                                    <input
-                                        type="radio"
-                                        name={field.key}
-                                        value={choice}
-                                        checked={values[field.key] === choice}
-                                        onChange={set(field.key)}
-                                    />
-                                    {choice}
-                                </label>
-                            ))}
-                        </div>
-                    ) : (
-                        <FormInput
+            {schema.title && <FormTitle>{schema.title}</FormTitle>}
+            <FormBody>
+                {schema.fields.map((field) => field.type === "question" ? (
+                    <FormField key={field.key}>
+                        <QuestionHeader>{field.field}</QuestionHeader>
+                        <QuestionRule />
+                        {field.description && <QuestionDesc>{field.description}</QuestionDesc>}
+                        <QuestionInput
                             type="text"
+                            autoFocus
                             value={values[field.key] ?? ""}
+                            placeholder={field.placeholder}
                             onInput={set(field.key)}
                         />
-                    )}
-                </FormField>
-            ))}
-            <FormSubmit disabled={sending} onClick={handleSubmit}>
-                {sending ? "Sending..." : (schema.submit ?? "Submit")}
-            </FormSubmit>
+                    </FormField>
+                ) : (
+                    <FormField key={field.key}>
+                        <FormLabel>{field.field}</FormLabel>
+                        {field.type === "textarea" ? (
+                            <FormTextarea
+                                value={values[field.key] ?? ""}
+                                placeholder={field.placeholder}
+                                onInput={set(field.key)}
+                            />
+                        ) : field.type === "combo" || field.type === "select" ? (
+                            <FormSelect value={values[field.key] ?? ""} onChange={set(field.key)}>
+                                <option value="">Select...</option>
+                                {(field.options ?? field.choices ?? []).map((opt) => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                            </FormSelect>
+                        ) : field.type === "radio" ? (
+                            <RadioGroup>
+                                {(field.choices ?? []).map((choice) => (
+                                    <RadioChip key={choice} checked={values[field.key] === choice}>
+                                        <input
+                                            type="radio"
+                                            name={field.key}
+                                            value={choice}
+                                            checked={values[field.key] === choice}
+                                            onChange={set(field.key)}
+                                        />
+                                        {choice}
+                                    </RadioChip>
+                                ))}
+                            </RadioGroup>
+                        ) : (
+                            <FormInput
+                                type="text"
+                                value={values[field.key] ?? ""}
+                                placeholder={field.placeholder}
+                                onInput={set(field.key)}
+                            />
+                        )}
+                    </FormField>
+                ))}
+                <FormDivider />
+                <FormSubmit disabled={sending} onClick={handleSubmit}>
+                    {sending ? "Sending..." : (schema.submit ?? "Submit")}
+                </FormSubmit>
+            </FormBody>
         </FormWrap>
     );
 }
