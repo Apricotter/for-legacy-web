@@ -1,6 +1,6 @@
 import styled from "styled-components";
 
-import { useCallback, useRef, useState } from "preact/hooks";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { useLocation } from "react-router-dom";
 
 import { Tooltip } from "@revoltchat/ui";
@@ -242,6 +242,7 @@ interface OttoFormField {
 
 interface OttoFormSchema {
     title?: string;
+    messageId?: string;
     fields: OttoFormField[];
     submit?: string;
 }
@@ -264,6 +265,9 @@ function OttoFormBlock({ raw }: { raw: string }) {
     });
     const [submitted, setSubmitted] = useState(false);
     const [sending, setSending] = useState(false);
+    const [askOttoField, setAskOttoField] = useState<{ key: string; text: string } | null>(null);
+
+    const serverId = location.pathname.match(/\/server\/([A-Z0-9]{26})/i)?.[1] ?? "";
 
     const set = (key: string) => (e: Event) =>
         setValues((v) => ({ ...v, [key]: (e.target as HTMLInputElement).value }));
@@ -297,6 +301,7 @@ function OttoFormBlock({ raw }: { raw: string }) {
     }
 
     return (
+        <>
         <FormWrap>
             {schema.title && <FormTitle>{schema.title}</FormTitle>}
             <FormBody>
@@ -312,6 +317,9 @@ function OttoFormBlock({ raw }: { raw: string }) {
                             placeholder={field.placeholder}
                             onInput={set(field.key)}
                         />
+                        <AskOttoLink onClick={() => setAskOttoField({ key: field.key, text: field.description ?? field.field })}>
+                            Need help? Ask Otto
+                        </AskOttoLink>
                     </FormField>
                 ) : (
                     <FormField key={field.key}>
@@ -360,6 +368,246 @@ function OttoFormBlock({ raw }: { raw: string }) {
                 </FormSubmit>
             </FormBody>
         </FormWrap>
+        {askOttoField && (
+            <AskOttoModal
+                serverId={serverId}
+                messageId={schema.messageId ?? ""}
+                questionKey={askOttoField.key}
+                questionText={askOttoField.text}
+                onClose={() => setAskOttoField(null)}
+            />
+        )}
+        </>
+    );
+}
+
+const AskOttoLink = styled.button`
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--accent);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    align-self: flex-start;
+    margin-top: 4px;
+    &:hover { opacity: 0.75; }
+`;
+
+const ModalOverlay = styled.div`
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+`;
+
+const ModalBox = styled.div`
+    background: var(--secondary-background);
+    border: 1px solid var(--tertiary-background);
+    border-top: 3px solid var(--accent);
+    border-radius: var(--border-radius);
+    width: 420px;
+    max-width: 95vw;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+`;
+
+const ModalHeader = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--tertiary-background);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--foreground);
+`;
+
+const ModalClose = styled.button`
+    background: none;
+    border: none;
+    color: var(--secondary-foreground);
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 2px;
+    &:hover { color: var(--foreground); }
+`;
+
+const ModalMessages = styled.div`
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+`;
+
+const ModalMsg = styled.div<{ self: boolean }>`
+    align-self: ${p => p.self ? "flex-end" : "flex-start"};
+    max-width: 85%;
+    padding: 7px 11px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.45;
+    background: ${p => p.self ? "var(--accent)" : "var(--background)"};
+    color: ${p => p.self ? "#080c18" : "var(--foreground)"};
+    border: ${p => p.self ? "none" : "1px solid var(--tertiary-background)"};
+    white-space: pre-wrap;
+    word-break: break-word;
+`;
+
+const ModalInputRow = styled.div`
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px;
+    border-top: 1px solid var(--tertiary-background);
+`;
+
+const ModalInput = styled.input`
+    ${inputBase}
+    flex: 1;
+    font-size: 13px;
+`;
+
+const ModalSend = styled.button`
+    padding: 8px 14px;
+    background: var(--accent);
+    color: #080c18;
+    border: none;
+    border-radius: calc(var(--border-radius) / 1.5);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    &:disabled { opacity: 0.45; cursor: not-allowed; }
+`;
+
+const OTTO_API = "https://otto.apricotter.com";
+
+interface ChatMessage { id: string; content: string; self: boolean; }
+
+function AskOttoModal({
+    serverId,
+    messageId,
+    questionKey,
+    questionText,
+    onClose,
+}: {
+    serverId: string;
+    messageId: string;
+    questionKey: string;
+    questionText: string;
+    onClose: () => void;
+}) {
+    const client = useClient();
+    const [channelId, setChannelId] = useState<string | null>(null);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [input, setInput] = useState("");
+    const [sending, setSending] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const bottomRef = useRef<HTMLDivElement>(null);
+
+    // Create/fetch the question group channel
+    useEffect(() => {
+        fetch(`${OTTO_API}/question-group`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ serverId, messageId, questionKey, questionText }),
+        })
+            .then(r => r.json())
+            .then((data: any) => {
+                if (data.channelId) setChannelId(data.channelId);
+            })
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    }, [serverId, messageId, questionKey]);
+
+    // Load recent messages when channel is ready
+    useEffect(() => {
+        if (!channelId) return;
+        const ch = (client as any)?.channels?.get(channelId);
+        ch?.fetchMessages?.({ limit: 25 })
+            .then((msgs: any[]) => {
+                if (!msgs) return;
+                const selfId = (client as any)?.user?.id;
+                setMessages(msgs.reverse().map((m: any) => ({
+                    id: m.id ?? m._id,
+                    content: m.content ?? "",
+                    self: m.authorId === selfId || m.author_id === selfId,
+                })));
+            })
+            .catch(() => {});
+    }, [channelId]);
+
+    // Subscribe to new messages
+    useEffect(() => {
+        if (!channelId) return;
+        const selfId = (client as any)?.user?.id;
+        const handler = (msg: any) => {
+            const msgChannelId = msg.channelId ?? msg.channel_id;
+            if (msgChannelId !== channelId) return;
+            setMessages(prev => [...prev, {
+                id: msg.id ?? msg._id,
+                content: msg.content ?? "",
+                self: (msg.authorId ?? msg.author_id) === selfId,
+            }]);
+        };
+        (client as any)?.on?.("message", handler);
+        return () => (client as any)?.off?.("message", handler);
+    }, [channelId, client]);
+
+    // Scroll to bottom on new messages
+    useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+
+    const send = async () => {
+        if (!input.trim() || !channelId || sending) return;
+        const ch = (client as any)?.channels?.get(channelId);
+        if (!ch) return;
+        setSending(true);
+        try {
+            await ch.sendMessage({ content: input.trim() });
+            setInput("");
+        } finally {
+            setSending(false);
+        }
+    };
+
+    return (
+        <ModalOverlay onClick={e => e.target === e.currentTarget && onClose()}>
+            <ModalBox>
+                <ModalHeader>
+                    <span>Ask Otto — {questionText.length > 40 ? questionText.slice(0, 40) + "…" : questionText}</span>
+                    <ModalClose onClick={onClose}>×</ModalClose>
+                </ModalHeader>
+                <ModalMessages>
+                    {loading && <ModalMsg self={false}>Connecting…</ModalMsg>}
+                    {messages.map(m => (
+                        <ModalMsg key={m.id} self={m.self}>{m.content}</ModalMsg>
+                    ))}
+                    <div ref={bottomRef} />
+                </ModalMessages>
+                <ModalInputRow>
+                    <ModalInput
+                        type="text"
+                        placeholder="Ask Otto…"
+                        value={input}
+                        onInput={e => setInput((e.target as HTMLInputElement).value)}
+                        onKeyDown={e => e.key === "Enter" && send()}
+                        autoFocus
+                    />
+                    <ModalSend disabled={sending || !input.trim()} onClick={send}>Send</ModalSend>
+                </ModalInputRow>
+            </ModalBox>
+        </ModalOverlay>
     );
 }
 
