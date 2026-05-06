@@ -387,18 +387,8 @@ function OttoFormBlock({ raw }: { raw: string }) {
             <FormBody>
                 {schema.fields.map((field) => field.type === "question" ? (
                     <FormField key={field.key}>
-                        <QuestionHeader>{field.field}</QuestionHeader>
-                        <QuestionRule />
-                        {field.description && <QuestionDesc>{field.description}</QuestionDesc>}
-                        <QuestionInput
-                            type="text"
-                            autoFocus
-                            value={values[field.key] ?? ""}
-                            placeholder={field.placeholder}
-                            onInput={set(field.key)}
-                        />
                         <AskOttoLink onClick={() => setAskOttoField({ key: field.key, text: field.description ?? field.field })}>
-                            Need help? Ask Otto
+                            {field.field}
                         </AskOttoLink>
                     </FormField>
                 ) : (
@@ -796,6 +786,93 @@ function AskOttoModal({
     );
 }
 
+// --- Greeting block ---
+
+const GreetingWrap = styled.div`
+    background: var(--secondary-background);
+    border: 1px solid var(--tertiary-background);
+    border-top: 3px solid var(--accent);
+    border-radius: var(--border-radius);
+    max-width: 480px;
+    overflow: hidden;
+    padding: 20px 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+`;
+
+const GreetingTitle = styled.div`
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--foreground);
+    letter-spacing: -0.2px;
+`;
+
+const GreetingDesc = styled.div`
+    font-size: 13px;
+    color: var(--secondary-foreground);
+    line-height: 1.55;
+`;
+
+const GreetingSteps = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+`;
+
+const GreetingStep = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--foreground);
+`;
+
+const GreetingStepNum = styled.div`
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #080c18;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+`;
+
+interface GreetingSchema {
+    title: string;
+    description?: string;
+    steps?: string[];
+}
+
+function GreetingBlock({ raw }: { raw: string }) {
+    let schema: GreetingSchema;
+    try {
+        schema = JSON.parse(raw);
+    } catch {
+        return null;
+    }
+    return (
+        <GreetingWrap>
+            <GreetingTitle>{schema.title}</GreetingTitle>
+            {schema.description && <GreetingDesc>{schema.description}</GreetingDesc>}
+            {schema.steps && schema.steps.length > 0 && (
+                <GreetingSteps>
+                    {schema.steps.map((step, i) => (
+                        <GreetingStep key={i}>
+                            <GreetingStepNum>{i + 1}</GreetingStepNum>
+                            {step}
+                        </GreetingStep>
+                    ))}
+                </GreetingSteps>
+            )}
+        </GreetingWrap>
+    );
+}
+
 const ThinkingDetails = styled.details`
     margin: 4px 0;
     border-radius: var(--border-radius);
@@ -868,6 +945,10 @@ export const RenderCodeblock: React.FC<{ class: string }> = ({
     // Otto interactive form block
     if (lang === "form") {
         return <OttoFormBlock raw={extractText(children)} />;
+    }
+
+    if (lang === "greeting") {
+        return <GreetingBlock raw={extractText(children)} />;
     }
 
     // Otto thinking block — collapsible reasoning display
