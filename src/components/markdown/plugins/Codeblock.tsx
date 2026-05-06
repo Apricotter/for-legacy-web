@@ -3,6 +3,8 @@ import styled from "styled-components";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { useLocation } from "react-router-dom";
 
+import { uploadFile } from "../../../controllers/client/jsx/legacy/FileUploads";
+
 import { Tooltip } from "@revoltchat/ui";
 
 import { modalController } from "../../../controllers/modals/ModalController";
@@ -230,12 +232,13 @@ const FormSuccess = styled.div`
 `;
 
 interface OttoFormField {
-    type: "text" | "textarea" | "combo" | "radio" | "checkbox" | "file" | "select" | "question";
+    type: "text" | "textarea" | "combo" | "radio" | "checkbox" | "file" | "upload" | "select" | "question";
     key: string;
     field: string;
     description?: string;
     value?: string;
     placeholder?: string;
+    accept?: string;
     options?: string[];
     choices?: string[];
 }
@@ -245,6 +248,63 @@ interface OttoFormSchema {
     messageId?: string;
     fields: OttoFormField[];
     submit?: string;
+}
+
+function UploadField({
+    accept, file, progress, dragging,
+    onFile, onRemove, onDragOver, onDragLeave,
+}: {
+    accept?: string;
+    file?: File;
+    progress?: number;
+    dragging: boolean;
+    onFile: (f: File) => void;
+    onRemove: () => void;
+    onDragOver: () => void;
+    onDragLeave: () => void;
+}) {
+    const inputRef = useRef<HTMLInputElement>(null);
+    return (
+        <div>
+            {file ? (
+                <FilePreview>
+                    <span>📄</span>
+                    <FilePreviewName>{file.name}</FilePreviewName>
+                    <FilePreviewSize>{fmtBytes(file.size)}</FilePreviewSize>
+                    <FilePreviewRemove onClick={onRemove}>×</FilePreviewRemove>
+                </FilePreview>
+            ) : (
+                <UploadZone
+                    dragging={dragging}
+                    hasFile={false}
+                    onClick={() => inputRef.current?.click()}
+                    onDragOver={e => { e.preventDefault(); onDragOver(); }}
+                    onDragLeave={onDragLeave}
+                    onDrop={e => {
+                        e.preventDefault();
+                        onDragLeave();
+                        const f = e.dataTransfer?.files?.[0];
+                        if (f) onFile(f);
+                    }}
+                >
+                    <UploadIcon>📂</UploadIcon>
+                    <UploadText>Drop your file here or <span>browse</span></UploadText>
+                    <UploadHint>{accept ?? "PDF, Word, ePub, or any format"}</UploadHint>
+                </UploadZone>
+            )}
+            {progress !== undefined && progress < 100 && <UploadProgress pct={progress} />}
+            <input
+                ref={inputRef}
+                type="file"
+                accept={accept}
+                style={{ display: "none" }}
+                onChange={e => {
+                    const f = (e.target as HTMLInputElement).files?.[0];
+                    if (f) onFile(f);
+                }}
+            />
+        </div>
+    );
 }
 
 function OttoFormBlock({ raw }: { raw: string }) {
@@ -265,6 +325,9 @@ function OttoFormBlock({ raw }: { raw: string }) {
     });
     const [submitted, setSubmitted] = useState(false);
     const [sending, setSending] = useState(false);
+    const [uploadFiles, setUploadFiles] = useState<Record<string, File>>({});
+    const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+    const [draggingOver, setDraggingOver] = useState<string | null>(null);
     const [askOttoField, setAskOttoField] = useState<{ key: string; text: string } | null>(null);
 
     const serverId = location.pathname.match(/\/server\/([A-Z0-9]{26})/i)?.[1] ?? "";
@@ -276,16 +339,33 @@ function OttoFormBlock({ raw }: { raw: string }) {
         if (sending || submitted) return;
         setSending(true);
         try {
-            // Extract channel ID from current URL: /server/:sid/channel/:cid or /channel/:cid
             const channelId = location.pathname.match(/\/channel\/([A-Z0-9]{26})/i)?.[1];
             const channel = channelId ? (client as any)?.channels?.get(channelId) : null;
             if (!channel) return;
 
+            // Upload any file fields first
+            const attachmentIds: string[] = [];
+            const autumnUrl = (client as any)?.configuration?.features?.autumn?.url as string | undefined;
+            for (const [key, file] of Object.entries(uploadFiles)) {
+                if (autumnUrl) {
+                    const id = await uploadFile(autumnUrl, "attachments", file, {
+                        onUploadProgress: (e: any) => {
+                            const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 50;
+                            setUploadProgress(p => ({ ...p, [key]: pct }));
+                        },
+                    });
+                    if (id) attachmentIds.push(id);
+                }
+            }
+
             const lines = schema.fields
-                .filter((f) => values[f.key] !== undefined && values[f.key] !== "")
+                .filter((f) => f.type !== "upload" && f.type !== "file" && values[f.key] !== undefined && values[f.key] !== "")
                 .map((f) => `${f.field}: ${values[f.key]}`);
 
-            await channel.sendMessage({ content: lines.join("\n") });
+            await channel.sendMessage({
+                content: lines.join("\n") || undefined,
+                attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
+            });
             setSubmitted(true);
         } finally {
             setSending(false);
@@ -324,7 +404,18 @@ function OttoFormBlock({ raw }: { raw: string }) {
                 ) : (
                     <FormField key={field.key}>
                         <FormLabel>{field.field}</FormLabel>
-                        {field.type === "textarea" ? (
+                        {field.type === "upload" || field.type === "file" ? (
+                            <UploadField
+                                accept={field.accept}
+                                file={uploadFiles[field.key]}
+                                progress={uploadProgress[field.key]}
+                                dragging={draggingOver === field.key}
+                                onFile={f => setUploadFiles(p => ({ ...p, [field.key]: f }))}
+                                onRemove={() => setUploadFiles(p => { const n = {...p}; delete n[field.key]; return n; })}
+                                onDragOver={() => setDraggingOver(field.key)}
+                                onDragLeave={() => setDraggingOver(null)}
+                            />
+                        ) : field.type === "textarea" ? (
                             <FormTextarea
                                 value={values[field.key] ?? ""}
                                 placeholder={field.placeholder}
@@ -379,6 +470,100 @@ function OttoFormBlock({ raw }: { raw: string }) {
         )}
         </>
     );
+}
+
+const UploadZone = styled.div<{ dragging: boolean; hasFile: boolean }>`
+    border: 2px dashed ${p => p.dragging ? "var(--accent)" : p.hasFile ? "var(--accent)" : "var(--tertiary-background)"};
+    border-radius: var(--border-radius);
+    padding: 28px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: ${p => p.dragging ? "rgba(255,160,60,0.08)" : "var(--background)"};
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    &:hover {
+        border-color: var(--accent);
+        background: rgba(255,160,60,0.05);
+    }
+`;
+
+const UploadIcon = styled.div`
+    font-size: 28px;
+    line-height: 1;
+    opacity: 0.6;
+`;
+
+const UploadText = styled.div`
+    font-size: 13px;
+    color: var(--secondary-foreground);
+    span { color: var(--accent); font-weight: 600; }
+`;
+
+const UploadHint = styled.div`
+    font-size: 11px;
+    color: var(--tertiary-foreground);
+`;
+
+const FilePreview = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    background: var(--background);
+    border: 1.5px solid var(--accent);
+    border-radius: calc(var(--border-radius) / 1.5);
+    font-size: 13px;
+`;
+
+const FilePreviewName = styled.div`
+    flex: 1;
+    font-weight: 600;
+    color: var(--foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+`;
+
+const FilePreviewSize = styled.div`
+    font-size: 11px;
+    color: var(--tertiary-foreground);
+    white-space: nowrap;
+`;
+
+const FilePreviewRemove = styled.button`
+    background: none;
+    border: none;
+    color: var(--tertiary-foreground);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 2px;
+    &:hover { color: var(--foreground); }
+`;
+
+const UploadProgress = styled.div<{ pct: number }>`
+    width: 100%;
+    height: 3px;
+    background: var(--tertiary-background);
+    border-radius: 2px;
+    overflow: hidden;
+    &::after {
+        content: "";
+        display: block;
+        height: 100%;
+        width: ${p => p.pct}%;
+        background: var(--accent);
+        transition: width 0.2s;
+    }
+`;
+
+function fmtBytes(b: number) {
+    if (b < 1024) return `${b} B`;
+    if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+    return `${(b / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 const AskOttoLink = styled.button`
