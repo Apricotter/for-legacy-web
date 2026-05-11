@@ -35,7 +35,7 @@ const Lang = styled.div`
         font-weight: 600;
         user-select: none;
         display: inline-block;
-        background: var(--accent);
+        background: #F4B978;
 
         font-size: 10px;
         text-transform: uppercase;
@@ -201,7 +201,7 @@ const FormSubmit = styled.button`
     align-self: flex-start;
     padding: 8px 20px;
     border-radius: var(--border-radius);
-    background: var(--accent);
+    background: #F4B978;
     color: #080c18;
     font-size: 13px;
     font-weight: 700;
@@ -631,7 +631,7 @@ const ModalMsg = styled.div<{ self: boolean }>`
     border-radius: 12px;
     font-size: 13px;
     line-height: 1.45;
-    background: ${p => p.self ? "var(--accent)" : "var(--background)"};
+    background: ${p => p.self ? "#F4B978" : "var(--background)"};
     color: ${p => p.self ? "#080c18" : "var(--foreground)"};
     border: ${p => p.self ? "none" : "1px solid var(--tertiary-background)"};
     white-space: pre-wrap;
@@ -653,7 +653,7 @@ const ModalInput = styled.input`
 
 const ModalSend = styled.button`
     padding: 8px 14px;
-    background: var(--accent);
+    background: #F4B978;
     color: #080c18;
     border: none;
     border-radius: calc(var(--border-radius) / 1.5);
@@ -832,7 +832,7 @@ const GreetingStepNum = styled.div`
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    background: var(--accent);
+    background: #F4B978;
     color: #080c18;
     font-size: 11px;
     font-weight: 800;
