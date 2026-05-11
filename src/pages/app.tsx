@@ -17,7 +17,9 @@ const RevoltApp = lazy(() => import("./RevoltApp"));
 const Landing = lazy(() => import("./landing/Landing"));
 
 const IS_HUB =
-    typeof window !== "undefined" && window.location.hostname === "hub2.apricotter.com";
+    typeof window !== "undefined" &&
+    (window.location.hostname === "hub2.apricotter.com" ||
+        window.location.hostname === "localhost");
 
 const LoadSuspense: React.FC = ({ children }) => (
     // @ts-expect-error Typing issue between Preact and Preact.

@@ -25,7 +25,7 @@ export default function Landing() {
     return (
         <div className={styles.landing}>
             <nav className={styles.nav}>
-                <img src="/assets/wide.svg" alt="Apricotter" />
+                <img src="/assets/apricotter-wordmark.webp" alt="Apricotter" />
                 <a href="/login">Sign in</a>
             </nav>
             <main className={styles.main}>
