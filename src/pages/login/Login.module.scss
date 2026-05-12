@@ -263,13 +263,22 @@
 
 @media only screen and (max-width: 768px) {
     .login {
-        padding: 30px 20px;
+        padding: 28px 20px;
 
         &::before {
-            display: none;
+            display: block;
+            background: url("/assets/web/login-mobile-bg.webp") center 40% / cover no-repeat;
+            transform: none;
         }
 
-        background-color: var(--primary-background);
+        &::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(10, 5, 1, 0.45);
+            z-index: 0;
+            pointer-events: none;
+        }
 
         .content {
             .bottom {
@@ -283,14 +292,9 @@
         }
 
         .form {
-            border: unset;
             margin-inline-start: 0;
-            padding: 0;
             max-width: unset;
-            box-shadow: unset;
-            background: transparent;
-            backdrop-filter: none;
-            -webkit-backdrop-filter: none;
+            align-self: center;
         }
     }
 }
