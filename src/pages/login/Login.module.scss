@@ -95,6 +95,13 @@
         margin-bottom: 20px;
         box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
 
+        --foreground: rgba(255, 255, 255, 0.9);
+        --secondary-foreground: rgba(255, 255, 255, 0.6);
+        --tertiary-foreground: rgba(255, 255, 255, 0.4);
+        --accent: #f4b978;
+        --accent-contrast: #080c18;
+        color: rgba(255, 255, 255, 0.9);
+
         .captcha {
             display: flex;
             flex-direction: column;
@@ -187,7 +194,8 @@
 
                 button {
                     padding: 8px;
-                    background: var(--secondary-background);
+                    background: #f4b978;
+                    color: #080c18;
                     margin-bottom: 15px;
                 }
             }
