@@ -1,4 +1,10 @@
 import { API, Client, User, Member, Channel, Server, Message } from "revolt.js";
+export type PolicyChange = {
+    created_time: string;
+    effective_time: string;
+    description: string;
+    url: string;
+};
 
 export type Modal = {
     key?: string;
@@ -195,6 +201,10 @@ export type Modal = {
           target: { name: string, id: string },
           callback: () => Promise<void>;
     }
+    | {
+          type: "policy_changes";
+          changes: PolicyChange[];
+      }
 );
 
 export type ModalProps<T extends Modal["type"]> = Modal & { type: T } & {

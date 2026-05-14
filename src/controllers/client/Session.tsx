@@ -1,5 +1,8 @@
 import { action, computed, makeAutoObservable } from "mobx";
 import { API, Client } from "revolt.js";
+import type { ClientboundNotification } from "revolt.js";
+
+import type { PolicyChange } from "../modals/types";
 
 import { state } from "../../mobx/State";
 
@@ -49,6 +52,7 @@ export default class Session {
 
         this.onDropped = this.onDropped.bind(this);
         this.onReady = this.onReady.bind(this);
+        this.onPacket = this.onPacket.bind(this);
         this.onOnline = this.onOnline.bind(this);
         this.onOffline = this.onOffline.bind(this);
 
@@ -105,6 +109,17 @@ export default class Session {
     }
 
     /**
+     * Intercept raw packets to surface policy_changes from the Ready payload
+     */
+    private onPacket(packet: ClientboundNotification) {
+        if (packet.type !== "Ready") return;
+        const changes = (packet as any).policy_changes as PolicyChange[] | undefined;
+        if (changes && changes.length > 0) {
+            modalController.push({ type: "policy_changes", changes });
+        }
+    }
+
+    /**
      * Create a new Revolt.js Client for this Session
      * @param apiUrl Optionally specify an API URL
      */
@@ -118,6 +133,7 @@ export default class Session {
 
         this.client.addListener("dropped", this.onDropped);
         this.client.addListener("ready", this.onReady);
+        this.client.addListener("packet", this.onPacket);
     }
 
     /**
