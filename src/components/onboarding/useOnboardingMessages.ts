@@ -74,7 +74,9 @@ export function useOnboardingMessages(channelId: string | undefined) {
                 // @ts-ignore — revolt.js v7 Channel
                 const msgs = await (channel as any).fetchMessages({ limit: 100 });
                 console.log("[wizard] fetchMessages raw result:", msgs);
-                const list: any[] = Array.isArray(msgs) ? msgs : (msgs?.messages ?? []);
+                // fetchMessages returns newest-first; reverse to get chronological (greeting before form)
+                const raw: any[] = Array.isArray(msgs) ? msgs : (msgs?.messages ?? []);
+                const list = [...raw].reverse();
                 console.log("[wizard] message list length:", list.length, "first:", list[0]);
                 const existing: WizardStep[] = [];
                 for (const msg of list) {
