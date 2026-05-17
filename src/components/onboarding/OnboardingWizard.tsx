@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useState, useCallback } from "preact/hooks";
 import styled from "styled-components/macro";
 
 import { uploadFile } from "../../controllers/client/jsx/legacy/FileUploads";
@@ -54,6 +54,18 @@ const CloseBtn = styled.button`
     cursor: pointer;
     padding: 0 4px;
     line-height: 1;
+    &:hover { color: var(--foreground); }
+`;
+
+const ResetBtn = styled.button<{ $resetting?: boolean }>`
+    background: none;
+    border: none;
+    color: var(--tertiary-foreground);
+    font-size: 11px;
+    cursor: ${p => p.$resetting ? "wait" : "pointer"};
+    padding: 0;
+    text-decoration: underline;
+    opacity: ${p => p.$resetting ? 0.5 : 1};
     &:hover { color: var(--foreground); }
 `;
 
@@ -563,12 +575,33 @@ function StepContent({
 
 // ── main modal ────────────────────────────────────────────────────────────────
 
+const OTTO_API = "https://otto.apricotter.com";
+
 export default function OnboardingWizard({
     channelId,
     onClose,
 }: ModalProps<"author_onboarding">) {
-    const { steps, markDone } = useOnboardingMessages(channelId);
+    const { steps, markDone, clearSteps } = useOnboardingMessages(channelId);
     const [activeIndex, setActiveIndex] = useState(0);
+    const [resetting, setResetting] = useState(false);
+
+    const handleReset = useCallback(async () => {
+        if (resetting) return;
+        setResetting(true);
+        try {
+            await fetch(`${OTTO_API}/onboarding/reset`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ channelId }),
+            });
+            clearSteps();
+            setActiveIndex(0);
+        } catch {
+            // ignore — Otto will re-greet on next message anyway
+        } finally {
+            setResetting(false);
+        }
+    }, [channelId, resetting]);
 
     // Auto-advance to first step needing action when steps load
     const firstPending = steps.findIndex(s => s.needsAction && !s.done);
@@ -589,7 +622,12 @@ export default function OnboardingWizard({
             <Shell>
                 <Header>
                     <WizardTitle>Studio Setup</WizardTitle>
-                    <CloseBtn onClick={onClose}>×</CloseBtn>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <ResetBtn $resetting={resetting} onClick={handleReset}>
+                            {resetting ? "Resetting…" : "Start over"}
+                        </ResetBtn>
+                        <CloseBtn onClick={onClose}>×</CloseBtn>
+                    </div>
                 </Header>
 
                 <SubwayMap

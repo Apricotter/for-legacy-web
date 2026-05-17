@@ -110,5 +110,7 @@ export function useOnboardingMessages(channelId: string | undefined) {
         setSteps(prev => prev.map(s => s.id === stepId ? { ...s, done: true, needsAction: false } : s));
     };
 
-    return { steps, markDone };
+    const clearSteps = () => setSteps([]);
+
+    return { steps, markDone, clearSteps };
 }
