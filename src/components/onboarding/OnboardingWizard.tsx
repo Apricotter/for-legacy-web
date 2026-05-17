@@ -732,14 +732,16 @@ export default function OnboardingWizard({
     const handleReset = useCallback(async () => {
         if (resetting) return;
         setResetting(true);
+        // Clear before the fetch so real-time messages from Otto land into a clean state
+        clearSteps();
+        setActiveIndex(0);
+        autoAdvanced.current = false;
         try {
             await fetch(`${OTTO_API}/onboarding/reset`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ channelId }),
             });
-            clearSteps();
-            setActiveIndex(0);
         } catch {
             // ignore — Otto will re-greet on next message anyway
         } finally {
