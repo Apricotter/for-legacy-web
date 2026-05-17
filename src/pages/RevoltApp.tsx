@@ -4,7 +4,10 @@ import styled, { css } from "styled-components/macro";
 
 import { useEffect, useState } from "preact/hooks";
 
+import { useRef } from "preact/hooks";
+import { useApplicationState } from "../mobx/State";
 import { useClient } from "../controllers/client/ClientController";
+import { modalController } from "../controllers/modals/ModalController";
 import ContextMenus from "../lib/ContextMenus";
 import { isTouchscreenDevice } from "../lib/isTouchscreenDevice";
 
@@ -91,6 +94,30 @@ const Routes = styled.div.attrs({ "data-component": "routes" })<{
 
 export default function App() {
     const path = useLocation().pathname;
+    const client = useClient();
+    const state = useApplicationState();
+    const wizardLaunched = useRef(false);
+
+    // Launch onboarding wizard as soon as #start-here is available — regardless of current route
+    useEffect(() => {
+        if (!client || wizardLaunched.current) return;
+        const studioServer =
+            state.ordering.orderedServers.find((s: any) => s.name?.toLowerCase().includes("studio"))
+            ?? state.ordering.orderedServers[0];
+        if (!studioServer) return;
+        const channels = (studioServer as any).channel_ids
+            ?.map((id: string) => client.channels.get(id))
+            .filter(Boolean) ?? [];
+        const startHere = channels.find((c: any) => c?.name === "start-here");
+        if (!startHere) return;
+        wizardLaunched.current = true;
+        modalController.push({
+            type: "author_onboarding",
+            serverId: (studioServer as any)._id,
+            channelId: (startHere as any)._id,
+        });
+    }, [client, state.ordering.orderedServers.length]);
+
     const fixedBottomNav =
         path === "/" ||
         path === "/settings" ||

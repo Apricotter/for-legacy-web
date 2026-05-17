@@ -5,7 +5,6 @@ import styled, { keyframes } from "styled-components/macro";
 
 import { useApplicationState } from "../../mobx/State";
 import { useClient } from "../../controllers/client/ClientController";
-import { modalController } from "../../controllers/modals/ModalController";
 
 // ── animations ──────────────────────────────────────────────────────────────
 
@@ -386,8 +385,7 @@ export default observer(() => {
             s.name.toLowerCase().includes("studio"),
         ) ?? state.ordering.orderedServers[0];
 
-    const healedRef      = useRef(false);
-    const wizardLaunched = useRef(false);
+    const healedRef = useRef(false);
 
     useEffect(() => {
         if (!client || !client.user) return;
@@ -413,17 +411,6 @@ export default observer(() => {
         history.push(`/server/${(studioServer as any)._id}/channel/${(startHereChannel as any)._id}`);
     }, [studioServer, startHereChannel, studioChannels.length]);
 
-    // Auto-launch onboarding wizard when #start-here is available
-    useEffect(() => {
-        if (!studioServer || !startHereChannel) return;
-        if (wizardLaunched.current) return;
-        wizardLaunched.current = true;
-        modalController.push({
-            type: "author_onboarding",
-            serverId: (studioServer as any)._id,
-            channelId: (startHereChannel as any)._id,
-        });
-    }, [studioServer, startHereChannel]);
 
     return (
         <Wrap>
