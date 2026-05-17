@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "preact/hooks";
+import { useState, useCallback, useEffect, useRef } from "preact/hooks";
 import styled from "styled-components/macro";
 
 import { uploadFile } from "../../controllers/client/jsx/legacy/FileUploads";
@@ -719,6 +719,15 @@ export default function OnboardingWizard({
     const { steps, markDone, clearSteps } = useOnboardingMessages(channelId);
     const [activeIndex, setActiveIndex] = useState(0);
     const [resetting, setResetting] = useState(false);
+    const autoAdvanced = useRef(false);
+
+    // On first load, jump to the first step that still needs action
+    useEffect(() => {
+        if (steps.length === 0 || autoAdvanced.current) return;
+        autoAdvanced.current = true;
+        const firstPending = steps.findIndex(s => s.needsAction && !s.done);
+        if (firstPending > 0) setActiveIndex(firstPending);
+    }, [steps.length]);
 
     const handleReset = useCallback(async () => {
         if (resetting) return;
@@ -738,8 +747,6 @@ export default function OnboardingWizard({
         }
     }, [channelId, resetting]);
 
-    // Auto-advance to first step needing action when steps load
-    const firstPending = steps.findIndex(s => s.needsAction && !s.done);
     const displayIndex = steps.length > 0
         ? Math.min(activeIndex, steps.length - 1)
         : 0;

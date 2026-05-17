@@ -69,6 +69,35 @@ export function useOnboardingMessages(channelId: string | undefined) {
         if (!channel) return;
 
         (async () => {
+            const applyUserReplies = (existing: WizardStep[], list: any[]) => {
+                const userId = (client as any)?.user?._id;
+                const userMsgs = list.filter((m: any) => {
+                    const author = m.author_id ?? m.author?._id ?? m.author;
+                    return userId ? author === userId : !parseCodeblock(m.content ?? "");
+                });
+                // Greeting done if user replied "My name is X"
+                const nameMsg = userMsgs.find((m: any) => /^my name is /i.test(m.content ?? ""));
+                if (nameMsg) {
+                    const name = nameMsg.content.replace(/^my name is /i, "").trim();
+                    existing.forEach(s => {
+                        if (s.type === "greeting") {
+                            s.done = true;
+                            s.needsAction = false;
+                            s.data = { ...s.data, prefill_name: name };
+                        }
+                    });
+                }
+                // Upload form done if user sent a message with attachments
+                if (userMsgs.some((m: any) => m.attachments?.length > 0)) {
+                    existing.forEach(s => {
+                        if (s.type === "form" && s.line === "book") {
+                            s.done = true;
+                            s.needsAction = false;
+                        }
+                    });
+                }
+            };
+
             try {
                 // @ts-ignore — revolt.js v7 Channel
                 const msgs = await (channel as any).fetchMessages({ limit: 100 });
@@ -83,17 +112,21 @@ export function useOnboardingMessages(channelId: string | undefined) {
                     const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
                     if (step) existing.push(step);
                 }
+                applyUserReplies(existing, list);
                 if (existing.length > 0) setSteps(existing);
             } catch {
                 const existing: WizardStep[] = [];
+                const list: any[] = [];
                 // @ts-ignore
                 channel.messages?.forEach?.((msg: any) => {
+                    list.push(msg);
                     if (!msg?.content) return;
                     const parsed = parseCodeblock(msg.content);
                     if (!parsed) return;
                     const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
                     if (step) existing.push(step);
                 });
+                applyUserReplies(existing, list);
                 if (existing.length > 0) setSteps(existing);
             }
         })();
