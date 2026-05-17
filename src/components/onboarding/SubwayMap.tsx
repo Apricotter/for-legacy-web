@@ -126,7 +126,7 @@ interface LineConfig {
 }
 
 const LINES: LineConfig[] = [
-    { id: "book",   label: "BOOK",   color: "#F4B978" },
+    { id: "book",   label: "BOOK",   color: "#F5A623" },
     { id: "author", label: "AUTHOR", color: "#60a5fa" },
 ];
 

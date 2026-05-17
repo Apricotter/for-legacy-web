@@ -62,10 +62,9 @@ const Header = styled.div`
 const WizardTitle = styled.div`
     font-size: 10px;
     font-weight: 700;
-    color: #F4B978;
+    color: #F5A623;
     text-transform: uppercase;
     letter-spacing: 0.14em;
-    opacity: 0.7;
 `;
 
 const CloseBtn = styled.button`
@@ -169,9 +168,9 @@ const GreetNum = styled.div`
     width: 22px;
     height: 22px;
     border-radius: 6px;
-    background: rgba(244, 185, 120, 0.15);
-    border: 1px solid rgba(244, 185, 120, 0.3);
-    color: var(--accent);
+    background: rgba(245, 166, 35, 0.18);
+    border: 1px solid rgba(245, 166, 35, 0.45);
+    color: #F5A623;
     font-size: 11px;
     font-weight: 800;
     display: flex;
@@ -250,19 +249,23 @@ const UploadZone = styled.div<{ $dragging: boolean; $hasFile: boolean }>`
     &:hover { border-color: #F4B978; background: rgba(244,185,120,0.06); }
 `;
 const SubmitBtn = styled.button<{ $sending?: boolean }>`
-    background: ${p => p.$sending ? "rgba(244,185,120,0.7)" : "var(--accent)"};
-    color: #080c18;
+    background: ${p => p.$sending ? "rgba(245,166,35,0.6)" : "#F5A623"};
+    color: #1a0e00;
     border: none;
     border-radius: 8px;
     font-size: 14px;
     font-weight: 700;
-    padding: 11px 0;
+    padding: 12px 0;
     width: 100%;
     cursor: ${p => p.$sending ? "wait" : "pointer"};
     margin-top: 8px;
-    transition: background 0.15s, transform 0.1s;
-    letter-spacing: 0.01em;
-    &:hover:not(:disabled) { background: #f9c68e; }
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    letter-spacing: 0.02em;
+    box-shadow: 0 4px 20px rgba(245, 166, 35, 0.35);
+    &:hover:not(:disabled) {
+        background: #f9b830;
+        box-shadow: 0 6px 28px rgba(245, 166, 35, 0.5);
+    }
     &:active:not(:disabled) { transform: scale(0.99); }
 `;
 const SuccessMsg = styled.div`
