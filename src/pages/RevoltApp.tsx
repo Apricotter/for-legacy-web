@@ -1,10 +1,10 @@
 import { Docked, OverlappingPanels, ShowIf } from "react-overlapping-panels";
 import { Switch, Route, useLocation, Link } from "react-router-dom";
 import styled, { css } from "styled-components/macro";
+import { observer } from "mobx-react-lite";
 
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 
-import { useRef } from "preact/hooks";
 import { useApplicationState } from "../mobx/State";
 import { useClient } from "../controllers/client/ClientController";
 import { modalController } from "../controllers/modals/ModalController";
@@ -92,36 +92,36 @@ const Routes = styled.div.attrs({ "data-component": "routes" })<{
         `}
 `;
 
-export default function App() {
-    const path = useLocation().pathname;
+// Watches MobX server state reactively and fires the wizard exactly once
+const WizardLauncher = observer(() => {
     const client = useClient();
     const state = useApplicationState();
-    const wizardLaunched = useRef(false);
+    const launched = useRef(false);
 
-    // Launch onboarding wizard as soon as #start-here is available — regardless of current route
     useEffect(() => {
-        console.log("[wizard] effect firing — client:", !!client, "launched:", wizardLaunched.current, "servers:", state.ordering.orderedServers.length);
-        if (!client || wizardLaunched.current) return;
+        if (!client || launched.current) return;
         const studioServer =
             state.ordering.orderedServers.find((s: any) => s.name?.toLowerCase().includes("studio"))
             ?? state.ordering.orderedServers[0];
-        console.log("[wizard] studioServer:", (studioServer as any)?._id, (studioServer as any)?.name);
         if (!studioServer) return;
         const channels = (studioServer as any).channel_ids
             ?.map((id: string) => client.channels.get(id))
             .filter(Boolean) ?? [];
-        console.log("[wizard] channels:", channels.map((c: any) => c?.name));
         const startHere = channels.find((c: any) => c?.name === "start-here");
-        console.log("[wizard] startHere:", (startHere as any)?._id);
         if (!startHere) return;
-        wizardLaunched.current = true;
-        console.log("[wizard] pushing modal");
+        launched.current = true;
         modalController.push({
             type: "author_onboarding",
             serverId: (studioServer as any)._id,
             channelId: (startHere as any)._id,
         });
-    }, [client, state.ordering.orderedServers.length]);
+    });
+
+    return null;
+});
+
+export default function App() {
+    const path = useLocation().pathname;
 
     const fixedBottomNav =
         path === "/" ||
@@ -271,6 +271,7 @@ export default function App() {
                     </Routes>
                     <ContextMenus />
                 </OverlappingPanels>
+                <WizardLauncher />
             </AppContainer>
         </>
     );
