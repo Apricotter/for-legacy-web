@@ -543,7 +543,7 @@ function FormStep({
                             placeholder={field.placeholder ?? ""}
                             onInput={set(field.key)}
                         />
-                    )}
+                    ) : null}
                 </FormField>
             ))}
             <SubmitBtn $sending={sending} $disabled={!canSubmit} onClick={handleSubmit}>
