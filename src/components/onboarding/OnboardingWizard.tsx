@@ -707,7 +707,7 @@ export default function OnboardingWizard({
     function next() { if (canNext) setActiveIndex(i => i + 1); }
 
     return (
-        <Overlay onClick={e => e.target === e.currentTarget && onClose()}>
+        <Overlay>
             <Shell>
                 <Header>
                     <WizardTitle>Studio Setup</WizardTitle>
