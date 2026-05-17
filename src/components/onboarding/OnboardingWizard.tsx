@@ -536,7 +536,7 @@ function FormStep({
                                 <option key={o} value={o}>{o}</option>
                             ))}
                         </FormSelect>
-                    ) : (
+                    ) : field.type === "text" || field.type === "input" ? (
                         <FormInput
                             type="text"
                             value={values[field.key] ?? ""}
