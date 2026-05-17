@@ -706,7 +706,7 @@ export default function OnboardingWizard({
     const activeStep = steps[displayIndex];
 
     const canPrev = displayIndex > 0;
-    const canNext = displayIndex < steps.length - 1;
+    const canNext = displayIndex < steps.length - 1 && !(activeStep?.needsAction && !activeStep?.done);
 
     function prev() { if (canPrev) setActiveIndex(i => i - 1); }
     function next() { if (canNext) setActiveIndex(i => i + 1); }
