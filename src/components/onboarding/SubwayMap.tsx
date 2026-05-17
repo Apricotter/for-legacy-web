@@ -140,6 +140,10 @@ export default function SubwayMap({ steps, activeIndex, onSelectStep }: SubwayMa
 
                 if (lineSteps.length === 0) return null;
 
+                const lineIsActive = lineSteps.some(({ globalIndex }) => globalIndex === activeIndex);
+                const lineHasDone  = lineSteps.some(({ step }) => step.done);
+                if (!lineIsActive && !lineHasDone) return null;
+
                 return (
                     <LineRow key={line.id}>
                         <LineLabel>{line.label}</LineLabel>
