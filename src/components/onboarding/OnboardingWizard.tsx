@@ -248,25 +248,25 @@ const UploadZone = styled.div<{ $dragging: boolean; $hasFile: boolean }>`
     transition: border-color 0.15s, background 0.15s;
     &:hover { border-color: #F4B978; background: rgba(244,185,120,0.06); }
 `;
-const SubmitBtn = styled.button<{ $sending?: boolean }>`
-    background: ${p => p.$sending ? "rgba(245,166,35,0.6)" : "#F5A623"};
-    color: #1a0e00;
+const SubmitBtn = styled.button<{ $sending?: boolean; $disabled?: boolean }>`
+    background: ${p => p.$disabled ? "rgba(245,166,35,0.25)" : p.$sending ? "rgba(245,166,35,0.6)" : "#F5A623"};
+    color: ${p => p.$disabled ? "rgba(255,255,255,0.3)" : "#1a0e00"};
     border: none;
     border-radius: 8px;
     font-size: 14px;
     font-weight: 700;
     padding: 12px 0;
     width: 100%;
-    cursor: ${p => p.$sending ? "wait" : "pointer"};
+    cursor: ${p => p.$disabled ? "not-allowed" : p.$sending ? "wait" : "pointer"};
     margin-top: 8px;
     transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
     letter-spacing: 0.02em;
-    box-shadow: 0 4px 20px rgba(245, 166, 35, 0.35);
-    &:hover:not(:disabled) {
-        background: #f9b830;
-        box-shadow: 0 6px 28px rgba(245, 166, 35, 0.5);
+    box-shadow: ${p => p.$disabled ? "none" : "0 4px 20px rgba(245, 166, 35, 0.35)"};
+    &:hover:not([disabled]) {
+        background: ${p => p.$disabled ? undefined : "#f9b830"};
+        box-shadow: ${p => p.$disabled ? "none" : "0 6px 28px rgba(245, 166, 35, 0.5)"};
     }
-    &:active:not(:disabled) { transform: scale(0.99); }
+    &:active { transform: ${p => p.$disabled ? "none" : "scale(0.99)"}; }
 `;
 const SuccessMsg = styled.div`
     color: #65E572;
@@ -425,8 +425,11 @@ function FormStep({
     const set = (key: string) => (e: Event) =>
         setValues(v => ({ ...v, [key]: (e.target as HTMLInputElement).value }));
 
+    const hasUploadField = (schema?.fields ?? []).some((f: any) => f.type === "upload" || f.type === "file");
+    const canSubmit = !hasUploadField || !!uploadFile_;
+
     async function handleSubmit() {
-        if (sending || submitted) return;
+        if (sending || submitted || !canSubmit) return;
         setSending(true);
         try {
             const ch = (client as any)?.channels?.get(channelId);
@@ -524,7 +527,7 @@ function FormStep({
                     )}
                 </FormField>
             ))}
-            <SubmitBtn $sending={sending} onClick={handleSubmit}>
+            <SubmitBtn $sending={sending} $disabled={!canSubmit} onClick={handleSubmit}>
                 {sending ? "Sending…" : (schema?.submit ?? "Submit")}
             </SubmitBtn>
         </div>
