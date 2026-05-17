@@ -100,17 +100,22 @@ export default function App() {
 
     // Launch onboarding wizard as soon as #start-here is available — regardless of current route
     useEffect(() => {
+        console.log("[wizard] effect firing — client:", !!client, "launched:", wizardLaunched.current, "servers:", state.ordering.orderedServers.length);
         if (!client || wizardLaunched.current) return;
         const studioServer =
             state.ordering.orderedServers.find((s: any) => s.name?.toLowerCase().includes("studio"))
             ?? state.ordering.orderedServers[0];
+        console.log("[wizard] studioServer:", (studioServer as any)?._id, (studioServer as any)?.name);
         if (!studioServer) return;
         const channels = (studioServer as any).channel_ids
             ?.map((id: string) => client.channels.get(id))
             .filter(Boolean) ?? [];
+        console.log("[wizard] channels:", channels.map((c: any) => c?.name));
         const startHere = channels.find((c: any) => c?.name === "start-here");
+        console.log("[wizard] startHere:", (startHere as any)?._id);
         if (!startHere) return;
         wizardLaunched.current = true;
+        console.log("[wizard] pushing modal");
         modalController.push({
             type: "author_onboarding",
             serverId: (studioServer as any)._id,
