@@ -28,7 +28,7 @@ function blockToStep(type: string, data: any, messageId: string): WizardStep | n
     const id = messageId;
     switch (type) {
         case "greeting":
-            return { id, type: "greeting", line: "author", label: "Welcome", data, done: false, needsAction: false, messageId };
+            return { id, type: "greeting", line: "author", label: "Welcome", data, done: false, needsAction: true, messageId };
         case "form":
             if (data?.fields?.some((f: any) => f.type === "upload" || f.key === "book_file")) {
                 return { id, type: "form", line: "book", label: "Upload", data, done: false, needsAction: true, messageId };

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "preact/hooks";
+import { useState, useCallback, useEffect } from "preact/hooks";
 import styled from "styled-components/macro";
 
 import { uploadFile } from "../../controllers/client/jsx/legacy/FileUploads";
@@ -402,13 +402,35 @@ const EmptyState = styled.div`
 
 // ── step renderers ────────────────────────────────────────────────────────────
 
-function GreetingStep({ data }: { data: any }) {
+function GreetingStep({ data, onDone }: { data: any; onDone: (name: string) => void }) {
+    const client = useClient();
+    const fallback = (client as any)?.user?.username ?? (client as any)?.user?.display_name ?? "";
+    const [name, setName] = useState<string>(data?.prefill_name || fallback);
+
+    useEffect(() => {
+        if (!name && fallback) setName(fallback);
+    }, [fallback]);
+
+    const canStart = name.trim().length > 0;
+
     return (
         <div>
             <GreetTitle>{data?.title ?? "Welcome"}</GreetTitle>
             {data?.description && <GreetDesc>{data.description}</GreetDesc>}
+
+            <div style={{ marginBottom: 20 }}>
+                <FormLabel as="div" style={{ marginBottom: 6 }}>What should we call you?</FormLabel>
+                <FormInput
+                    type="text"
+                    value={name}
+                    placeholder="Your name"
+                    onInput={(e: Event) => setName((e.target as HTMLInputElement).value)}
+                    style={{ fontSize: 16 }}
+                />
+            </div>
+
             {Array.isArray(data?.steps) && data.steps.length > 0 && (
-                <GreetSteps>
+                <GreetSteps style={{ marginBottom: 20 }}>
                     {data.steps.map((s: string, i: number) => (
                         <GreetStep key={i}>
                             <GreetNum>{i + 1}</GreetNum>
@@ -417,6 +439,10 @@ function GreetingStep({ data }: { data: any }) {
                     ))}
                 </GreetSteps>
             )}
+
+            <SubmitBtn $disabled={!canStart} onClick={() => canStart && onDone(name.trim())}>
+                Get Started
+            </SubmitBtn>
         </div>
     );
 }
@@ -660,7 +686,7 @@ function StepContent({
     onDone: () => void;
 }) {
     switch (step.type) {
-        case "greeting":   return <GreetingStep data={step.data} />;
+        case "greeting":   return <GreetingStep data={step.data} onDone={() => onDone()} />;
         case "form":       return <FormStep step={step} channelId={channelId} onDone={onDone} />;
         case "checkpoint": return <CheckpointStep step={step} channelId={channelId} onDone={onDone} />;
         case "processing": return <ProcessingStep data={step.data} />;
