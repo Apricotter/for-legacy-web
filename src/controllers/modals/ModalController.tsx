@@ -52,6 +52,7 @@ import SignOutSessions from "./components/SignOutSessions";
 import SignedOut from "./components/SignedOut";
 import UserPicker from "./components/UserPicker";
 import PolicyChanges from "./components/PolicyChanges";
+import OnboardingWizard from "../../components/onboarding/OnboardingWizard";
 import { OnboardingModal } from "./components/legacy/Onboarding";
 import { UserProfile } from "./components/legacy/UserProfile";
 import { Modal } from "./types";
@@ -300,4 +301,5 @@ export const modalController = new ModalControllerExtended({
     changelog_usernames: ChangelogUsernames,
     reset_bot_token: Confirmation,
     policy_changes: PolicyChanges,
+    author_onboarding: OnboardingWizard,
 });

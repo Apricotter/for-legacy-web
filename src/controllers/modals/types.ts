@@ -205,6 +205,11 @@ export type Modal = {
           type: "policy_changes";
           changes: PolicyChange[];
       }
+    | {
+          type: "author_onboarding";
+          serverId: string;
+          channelId: string;
+      }
 );
 
 export type ModalProps<T extends Modal["type"]> = Modal & { type: T } & {
