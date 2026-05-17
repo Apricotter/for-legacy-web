@@ -38,214 +38,235 @@ const Overlay = styled.div`
 const Shell = styled.div`
     position: relative;
     z-index: 2;
-    background: rgba(18, 10, 2, 0.82);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
+    background: rgba(14, 8, 2, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-top: 1px solid rgba(244, 185, 120, 0.35);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
     border-radius: 20px;
-    width: min(620px, calc(100vw - 32px));
+    width: min(600px, calc(100vw - 32px));
     max-height: calc(100vh - 64px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0,0,0,0.4);
 `;
 
 const Header = styled.div`
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 18px 22px 0;
+    padding: 16px 22px 0;
 `;
 
 const WizardTitle = styled.div`
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--accent);
     text-transform: uppercase;
-    letter-spacing: 0.10em;
+    letter-spacing: 0.14em;
+    opacity: 0.7;
 `;
 
 const CloseBtn = styled.button`
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--tertiary-foreground);
     font-size: 20px;
     cursor: pointer;
     padding: 0 4px;
     line-height: 1;
-    &:hover { color: rgba(255, 255, 255, 0.9); }
+    transition: color 0.15s;
+    &:hover { color: var(--foreground); }
 `;
 
 const ResetBtn = styled.button<{ $resetting?: boolean }>`
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--tertiary-foreground);
     font-size: 11px;
     cursor: ${p => p.$resetting ? "wait" : "pointer"};
     padding: 0;
     text-decoration: underline;
     opacity: ${p => p.$resetting ? 0.5 : 1};
-    &:hover { color: rgba(255, 255, 255, 0.7); }
+    transition: color 0.15s;
+    &:hover { color: var(--secondary-foreground); }
 `;
 
 const Content = styled.div`
     flex: 1;
     overflow-y: auto;
-    padding: 24px 28px;
+    padding: 22px 26px 26px;
     min-height: 180px;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--foreground);
 `;
 
 const NavBar = styled.div`
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 20px 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 10px 18px 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
 `;
 
 const NavBtn = styled.button<{ disabled?: boolean }>`
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: transparent;
+    border: 1px solid ${p => p.disabled ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.18)"};
     border-radius: 8px;
-    color: ${p => p.disabled ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.85)"};
+    color: ${p => p.disabled ? "var(--tertiary-foreground)" : "var(--secondary-foreground)"};
     font-size: 13px;
     font-weight: 600;
     padding: 7px 18px;
     cursor: ${p => p.disabled ? "default" : "pointer"};
-    transition: background 0.15s;
-    &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
+    transition: border-color 0.15s, color 0.15s;
+    &:hover:not(:disabled) {
+        border-color: rgba(255,255,255,0.35);
+        color: var(--foreground);
+    }
 `;
 
 const StepCount = styled.div`
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.35);
+    font-size: 11px;
+    color: var(--tertiary-foreground);
+    letter-spacing: 0.04em;
 `;
 
 // ── step content ──────────────────────────────────────────────────────────────
 
 // Greeting
 const GreetTitle = styled.div`
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 800;
-    color: rgba(255, 255, 255, 0.95);
-    margin-bottom: 10px;
+    color: var(--foreground);
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
 `;
 const GreetDesc = styled.div`
     font-size: 14px;
-    color: rgba(255, 255, 255, 0.6);
-    line-height: 1.6;
-    margin-bottom: 14px;
+    color: var(--secondary-foreground);
+    line-height: 1.65;
+    margin-bottom: 20px;
 `;
 const GreetSteps = styled.div`
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    overflow: hidden;
 `;
 const GreetStep = styled.div`
     display: flex;
-    align-items: flex-start;
-    gap: 10px;
+    align-items: center;
+    gap: 14px;
     font-size: 13px;
-    color: var(--foreground);
+    color: var(--secondary-foreground);
+    padding: 11px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    &:last-child { border-bottom: none; }
 `;
 const GreetNum = styled.div`
     width: 22px;
     height: 22px;
-    border-radius: 50%;
-    background: #F4B978;
-    color: #080c18;
+    border-radius: 6px;
+    background: rgba(244, 185, 120, 0.15);
+    border: 1px solid rgba(244, 185, 120, 0.3);
+    color: var(--accent);
     font-size: 11px;
     font-weight: 800;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    margin-top: 1px;
 `;
 
 // Form
 const FormTitle = styled.div`
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.95);
-    margin-bottom: 16px;
+    color: var(--foreground);
+    margin-bottom: 18px;
+    letter-spacing: -0.01em;
 `;
 const FormField = styled.div`
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 6px;
     margin-bottom: 14px;
 `;
 const FormLabel = styled.label`
     font-size: 11px;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--tertiary-foreground);
     text-transform: uppercase;
     letter-spacing: 0.07em;
 `;
 const FormInput = styled.input`
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--primary-background);
+    border: 1px solid var(--tertiary-background);
     border-radius: 8px;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--foreground);
     font-size: 14px;
     padding: 9px 13px;
     outline: none;
-    &::placeholder { color: rgba(255,255,255,0.3); }
-    &:focus { border-color: #f4b978; }
+    transition: border-color 0.15s;
+    &::placeholder { color: var(--tertiary-foreground); }
+    &:focus { border-color: var(--accent); }
 `;
 const FormTextarea = styled.textarea`
-    background: rgba(0, 0, 0, 0.35);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--primary-background);
+    border: 1px solid var(--tertiary-background);
     border-radius: 8px;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--foreground);
     font-size: 14px;
     padding: 9px 13px;
     outline: none;
     resize: vertical;
     min-height: 80px;
-    &::placeholder { color: rgba(255,255,255,0.3); }
-    &:focus { border-color: #f4b978; }
+    transition: border-color 0.15s;
+    &::placeholder { color: var(--tertiary-foreground); }
+    &:focus { border-color: var(--accent); }
 `;
 const FormSelect = styled.select`
-    background: rgba(18, 10, 2, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: var(--primary-background);
+    border: 1px solid var(--tertiary-background);
     border-radius: 8px;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--foreground);
     font-size: 14px;
     padding: 9px 13px;
     outline: none;
 `;
 const UploadZone = styled.div<{ $dragging: boolean; $hasFile: boolean }>`
-    border: 2px dashed ${p => p.$dragging || p.$hasFile ? "#F4B978" : "var(--tertiary-background)"};
+    border: 1px dashed ${p => p.$dragging || p.$hasFile ? "var(--accent)" : "var(--tertiary-background)"};
     border-radius: 10px;
-    padding: 36px 24px;
+    padding: 40px 24px;
     text-align: center;
     cursor: pointer;
-    background: ${p => p.$dragging ? "rgba(244,185,120,0.08)" : p.$hasFile ? "rgba(244,185,120,0.05)" : "var(--primary-background)"};
-    color: ${p => p.$hasFile ? "#F4B978" : "var(--secondary-foreground)"};
-    font-size: 14px;
-    font-weight: ${p => p.$hasFile ? "600" : "400"};
+    background: ${p =>
+        p.$hasFile   ? "rgba(244,185,120,0.06)" :
+        p.$dragging  ? "rgba(244,185,120,0.08)" :
+        "var(--primary-background)"};
     transition: border-color 0.15s, background 0.15s;
-    &:hover { border-color: #F4B978; background: rgba(244,185,120,0.06); }
+    &:hover { border-color: var(--accent); background: rgba(244,185,120,0.05); }
 `;
 const SubmitBtn = styled.button<{ $sending?: boolean }>`
-    background: var(--accent);
-    color: var(--accent-contrast, #000);
+    background: ${p => p.$sending ? "rgba(244,185,120,0.7)" : "var(--accent)"};
+    color: #080c18;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 14px;
     font-weight: 700;
-    padding: 10px 24px;
+    padding: 11px 0;
+    width: 100%;
     cursor: ${p => p.$sending ? "wait" : "pointer"};
-    opacity: ${p => p.$sending ? 0.7 : 1};
-    margin-top: 6px;
-    transition: opacity 0.15s;
+    margin-top: 8px;
+    transition: background 0.15s, transform 0.1s;
+    letter-spacing: 0.01em;
+    &:hover:not(:disabled) { background: #f9c68e; }
+    &:active:not(:disabled) { transform: scale(0.99); }
 `;
 const SuccessMsg = styled.div`
-    color: #4ade80;
+    color: var(--success);
     font-size: 14px;
     font-weight: 600;
     padding: 12px 0;
@@ -253,26 +274,28 @@ const SuccessMsg = styled.div`
 
 // Checkpoint
 const CheckpointTitle = styled.div`
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.95);
+    color: var(--foreground);
     margin-bottom: 6px;
+    letter-spacing: -0.01em;
 `;
 const CheckpointSub = styled.div`
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.55);
-    margin-bottom: 16px;
+    color: var(--secondary-foreground);
+    margin-bottom: 18px;
+    line-height: 1.5;
 `;
 const CharGroup = styled.div`
     margin-bottom: 14px;
 `;
 const CharGroupLabel = styled.div`
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.09em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.35);
-    margin-bottom: 6px;
+    color: var(--tertiary-foreground);
+    margin-bottom: 7px;
 `;
 const CharList = styled.div`
     display: flex;
@@ -281,42 +304,49 @@ const CharList = styled.div`
 `;
 const CharChip = styled.div<{ $role?: "Main" | "Supporting" | "Minor" }>`
     background: ${p =>
-        p.$role === "Main"       ? "rgba(244,185,120,0.15)" :
-        p.$role === "Supporting" ? "rgba(96,165,250,0.12)"  :
-        "var(--tertiary-background)"};
+        p.$role === "Main"       ? "rgba(244,185,120,0.12)" :
+        p.$role === "Supporting" ? "rgba(96,165,250,0.10)"  :
+        "rgba(255,255,255,0.05)"};
     border: 1px solid ${p =>
-        p.$role === "Main"       ? "#F4B978" :
-        p.$role === "Supporting" ? "#60a5fa"  :
-        "var(--tertiary-background)"};
+        p.$role === "Main"       ? "rgba(244,185,120,0.4)" :
+        p.$role === "Supporting" ? "rgba(96,165,250,0.35)"  :
+        "rgba(255,255,255,0.1)"};
     border-radius: 20px;
     padding: 4px 12px;
     font-size: 13px;
-    color: var(--foreground);
+    color: ${p =>
+        p.$role === "Main"       ? "var(--accent)" :
+        p.$role === "Supporting" ? "#93c5fd"        :
+        "var(--secondary-foreground)"};
 `;
 const CheckpointActions = styled.div`
     display: flex;
     gap: 10px;
-    margin-top: 18px;
+    margin-top: 20px;
 `;
 const ConfirmBtn = styled.button`
-    background: #4ade80;
-    color: #0a1f0a;
-    border: none;
-    border-radius: 6px;
+    background: rgba(101, 229, 114, 0.12);
+    color: var(--success);
+    border: 1px solid rgba(101, 229, 114, 0.35);
+    border-radius: 8px;
     font-size: 14px;
     font-weight: 700;
     padding: 10px 22px;
     cursor: pointer;
+    transition: background 0.15s;
+    &:hover { background: rgba(101, 229, 114, 0.2); }
 `;
 const EditBtn = styled.button`
-    background: var(--tertiary-background);
-    color: var(--foreground);
-    border: none;
-    border-radius: 6px;
+    background: transparent;
+    color: var(--secondary-foreground);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
     font-size: 14px;
     font-weight: 600;
     padding: 10px 22px;
     cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    &:hover { border-color: rgba(255,255,255,0.3); color: var(--foreground); }
 `;
 
 // Processing
@@ -324,15 +354,15 @@ const ProcessWrap = styled.div`
     display: flex;
     align-items: center;
     gap: 14px;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--secondary-foreground);
     font-size: 14px;
     padding: 8px 0;
 `;
 const Spinner = styled.div`
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.12);
-    border-top-color: #f4b978;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--tertiary-background);
+    border-top-color: var(--accent);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -340,7 +370,7 @@ const Spinner = styled.div`
 `;
 
 const EmptyState = styled.div`
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--tertiary-foreground);
     font-size: 14px;
     text-align: center;
     padding: 32px 0;
@@ -457,12 +487,14 @@ function FormStep({
                             }}
                         >
                             {uploadFile_ ? (
-                                <>✓ {uploadFile_.name}</>
+                                <div style={{ color: "var(--accent)", fontWeight: 600, fontSize: 14 }}>
+                                    ✓ &nbsp;{uploadFile_.name}
+                                </div>
                             ) : (
-                                <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
-                                    <div style={{ fontSize: 28, lineHeight: 1 }}>📄</div>
-                                    <div style={{ fontWeight: 600, color: "var(--foreground)" }}>Drop your manuscript here</div>
-                                    <div style={{ fontSize: 12 }}>PDF, EPUB or TXT · click to browse</div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
+                                    <div style={{ fontSize: 32, lineHeight: 1 }}>📖</div>
+                                    <div style={{ fontWeight: 700, color: "var(--foreground)", fontSize: 15 }}>Drop your manuscript here</div>
+                                    <div style={{ fontSize: 12, color: "var(--tertiary-foreground)" }}>PDF, EPUB or TXT &nbsp;·&nbsp; or click to browse</div>
                                 </div>
                             )}
                         </UploadZone>
