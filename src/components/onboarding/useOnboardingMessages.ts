@@ -69,21 +69,26 @@ export function useOnboardingMessages(channelId: string | undefined) {
         if (!channel) return;
 
         (async () => {
+            console.log("[wizard] fetching messages for channel", channelId, "channel obj keys:", Object.keys(channel as any).slice(0, 20));
             try {
                 // @ts-ignore — revolt.js v7 Channel
                 const msgs = await (channel as any).fetchMessages({ limit: 100 });
+                console.log("[wizard] fetchMessages raw result:", msgs);
                 const list: any[] = Array.isArray(msgs) ? msgs : (msgs?.messages ?? []);
+                console.log("[wizard] message list length:", list.length, "first:", list[0]);
                 const existing: WizardStep[] = [];
                 for (const msg of list) {
+                    console.log("[wizard] msg content:", msg?.content?.slice(0, 80));
                     if (!msg?.content) continue;
                     const parsed = parseCodeblock(msg.content);
                     if (!parsed) continue;
                     const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
                     if (step) existing.push(step);
                 }
+                console.log("[wizard] existing steps found:", existing.length);
                 if (existing.length > 0) setSteps(existing);
-            } catch {
-                // fetchMessages failed — fall back to in-memory collection
+            } catch (e) {
+                console.warn("[wizard] fetchMessages failed:", e, "— trying in-memory");
                 const existing: WizardStep[] = [];
                 // @ts-ignore
                 channel.messages?.forEach?.((msg: any) => {
@@ -93,6 +98,7 @@ export function useOnboardingMessages(channelId: string | undefined) {
                     const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
                     if (step) existing.push(step);
                 });
+                console.log("[wizard] in-memory steps found:", existing.length);
                 if (existing.length > 0) setSteps(existing);
             }
         })();
