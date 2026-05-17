@@ -100,34 +100,39 @@ const Content = styled.div`
     color: rgba(255,255,255,0.92);
 `;
 
-const NavBar = styled.div`
+const ModalWrapper = styled.div`
+    position: relative;
+    z-index: 2;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 10px 18px 14px;
-    border-top: 1px solid rgba(255, 255, 255, 0.07);
 `;
 
-const NavBtn = styled.button<{ disabled?: boolean }>`
-    background: transparent;
-    border: 1px solid ${p => p.disabled ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.18)"};
-    border-radius: 8px;
-    color: ${p => p.disabled ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.7)"};
-    font-size: 13px;
-    font-weight: 600;
-    padding: 7px 18px;
-    cursor: ${p => p.disabled ? "default" : "pointer"};
-    transition: border-color 0.15s, color 0.15s;
-    &:hover:not(:disabled) {
-        border-color: rgba(255,255,255,0.35);
-        color: rgba(255,255,255,0.95);
+const DomeBtn = styled.button<{ $side: "left" | "right" }>`
+    position: absolute;
+    ${p => p.$side === "left" ? "right: 100%;" : "left: 100%;"}
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 80px;
+    background: rgba(245, 166, 35, 0.15);
+    border: 1px solid rgba(245, 166, 35, 0.4);
+    ${p => p.$side === "left"
+        ? "border-radius: 40px 0 0 40px; border-right: none;"
+        : "border-radius: 0 40px 40px 0; border-left: none;"}
+    color: #F5A623;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 0;
+    &:hover {
+        background: rgba(245, 166, 35, 0.28);
+        color: #fff;
     }
-`;
-
-const StepCount = styled.div`
-    font-size: 11px;
-    color: rgba(255,255,255,0.35);
-    letter-spacing: 0.04em;
 `;
 
 // ── step content ──────────────────────────────────────────────────────────────
@@ -708,48 +713,46 @@ export default function OnboardingWizard({
 
     return (
         <Overlay>
-            <Shell>
-                <Header>
-                    <WizardTitle>Studio Setup</WizardTitle>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <ResetBtn $resetting={resetting} onClick={handleReset}>
-                            {resetting ? "Resetting…" : "Start over"}
-                        </ResetBtn>
-                        <CloseBtn onClick={onClose}>×</CloseBtn>
-                    </div>
-                </Header>
+            <ModalWrapper>
+                {canPrev && (
+                    <DomeBtn $side="left" onClick={prev} title="Back">‹</DomeBtn>
+                )}
+                <Shell>
+                    <Header>
+                        <WizardTitle>Studio Setup</WizardTitle>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <ResetBtn $resetting={resetting} onClick={handleReset}>
+                                {resetting ? "Resetting…" : "Start over"}
+                            </ResetBtn>
+                            <CloseBtn onClick={onClose}>×</CloseBtn>
+                        </div>
+                    </Header>
 
-                <SubwayMap
-                    steps={steps}
-                    activeIndex={displayIndex}
-                    onSelectStep={setActiveIndex}
-                />
+                    <SubwayMap
+                        steps={steps}
+                        activeIndex={displayIndex}
+                        onSelectStep={setActiveIndex}
+                    />
 
-                <Content>
-                    {steps.length === 0 ? (
-                        <EmptyState>Waiting for Otto…</EmptyState>
-                    ) : activeStep ? (
-                        <StepContent
-                            step={activeStep}
-                            channelId={channelId}
-                            onDone={() => {
-                                markDone(activeStep.id);
-                                if (canNext) setActiveIndex(i => i + 1);
-                            }}
-                        />
-                    ) : null}
-                </Content>
-
-                <NavBar>
-                    <NavBtn disabled={!canPrev} onClick={prev}>← Back</NavBtn>
-                    <StepCount>
-                        {steps.length > 0
-                            ? `${displayIndex + 1} / ${steps.length}`
-                            : "—"}
-                    </StepCount>
-                    <NavBtn disabled={!canNext} onClick={next}>Next →</NavBtn>
-                </NavBar>
-            </Shell>
+                    <Content>
+                        {steps.length === 0 ? (
+                            <EmptyState>Waiting for Otto…</EmptyState>
+                        ) : activeStep ? (
+                            <StepContent
+                                step={activeStep}
+                                channelId={channelId}
+                                onDone={() => {
+                                    markDone(activeStep.id);
+                                    if (canNext) setActiveIndex(i => i + 1);
+                                }}
+                            />
+                        ) : null}
+                    </Content>
+                </Shell>
+                {canNext && (
+                    <DomeBtn $side="right" onClick={next} title="Next">›</DomeBtn>
+                )}
+            </ModalWrapper>
         </Overlay>
     );
 }
