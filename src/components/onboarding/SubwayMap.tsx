@@ -1,21 +1,21 @@
 import styled from "styled-components/macro";
 import { WizardStep } from "./useOnboardingMessages";
 
-// ── styled ────────────────────────────────────────────────────────────────────
-
 const MapWrap = styled.div`
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding: 14px 20px 12px;
+    padding: 16px 20px 10px;
     background: var(--secondary-background);
     border-bottom: 1px solid var(--tertiary-background);
+    display: flex;
+    flex-direction: column;
+    gap: 0;
 `;
 
 const LineRow = styled.div`
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0;
+    padding-bottom: 24px;
+    &:last-child { padding-bottom: 4px; }
 `;
 
 const LineLabel = styled.div`
@@ -24,37 +24,46 @@ const LineLabel = styled.div`
     letter-spacing: 0.08em;
     color: var(--tertiary-foreground);
     text-transform: uppercase;
-    width: 62px;
+    width: 58px;
     flex-shrink: 0;
+    padding-top: 6px;
 `;
 
 const Track = styled.div`
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     flex: 1;
     min-width: 0;
+    padding-top: 6px;
 `;
 
-const Segment = styled.div<{ $done: boolean; $color: string }>`
+const StopCol = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+`;
+
+const Connector = styled.div<{ $done: boolean; $color: string }>`
     flex: 1;
     height: 2px;
+    margin-top: 8px;
     background: ${p => p.$done ? p.$color : "var(--tertiary-background)"};
     transition: background 0.3s;
+    min-width: 12px;
 `;
 
 const Stop = styled.button<{ $state: "done" | "active" | "pending" | "locked"; $color: string }>`
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     border: 2px solid ${p =>
-        p.$state === "done"    ? p.$color :
-        p.$state === "active"  ? p.$color :
-        p.$state === "pending" ? p.$color :
-        "var(--tertiary-background)"
+        p.$state === "locked" ? "var(--tertiary-background)" : p.$color
     };
     background: ${p =>
         p.$state === "done"   ? p.$color :
-        p.$state === "active" ? "var(--background)" :
+        p.$state === "active" ? "var(--secondary-background)" :
         "transparent"
     };
     cursor: ${p => p.$state === "locked" ? "default" : "pointer"};
@@ -66,10 +75,7 @@ const Stop = styled.button<{ $state: "done" | "active" | "pending" | "locked"; $
     transition: all 0.2s;
     outline: none;
     padding: 0;
-
-    &:focus-visible {
-        box-shadow: 0 0 0 2px var(--accent);
-    }
+    &:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
 `;
 
 const StopDot = styled.div<{ $color: string }>`
@@ -77,18 +83,6 @@ const StopDot = styled.div<{ $color: string }>`
     height: 6px;
     border-radius: 50%;
     background: ${p => p.$color};
-`;
-
-const StopLabel = styled.div<{ $active: boolean; $color: string }>`
-    position: absolute;
-    top: 22px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 9px;
-    font-weight: ${p => p.$active ? "700" : "500"};
-    color: ${p => p.$active ? p.$color : "var(--tertiary-foreground)"};
-    white-space: nowrap;
-    pointer-events: none;
 `;
 
 const NeedsYouDot = styled.div`
@@ -102,7 +96,22 @@ const NeedsYouDot = styled.div`
     border: 1px solid var(--secondary-background);
 `;
 
-// ── types ─────────────────────────────────────────────────────────────────────
+const StopLabel = styled.div<{ $active: boolean; $color: string }>`
+    font-size: 9px;
+    font-weight: ${p => p.$active ? "700" : "500"};
+    color: ${p => p.$active ? p.$color : "var(--tertiary-foreground)"};
+    white-space: nowrap;
+    text-align: center;
+`;
+
+const TrailingTrack = styled.div<{ $color: string }>`
+    flex: 2;
+    height: 2px;
+    margin-top: 8px;
+    background: var(--tertiary-background);
+    min-width: 20px;
+    opacity: 0.4;
+`;
 
 interface SubwayMapProps {
     steps: WizardStep[];
@@ -121,8 +130,6 @@ const LINES: LineConfig[] = [
     { id: "author", label: "AUTHOR", color: "#60a5fa" },
 ];
 
-// ── component ─────────────────────────────────────────────────────────────────
-
 export default function SubwayMap({ steps, activeIndex, onSelectStep }: SubwayMapProps) {
     return (
         <MapWrap>
@@ -138,41 +145,38 @@ export default function SubwayMap({ steps, activeIndex, onSelectStep }: SubwayMa
                         <LineLabel>{line.label}</LineLabel>
                         <Track>
                             {lineSteps.map(({ step, globalIndex }, pos) => {
-                                const isFirst = pos === 0;
-                                const prevDone = pos === 0 || lineSteps[pos - 1].step.done;
-
                                 const state =
-                                    step.done            ? "done"    :
-                                    globalIndex === activeIndex ? "active"  :
-                                    step.needsAction     ? "pending" :
+                                    step.done                    ? "done"    :
+                                    globalIndex === activeIndex  ? "active"  :
+                                    step.needsAction             ? "pending" :
                                     "locked";
 
                                 return (
                                     <>
-                                        {!isFirst && (
-                                            <Segment
+                                        {pos > 0 && (
+                                            <Connector
                                                 $done={lineSteps[pos - 1].step.done}
                                                 $color={line.color}
                                             />
                                         )}
-                                        <Stop
-                                            key={step.id}
-                                            $state={state}
-                                            $color={line.color}
-                                            onClick={() => state !== "locked" && onSelectStep(globalIndex)}
-                                            title={step.label}
-                                        >
-                                            {state === "done" && null}
-                                            {state === "active" && <StopDot $color={line.color} />}
-                                            {step.needsAction && !step.done && <NeedsYouDot />}
+                                        <StopCol key={step.id}>
+                                            <Stop
+                                                $state={state}
+                                                $color={line.color}
+                                                onClick={() => state !== "locked" && onSelectStep(globalIndex)}
+                                                title={step.label}
+                                            >
+                                                {state === "active" && <StopDot $color={line.color} />}
+                                                {step.needsAction && !step.done && <NeedsYouDot />}
+                                            </Stop>
                                             <StopLabel $active={globalIndex === activeIndex} $color={line.color}>
                                                 {step.label}
                                             </StopLabel>
-                                        </Stop>
+                                        </StopCol>
                                     </>
                                 );
                             })}
-                            <Segment $done={false} $color={line.color} style={{ flex: 2 }} />
+                            <TrailingTrack $color={line.color} />
                         </Track>
                     </LineRow>
                 );

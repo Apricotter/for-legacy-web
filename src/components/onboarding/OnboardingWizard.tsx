@@ -197,15 +197,17 @@ const FormSelect = styled.select`
     outline: none;
 `;
 const UploadZone = styled.div<{ $dragging: boolean; $hasFile: boolean }>`
-    border: 2px dashed ${p => p.$dragging || p.$hasFile ? "var(--accent)" : "var(--tertiary-background)"};
-    border-radius: 8px;
-    padding: 24px;
+    border: 2px dashed ${p => p.$dragging || p.$hasFile ? "#F4B978" : "var(--tertiary-background)"};
+    border-radius: 10px;
+    padding: 36px 24px;
     text-align: center;
     cursor: pointer;
-    background: ${p => p.$dragging ? "rgba(244,185,120,0.08)" : "var(--primary-background)"};
-    color: var(--secondary-foreground);
-    font-size: 13px;
+    background: ${p => p.$dragging ? "rgba(244,185,120,0.08)" : p.$hasFile ? "rgba(244,185,120,0.05)" : "var(--primary-background)"};
+    color: ${p => p.$hasFile ? "#F4B978" : "var(--secondary-foreground)"};
+    font-size: 14px;
+    font-weight: ${p => p.$hasFile ? "600" : "400"};
     transition: border-color 0.15s, background 0.15s;
+    &:hover { border-color: #F4B978; background: rgba(244,185,120,0.06); }
 `;
 const SubmitBtn = styled.button<{ $sending?: boolean }>`
     background: var(--accent);
@@ -432,7 +434,15 @@ function FormStep({
                                 inp.click();
                             }}
                         >
-                            {uploadFile_ ? uploadFile_.name : "Drop a file here or click to browse"}
+                            {uploadFile_ ? (
+                                <>✓ {uploadFile_.name}</>
+                            ) : (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
+                                    <div style={{ fontSize: 28, lineHeight: 1 }}>📄</div>
+                                    <div style={{ fontWeight: 600, color: "var(--foreground)" }}>Drop your manuscript here</div>
+                                    <div style={{ fontSize: 12 }}>PDF, EPUB or TXT · click to browse</div>
+                                </div>
+                            )}
                         </UploadZone>
                     ) : field.type === "textarea" ? (
                         <FormTextarea
