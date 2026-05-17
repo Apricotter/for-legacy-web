@@ -784,7 +784,7 @@ export default function OnboardingWizard({
                                 channelId={channelId}
                                 onDone={() => {
                                     markDone(activeStep.id);
-                                    if (canNext) setActiveIndex(i => i + 1);
+                                    setActiveIndex(i => Math.min(i + 1, steps.length - 1));
                                 }}
                             />
                         ) : null}
