@@ -62,22 +62,40 @@ export function useOnboardingMessages(channelId: string | undefined) {
     const client = useClient();
     const [steps, setSteps] = useState<WizardStep[]>([]);
 
-    // Load existing messages from the channel on mount
+    // Fetch existing messages from the API on mount (in-memory collection may be empty)
     useEffect(() => {
         if (!channelId || !client) return;
         const channel = client.channels.get(channelId);
         if (!channel) return;
 
-        const existing: WizardStep[] = [];
-        // @ts-ignore — messages is a MobX collection
-        channel.messages?.forEach?.((msg: any) => {
-            if (!msg?.content) return;
-            const parsed = parseCodeblock(msg.content);
-            if (!parsed) return;
-            const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
-            if (step) existing.push(step);
-        });
-        if (existing.length > 0) setSteps(existing);
+        (async () => {
+            try {
+                // @ts-ignore — revolt.js v7 Channel
+                const msgs = await (channel as any).fetchMessages({ limit: 100 });
+                const list: any[] = Array.isArray(msgs) ? msgs : (msgs?.messages ?? []);
+                const existing: WizardStep[] = [];
+                for (const msg of list) {
+                    if (!msg?.content) continue;
+                    const parsed = parseCodeblock(msg.content);
+                    if (!parsed) continue;
+                    const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
+                    if (step) existing.push(step);
+                }
+                if (existing.length > 0) setSteps(existing);
+            } catch {
+                // fetchMessages failed — fall back to in-memory collection
+                const existing: WizardStep[] = [];
+                // @ts-ignore
+                channel.messages?.forEach?.((msg: any) => {
+                    if (!msg?.content) return;
+                    const parsed = parseCodeblock(msg.content);
+                    if (!parsed) return;
+                    const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
+                    if (step) existing.push(step);
+                });
+                if (existing.length > 0) setSteps(existing);
+            }
+        })();
     }, [channelId, client]);
 
     // Listen for new messages in real-time
