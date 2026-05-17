@@ -236,17 +236,33 @@ const FormSelect = styled.select`
     outline: none;
 `;
 const UploadZone = styled.div<{ $dragging: boolean; $hasFile: boolean }>`
-    border: 1px dashed ${p => p.$dragging || p.$hasFile ? "#F4B978" : "rgba(255,255,255,0.18)"};
-    border-radius: 10px;
-    padding: 40px 24px;
+    border: 1px dashed ${p => p.$hasFile || p.$dragging ? "#F5A623" : "rgba(245,166,35,0.45)"};
+    border-radius: 12px;
+    padding: 32px 24px 28px;
     text-align: center;
     cursor: pointer;
     background: ${p =>
-        p.$hasFile   ? "rgba(244,185,120,0.07)" :
-        p.$dragging  ? "rgba(244,185,120,0.10)" :
-        "rgba(255,255,255,0.04)"};
+        p.$hasFile  ? "rgba(245,166,35,0.09)" :
+        p.$dragging ? "rgba(245,166,35,0.12)" :
+        "rgba(245,166,35,0.04)"};
     transition: border-color 0.15s, background 0.15s;
-    &:hover { border-color: #F4B978; background: rgba(244,185,120,0.06); }
+    &:hover { border-color: #F5A623; background: rgba(245,166,35,0.08); }
+`;
+
+const UploadCta = styled.div`
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #F5A623;
+    color: #1a0e00;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 20px;
+    border-radius: 7px;
+    margin-top: 14px;
+    letter-spacing: 0.01em;
+    box-shadow: 0 3px 14px rgba(245,166,35,0.4);
+    pointer-events: none;
 `;
 const SubmitBtn = styled.button<{ $sending?: boolean; $disabled?: boolean }>`
     background: ${p => p.$disabled ? "rgba(245,166,35,0.25)" : p.$sending ? "rgba(245,166,35,0.6)" : "#F5A623"};
@@ -493,14 +509,17 @@ function FormStep({
                             }}
                         >
                             {uploadFile_ ? (
-                                <div style={{ color: "var(--accent)", fontWeight: 600, fontSize: 14 }}>
-                                    ✓ &nbsp;{uploadFile_.name}
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
+                                    <div style={{ fontSize: 28, lineHeight: 1 }}>📖</div>
+                                    <div style={{ color: "#F5A623", fontWeight: 700, fontSize: 14 }}>✓ &nbsp;{uploadFile_.name}</div>
+                                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Click to change</div>
                                 </div>
                             ) : (
-                                <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "center" }}>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
                                     <div style={{ fontSize: 32, lineHeight: 1 }}>📖</div>
-                                    <div style={{ fontWeight: 700, color: "var(--foreground)", fontSize: 15 }}>Drop your manuscript here</div>
-                                    <div style={{ fontSize: 12, color: "var(--tertiary-foreground)" }}>PDF, EPUB or TXT &nbsp;·&nbsp; or click to browse</div>
+                                    <div style={{ fontWeight: 700, color: "rgba(255,255,255,0.9)", fontSize: 15 }}>Drop your manuscript here</div>
+                                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", marginBottom: 2 }}>PDF, EPUB or TXT</div>
+                                    <UploadCta>↑ &nbsp;Choose file</UploadCta>
                                 </div>
                             )}
                         </UploadZone>
