@@ -402,16 +402,31 @@ const EmptyState = styled.div`
 
 // ── step renderers ────────────────────────────────────────────────────────────
 
-function GreetingStep({ data, onDone }: { data: any; onDone: (name: string) => void }) {
+function GreetingStep({ data, channelId, onDone }: { data: any; channelId: string; onDone: () => void }) {
     const client = useClient();
     const fallback = (client as any)?.user?.username ?? (client as any)?.user?.display_name ?? "";
     const [name, setName] = useState<string>(data?.prefill_name || fallback);
+    const [sending, setSending] = useState(false);
 
     useEffect(() => {
         if (!name && fallback) setName(fallback);
     }, [fallback]);
 
     const canStart = name.trim().length > 0;
+
+    async function handleStart() {
+        if (!canStart || sending) return;
+        setSending(true);
+        try {
+            const ch = (client as any)?.channels?.get(channelId);
+            await ch?.sendMessage({ content: `My name is ${name.trim()}` });
+        } catch {
+            // non-fatal — still advance
+        } finally {
+            setSending(false);
+            onDone();
+        }
+    }
 
     return (
         <div>
@@ -440,8 +455,8 @@ function GreetingStep({ data, onDone }: { data: any; onDone: (name: string) => v
                 </GreetSteps>
             )}
 
-            <SubmitBtn $disabled={!canStart} onClick={() => canStart && onDone(name.trim())}>
-                Get Started
+            <SubmitBtn $sending={sending} $disabled={!canStart} onClick={handleStart}>
+                {sending ? "Starting…" : "Get Started"}
             </SubmitBtn>
         </div>
     );
@@ -686,7 +701,7 @@ function StepContent({
     onDone: () => void;
 }) {
     switch (step.type) {
-        case "greeting":   return <GreetingStep data={step.data} onDone={() => onDone()} />;
+        case "greeting":   return <GreetingStep data={step.data} channelId={channelId} onDone={() => onDone()} />;
         case "form":       return <FormStep step={step} channelId={channelId} onDone={onDone} />;
         case "checkpoint": return <CheckpointStep step={step} channelId={channelId} onDone={onDone} />;
         case "processing": return <ProcessingStep data={step.data} />;
