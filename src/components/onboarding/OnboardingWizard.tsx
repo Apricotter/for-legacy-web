@@ -14,59 +14,79 @@ const Overlay = styled.div`
     position: fixed;
     inset: 0;
     z-index: 200;
-    background: rgba(0, 0, 0, 0.72);
     display: flex;
     align-items: center;
     justify-content: center;
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: url("/assets/web/bg-library.webp") center / cover no-repeat;
+        transform: scaleX(-1);
+        z-index: 0;
+    }
+    &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: rgba(8, 5, 1, 0.72);
+        z-index: 1;
+    }
 `;
 
 const Shell = styled.div`
-    background: var(--secondary-background);
-    border-radius: 10px;
-    width: min(660px, calc(100vw - 32px));
+    position: relative;
+    z-index: 2;
+    background: rgba(18, 10, 2, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border-radius: 20px;
+    width: min(620px, calc(100vw - 32px));
     max-height: calc(100vh - 64px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
 `;
 
 const Header = styled.div`
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 20px 0;
+    padding: 18px 22px 0;
 `;
 
 const WizardTitle = styled.div`
-    font-size: 13px;
+    font-size: 11px;
     font-weight: 700;
-    color: var(--tertiary-foreground);
+    color: rgba(255, 255, 255, 0.4);
     text-transform: uppercase;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.10em;
 `;
 
 const CloseBtn = styled.button`
     background: none;
     border: none;
-    color: var(--tertiary-foreground);
+    color: rgba(255, 255, 255, 0.4);
     font-size: 20px;
     cursor: pointer;
     padding: 0 4px;
     line-height: 1;
-    &:hover { color: var(--foreground); }
+    &:hover { color: rgba(255, 255, 255, 0.9); }
 `;
 
 const ResetBtn = styled.button<{ $resetting?: boolean }>`
     background: none;
     border: none;
-    color: var(--tertiary-foreground);
+    color: rgba(255, 255, 255, 0.35);
     font-size: 11px;
     cursor: ${p => p.$resetting ? "wait" : "pointer"};
     padding: 0;
     text-decoration: underline;
     opacity: ${p => p.$resetting ? 0.5 : 1};
-    &:hover { color: var(--foreground); }
+    &:hover { color: rgba(255, 255, 255, 0.7); }
 `;
 
 const Content = styled.div`
@@ -74,6 +94,7 @@ const Content = styled.div`
     overflow-y: auto;
     padding: 24px 28px;
     min-height: 180px;
+    color: rgba(255, 255, 255, 0.9);
 `;
 
 const NavBar = styled.div`
@@ -81,40 +102,39 @@ const NavBar = styled.div`
     align-items: center;
     justify-content: space-between;
     padding: 12px 20px 16px;
-    border-top: 1px solid var(--tertiary-background);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 `;
 
 const NavBtn = styled.button<{ disabled?: boolean }>`
-    background: var(--tertiary-background);
-    border: none;
-    border-radius: 6px;
-    color: ${p => p.disabled ? "var(--tertiary-foreground)" : "var(--foreground)"};
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 8px;
+    color: ${p => p.disabled ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.85)"};
     font-size: 13px;
     font-weight: 600;
     padding: 7px 18px;
     cursor: ${p => p.disabled ? "default" : "pointer"};
-    opacity: ${p => p.disabled ? 0.4 : 1};
     transition: background 0.15s;
-    &:hover:not(:disabled) { background: var(--primary-background); }
+    &:hover:not(:disabled) { background: rgba(255, 255, 255, 0.12); }
 `;
 
 const StepCount = styled.div`
     font-size: 12px;
-    color: var(--tertiary-foreground);
+    color: rgba(255, 255, 255, 0.35);
 `;
 
 // ── step content ──────────────────────────────────────────────────────────────
 
 // Greeting
 const GreetTitle = styled.div`
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 800;
-    color: var(--foreground);
+    color: rgba(255, 255, 255, 0.95);
     margin-bottom: 10px;
 `;
 const GreetDesc = styled.div`
     font-size: 14px;
-    color: var(--secondary-foreground);
+    color: rgba(255, 255, 255, 0.6);
     line-height: 1.6;
     margin-bottom: 14px;
 `;
@@ -149,7 +169,7 @@ const GreetNum = styled.div`
 const FormTitle = styled.div`
     font-size: 16px;
     font-weight: 700;
-    color: var(--foreground);
+    color: rgba(255, 255, 255, 0.95);
     margin-bottom: 16px;
 `;
 const FormField = styled.div`
@@ -159,41 +179,43 @@ const FormField = styled.div`
     margin-bottom: 14px;
 `;
 const FormLabel = styled.label`
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--secondary-foreground);
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.45);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.07em;
 `;
 const FormInput = styled.input`
-    background: var(--primary-background);
-    border: 1px solid var(--tertiary-background);
-    border-radius: 6px;
-    color: var(--foreground);
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.9);
     font-size: 14px;
-    padding: 8px 12px;
+    padding: 9px 13px;
     outline: none;
-    &:focus { border-color: var(--accent); }
+    &::placeholder { color: rgba(255,255,255,0.3); }
+    &:focus { border-color: #f4b978; }
 `;
 const FormTextarea = styled.textarea`
-    background: var(--primary-background);
-    border: 1px solid var(--tertiary-background);
-    border-radius: 6px;
-    color: var(--foreground);
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.9);
     font-size: 14px;
-    padding: 8px 12px;
+    padding: 9px 13px;
     outline: none;
     resize: vertical;
     min-height: 80px;
-    &:focus { border-color: var(--accent); }
+    &::placeholder { color: rgba(255,255,255,0.3); }
+    &:focus { border-color: #f4b978; }
 `;
 const FormSelect = styled.select`
-    background: var(--primary-background);
-    border: 1px solid var(--tertiary-background);
-    border-radius: 6px;
-    color: var(--foreground);
+    background: rgba(18, 10, 2, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.9);
     font-size: 14px;
-    padding: 8px 12px;
+    padding: 9px 13px;
     outline: none;
 `;
 const UploadZone = styled.div<{ $dragging: boolean; $hasFile: boolean }>`
@@ -233,12 +255,12 @@ const SuccessMsg = styled.div`
 const CheckpointTitle = styled.div`
     font-size: 16px;
     font-weight: 700;
-    color: var(--foreground);
+    color: rgba(255, 255, 255, 0.95);
     margin-bottom: 6px;
 `;
 const CheckpointSub = styled.div`
     font-size: 13px;
-    color: var(--secondary-foreground);
+    color: rgba(255, 255, 255, 0.55);
     margin-bottom: 16px;
 `;
 const CharGroup = styled.div`
@@ -249,7 +271,7 @@ const CharGroupLabel = styled.div`
     font-weight: 700;
     letter-spacing: 0.07em;
     text-transform: uppercase;
-    color: var(--tertiary-foreground);
+    color: rgba(255, 255, 255, 0.35);
     margin-bottom: 6px;
 `;
 const CharList = styled.div`
@@ -302,15 +324,15 @@ const ProcessWrap = styled.div`
     display: flex;
     align-items: center;
     gap: 14px;
-    color: var(--secondary-foreground);
+    color: rgba(255, 255, 255, 0.55);
     font-size: 14px;
     padding: 8px 0;
 `;
 const Spinner = styled.div`
     width: 20px;
     height: 20px;
-    border: 2px solid var(--tertiary-background);
-    border-top-color: var(--accent);
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    border-top-color: #f4b978;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -318,7 +340,7 @@ const Spinner = styled.div`
 `;
 
 const EmptyState = styled.div`
-    color: var(--tertiary-foreground);
+    color: rgba(255, 255, 255, 0.35);
     font-size: 14px;
     text-align: center;
     padding: 32px 0;

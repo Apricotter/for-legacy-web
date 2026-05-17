@@ -2,9 +2,9 @@ import styled from "styled-components/macro";
 import { WizardStep } from "./useOnboardingMessages";
 
 const MapWrap = styled.div`
-    padding: 16px 20px 10px;
-    background: var(--secondary-background);
-    border-bottom: 1px solid var(--tertiary-background);
+    padding: 16px 22px 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -22,7 +22,7 @@ const LineLabel = styled.div`
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: var(--tertiary-foreground);
+    color: rgba(255, 255, 255, 0.35);
     text-transform: uppercase;
     width: 58px;
     flex-shrink: 0;
@@ -99,7 +99,7 @@ const NeedsYouDot = styled.div`
 const StopLabel = styled.div<{ $active: boolean; $color: string }>`
     font-size: 9px;
     font-weight: ${p => p.$active ? "700" : "500"};
-    color: ${p => p.$active ? p.$color : "var(--tertiary-foreground)"};
+    color: ${p => p.$active ? p.$color : "rgba(255,255,255,0.3)"};
     white-space: nowrap;
     text-align: center;
 `;
