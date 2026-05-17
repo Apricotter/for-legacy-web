@@ -62,7 +62,7 @@ const Header = styled.div`
 const WizardTitle = styled.div`
     font-size: 10px;
     font-weight: 700;
-    color: var(--accent);
+    color: #F4B978;
     text-transform: uppercase;
     letter-spacing: 0.14em;
     opacity: 0.7;
@@ -71,26 +71,26 @@ const WizardTitle = styled.div`
 const CloseBtn = styled.button`
     background: none;
     border: none;
-    color: var(--tertiary-foreground);
+    color: rgba(255,255,255,0.4);
     font-size: 20px;
     cursor: pointer;
     padding: 0 4px;
     line-height: 1;
     transition: color 0.15s;
-    &:hover { color: var(--foreground); }
+    &:hover { color: rgba(255,255,255,0.9); }
 `;
 
 const ResetBtn = styled.button<{ $resetting?: boolean }>`
     background: none;
     border: none;
-    color: var(--tertiary-foreground);
+    color: rgba(255,255,255,0.35);
     font-size: 11px;
     cursor: ${p => p.$resetting ? "wait" : "pointer"};
     padding: 0;
     text-decoration: underline;
     opacity: ${p => p.$resetting ? 0.5 : 1};
     transition: color 0.15s;
-    &:hover { color: var(--secondary-foreground); }
+    &:hover { color: rgba(255,255,255,0.65); }
 `;
 
 const Content = styled.div`
@@ -98,7 +98,7 @@ const Content = styled.div`
     overflow-y: auto;
     padding: 22px 26px 26px;
     min-height: 180px;
-    color: var(--foreground);
+    color: rgba(255,255,255,0.92);
 `;
 
 const NavBar = styled.div`
@@ -113,7 +113,7 @@ const NavBtn = styled.button<{ disabled?: boolean }>`
     background: transparent;
     border: 1px solid ${p => p.disabled ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.18)"};
     border-radius: 8px;
-    color: ${p => p.disabled ? "var(--tertiary-foreground)" : "var(--secondary-foreground)"};
+    color: ${p => p.disabled ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.7)"};
     font-size: 13px;
     font-weight: 600;
     padding: 7px 18px;
@@ -121,13 +121,13 @@ const NavBtn = styled.button<{ disabled?: boolean }>`
     transition: border-color 0.15s, color 0.15s;
     &:hover:not(:disabled) {
         border-color: rgba(255,255,255,0.35);
-        color: var(--foreground);
+        color: rgba(255,255,255,0.95);
     }
 `;
 
 const StepCount = styled.div`
     font-size: 11px;
-    color: var(--tertiary-foreground);
+    color: rgba(255,255,255,0.35);
     letter-spacing: 0.04em;
 `;
 
@@ -137,13 +137,13 @@ const StepCount = styled.div`
 const GreetTitle = styled.div`
     font-size: 24px;
     font-weight: 800;
-    color: var(--foreground);
+    color: rgba(255,255,255,0.95);
     margin-bottom: 8px;
     letter-spacing: -0.02em;
 `;
 const GreetDesc = styled.div`
     font-size: 14px;
-    color: var(--secondary-foreground);
+    color: rgba(255,255,255,0.58);
     line-height: 1.65;
     margin-bottom: 20px;
 `;
@@ -160,7 +160,7 @@ const GreetStep = styled.div`
     align-items: center;
     gap: 14px;
     font-size: 13px;
-    color: var(--secondary-foreground);
+    color: rgba(255,255,255,0.65);
     padding: 11px 14px;
     border-bottom: 1px solid rgba(255,255,255,0.06);
     &:last-child { border-bottom: none; }
@@ -184,7 +184,7 @@ const GreetNum = styled.div`
 const FormTitle = styled.div`
     font-size: 18px;
     font-weight: 700;
-    color: var(--foreground);
+    color: rgba(255,255,255,0.95);
     margin-bottom: 18px;
     letter-spacing: -0.01em;
 `;
@@ -197,57 +197,57 @@ const FormField = styled.div`
 const FormLabel = styled.label`
     font-size: 11px;
     font-weight: 700;
-    color: var(--tertiary-foreground);
+    color: rgba(255,255,255,0.38);
     text-transform: uppercase;
     letter-spacing: 0.07em;
 `;
 const FormInput = styled.input`
-    background: var(--primary-background);
-    border: 1px solid var(--tertiary-background);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
     border-radius: 8px;
-    color: var(--foreground);
+    color: rgba(255,255,255,0.92);
     font-size: 14px;
     padding: 9px 13px;
     outline: none;
     transition: border-color 0.15s;
-    &::placeholder { color: var(--tertiary-foreground); }
-    &:focus { border-color: var(--accent); }
+    &::placeholder { color: rgba(255,255,255,0.28); }
+    &:focus { border-color: #F4B978; }
 `;
 const FormTextarea = styled.textarea`
-    background: var(--primary-background);
-    border: 1px solid var(--tertiary-background);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
     border-radius: 8px;
-    color: var(--foreground);
+    color: rgba(255,255,255,0.92);
     font-size: 14px;
     padding: 9px 13px;
     outline: none;
     resize: vertical;
     min-height: 80px;
     transition: border-color 0.15s;
-    &::placeholder { color: var(--tertiary-foreground); }
-    &:focus { border-color: var(--accent); }
+    &::placeholder { color: rgba(255,255,255,0.28); }
+    &:focus { border-color: #F4B978; }
 `;
 const FormSelect = styled.select`
-    background: var(--primary-background);
-    border: 1px solid var(--tertiary-background);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
     border-radius: 8px;
-    color: var(--foreground);
+    color: rgba(255,255,255,0.92);
     font-size: 14px;
     padding: 9px 13px;
     outline: none;
 `;
 const UploadZone = styled.div<{ $dragging: boolean; $hasFile: boolean }>`
-    border: 1px dashed ${p => p.$dragging || p.$hasFile ? "var(--accent)" : "var(--tertiary-background)"};
+    border: 1px dashed ${p => p.$dragging || p.$hasFile ? "#F4B978" : "rgba(255,255,255,0.18)"};
     border-radius: 10px;
     padding: 40px 24px;
     text-align: center;
     cursor: pointer;
     background: ${p =>
-        p.$hasFile   ? "rgba(244,185,120,0.06)" :
-        p.$dragging  ? "rgba(244,185,120,0.08)" :
-        "var(--primary-background)"};
+        p.$hasFile   ? "rgba(244,185,120,0.07)" :
+        p.$dragging  ? "rgba(244,185,120,0.10)" :
+        "rgba(255,255,255,0.04)"};
     transition: border-color 0.15s, background 0.15s;
-    &:hover { border-color: var(--accent); background: rgba(244,185,120,0.05); }
+    &:hover { border-color: #F4B978; background: rgba(244,185,120,0.06); }
 `;
 const SubmitBtn = styled.button<{ $sending?: boolean }>`
     background: ${p => p.$sending ? "rgba(244,185,120,0.7)" : "var(--accent)"};
@@ -266,7 +266,7 @@ const SubmitBtn = styled.button<{ $sending?: boolean }>`
     &:active:not(:disabled) { transform: scale(0.99); }
 `;
 const SuccessMsg = styled.div`
-    color: var(--success);
+    color: #65E572;
     font-size: 14px;
     font-weight: 600;
     padding: 12px 0;
@@ -276,13 +276,13 @@ const SuccessMsg = styled.div`
 const CheckpointTitle = styled.div`
     font-size: 18px;
     font-weight: 700;
-    color: var(--foreground);
+    color: rgba(255,255,255,0.95);
     margin-bottom: 6px;
     letter-spacing: -0.01em;
 `;
 const CheckpointSub = styled.div`
     font-size: 13px;
-    color: var(--secondary-foreground);
+    color: rgba(255,255,255,0.55);
     margin-bottom: 18px;
     line-height: 1.5;
 `;
@@ -294,7 +294,7 @@ const CharGroupLabel = styled.div`
     font-weight: 700;
     letter-spacing: 0.09em;
     text-transform: uppercase;
-    color: var(--tertiary-foreground);
+    color: rgba(255,255,255,0.35);
     margin-bottom: 7px;
 `;
 const CharList = styled.div`
@@ -315,9 +315,9 @@ const CharChip = styled.div<{ $role?: "Main" | "Supporting" | "Minor" }>`
     padding: 4px 12px;
     font-size: 13px;
     color: ${p =>
-        p.$role === "Main"       ? "var(--accent)" :
-        p.$role === "Supporting" ? "#93c5fd"        :
-        "var(--secondary-foreground)"};
+        p.$role === "Main"       ? "#F4B978" :
+        p.$role === "Supporting" ? "#93c5fd"  :
+        "rgba(255,255,255,0.6)"};
 `;
 const CheckpointActions = styled.div`
     display: flex;
@@ -354,15 +354,15 @@ const ProcessWrap = styled.div`
     display: flex;
     align-items: center;
     gap: 14px;
-    color: var(--secondary-foreground);
+    color: rgba(255,255,255,0.55);
     font-size: 14px;
     padding: 8px 0;
 `;
 const Spinner = styled.div`
     width: 18px;
     height: 18px;
-    border: 2px solid var(--tertiary-background);
-    border-top-color: var(--accent);
+    border: 2px solid rgba(255,255,255,0.12);
+    border-top-color: #F4B978;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -370,7 +370,7 @@ const Spinner = styled.div`
 `;
 
 const EmptyState = styled.div`
-    color: var(--tertiary-foreground);
+    color: rgba(255,255,255,0.32);
     font-size: 14px;
     text-align: center;
     padding: 32px 0;
