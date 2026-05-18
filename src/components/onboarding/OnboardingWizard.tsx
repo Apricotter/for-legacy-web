@@ -135,20 +135,6 @@ const DomeBtn = styled.button<{ $side: "left" | "right" }>`
     }
 `;
 
-const BackLink = styled.button`
-    background: none;
-    border: none;
-    color: rgba(245, 166, 35, 0.5);
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    padding: 0 0 18px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    transition: color 0.15s;
-    &:hover { color: #F5A623; }
-`;
 
 // ── step content ──────────────────────────────────────────────────────────────
 
@@ -772,13 +758,25 @@ export default function OnboardingWizard({
 
     const activeStep = steps[displayIndex];
 
-    const canPrev = displayIndex > 0;
+    // Find greeting index explicitly — it may not always be at index 0
+    const greetingIndex = steps.findIndex(s => s.type === "greeting");
+    const canPrev = displayIndex > 0
+        || (activeStep?.type === "form" && greetingIndex >= 0 && greetingIndex !== displayIndex);
     const canNext = displayIndex < steps.length - 1 && !(activeStep?.needsAction && !activeStep?.done);
 
-    function prev() { if (canPrev) setActiveIndex(i => i - 1); }
+    function prev() {
+        if (!canPrev) return;
+        if (displayIndex > 0) {
+            setActiveIndex(i => i - 1);
+        } else if (greetingIndex >= 0) {
+            setActiveIndex(greetingIndex);
+        }
+    }
     function next() { if (canNext) setActiveIndex(i => i + 1); }
 
-    const prevStep = canPrev ? steps[displayIndex - 1] : null;
+    const prevStep = canPrev
+        ? (displayIndex > 0 ? steps[displayIndex - 1] : steps[greetingIndex])
+        : null;
     const prevLabel = prevStep?.type === "greeting" ? "Welcome" : prevStep?.label ?? "Back";
 
     return (
@@ -805,9 +803,6 @@ export default function OnboardingWizard({
                     />
 
                     <Content>
-                        {canPrev && (
-                            <BackLink onClick={prev}>‹ {prevLabel}</BackLink>
-                        )}
                         {steps.length === 0 ? (
                             <EmptyState>Waiting for Otto…</EmptyState>
                         ) : activeStep ? (
