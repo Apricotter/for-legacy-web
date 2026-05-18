@@ -505,7 +505,7 @@ function FormStep({
     const [uploadFile_, setUploadFile] = useState<File | null>(null);
     const [dragging, setDragging] = useState(false);
     const [sending, setSending] = useState(false);
-    const [submitted, setSubmitted] = useState(step.done);
+    const [submitted, setSubmitted] = useState(false);
 
     const set = (key: string) => (e: Event) =>
         setValues(v => ({ ...v, [key]: (e.target as HTMLInputElement).value }));
