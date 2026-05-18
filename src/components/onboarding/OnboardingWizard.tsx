@@ -129,15 +129,10 @@ const DomeBtn = styled.button<{ $side: "left" | "right" }>`
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     padding: 0;
-    box-shadow: ${p => p.$side === "left"
-        ? "-4px 0 18px rgba(245, 166, 35, 0.18)"
-        : "4px 0 18px rgba(245, 166, 35, 0.18)"};
     &:hover {
         background: rgba(245, 166, 35, 0.28);
         color: #fff;
-        box-shadow: ${p => p.$side === "left"
-            ? "-4px 0 26px rgba(245, 166, 35, 0.35)"
-            : "4px 0 26px rgba(245, 166, 35, 0.35)"};
+        box-shadow: 0 4px 20px rgba(245, 166, 35, 0.35);
     }
 `;
 
