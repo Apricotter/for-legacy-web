@@ -551,11 +551,11 @@ function FormStep({
                 <ConfirmHeading>{isUpload ? "Your book is on its way" : "Done"}</ConfirmHeading>
                 <ConfirmBody>
                     {isUpload
-                        ? "Quill is processing it in the background. While that runs, let's finish your author profile."
+                        ? "Quill is processing it in the background. While that runs, let's add your reviews."
                         : "That step is complete."}
                 </ConfirmBody>
                 <SubmitBtn onClick={onDone}>
-                    {isUpload ? "Set up author profile →" : "Continue →"}
+                    {isUpload ? "Add Reviews →" : "Continue →"}
                 </SubmitBtn>
             </ConfirmCard>
         );
