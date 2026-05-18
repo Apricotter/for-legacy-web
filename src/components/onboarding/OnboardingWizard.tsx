@@ -100,28 +100,54 @@ const Content = styled.div`
     color: rgba(255,255,255,0.92);
 `;
 
-const NavBar = styled.div`
+const ModalWrapper = styled.div`
+    position: relative;
+    z-index: 2;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0 22px 14px;
-    min-height: 36px;
 `;
 
-const NavLink = styled.button`
-    background: none;
-    border: none;
-    color: rgba(245, 166, 35, 0.7);
-    font-size: 13px;
-    font-weight: 600;
+const DomeBtn = styled.button<{ $side: "left" | "right" }>`
+    position: absolute;
+    ${p => p.$side === "left" ? "right: 100%;" : "left: 100%;"}
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 80px;
+    background: rgba(245, 166, 35, 0.15);
+    border: 1px solid rgba(245, 166, 35, 0.4);
+    ${p => p.$side === "left"
+        ? "border-radius: 40px 0 0 40px; border-right: none;"
+        : "border-radius: 0 40px 40px 0; border-left: none;"}
+    color: #F5A623;
+    font-size: 16px;
     cursor: pointer;
-    padding: 4px 0;
     display: flex;
     align-items: center;
-    gap: 5px;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 0;
+    &:hover {
+        background: rgba(245, 166, 35, 0.28);
+        color: #fff;
+    }
+`;
+
+const BackLink = styled.button`
+    background: none;
+    border: none;
+    color: rgba(245, 166, 35, 0.5);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0 0 18px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
     transition: color 0.15s;
     &:hover { color: #F5A623; }
-    &:disabled { opacity: 0; pointer-events: none; }
 `;
 
 // ── step content ──────────────────────────────────────────────────────────────
@@ -757,52 +783,54 @@ export default function OnboardingWizard({
 
     return (
         <Overlay>
-            <Shell>
-                <Header>
-                    <WizardTitle>Studio Setup</WizardTitle>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <ResetBtn $resetting={resetting} onClick={handleReset}>
-                            {resetting ? "Resetting…" : "Start over"}
-                        </ResetBtn>
-                        <CloseBtn onClick={onClose}>×</CloseBtn>
-                    </div>
-                </Header>
+            <ModalWrapper>
+                {canPrev && (
+                    <DomeBtn $side="left" onClick={prev} title="Back">‹</DomeBtn>
+                )}
+                <Shell>
+                    <Header>
+                        <WizardTitle>Studio Setup</WizardTitle>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <ResetBtn $resetting={resetting} onClick={handleReset}>
+                                {resetting ? "Resetting…" : "Start over"}
+                            </ResetBtn>
+                            <CloseBtn onClick={onClose}>×</CloseBtn>
+                        </div>
+                    </Header>
 
-                <SubwayMap
-                    steps={steps}
-                    activeIndex={displayIndex}
-                    onSelectStep={setActiveIndex}
-                />
+                    <SubwayMap
+                        steps={steps}
+                        activeIndex={displayIndex}
+                        onSelectStep={setActiveIndex}
+                    />
 
-                <Content>
-                    {steps.length === 0 ? (
-                        <EmptyState>Waiting for Otto…</EmptyState>
-                    ) : activeStep ? (
-                        <StepContent
-                            step={activeStep}
-                            channelId={channelId}
-                            onGreetingDone={(name: string) => {
-                                patchStepData(activeStep.id, { prefill_name: name });
-                                markDone(activeStep.id);
-                                setActiveIndex(i => Math.min(i + 1, steps.length - 1));
-                            }}
-                            onDone={() => {
-                                markDone(activeStep.id);
-                                setActiveIndex(i => Math.min(i + 1, steps.length - 1));
-                            }}
-                        />
-                    ) : null}
-                </Content>
-
-                <NavBar>
-                    <NavLink onClick={prev} disabled={!canPrev}>
-                        ‹ {prevLabel}
-                    </NavLink>
-                    <NavLink onClick={next} disabled={!canNext}>
-                        Next ›
-                    </NavLink>
-                </NavBar>
-            </Shell>
+                    <Content>
+                        {canPrev && (
+                            <BackLink onClick={prev}>‹ {prevLabel}</BackLink>
+                        )}
+                        {steps.length === 0 ? (
+                            <EmptyState>Waiting for Otto…</EmptyState>
+                        ) : activeStep ? (
+                            <StepContent
+                                step={activeStep}
+                                channelId={channelId}
+                                onGreetingDone={(name: string) => {
+                                    patchStepData(activeStep.id, { prefill_name: name });
+                                    markDone(activeStep.id);
+                                    setActiveIndex(i => Math.min(i + 1, steps.length - 1));
+                                }}
+                                onDone={() => {
+                                    markDone(activeStep.id);
+                                    setActiveIndex(i => Math.min(i + 1, steps.length - 1));
+                                }}
+                            />
+                        ) : null}
+                    </Content>
+                </Shell>
+                {canNext && (
+                    <DomeBtn $side="right" onClick={next} title="Next">›</DomeBtn>
+                )}
+            </ModalWrapper>
         </Overlay>
     );
 }
