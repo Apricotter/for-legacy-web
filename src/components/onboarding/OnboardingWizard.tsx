@@ -402,7 +402,7 @@ const EmptyState = styled.div`
 
 // ── step renderers ────────────────────────────────────────────────────────────
 
-function GreetingStep({ data, channelId, onDone }: { data: any; channelId: string; onDone: () => void }) {
+function GreetingStep({ data, channelId, onDone }: { data: any; channelId: string; onDone: (name: string) => void }) {
     const client = useClient();
     const fallback = (client as any)?.user?.username ?? (client as any)?.user?.display_name ?? "";
     const [name, setName] = useState<string>(data?.prefill_name || fallback);
@@ -424,7 +424,7 @@ function GreetingStep({ data, channelId, onDone }: { data: any; channelId: strin
             // non-fatal — still advance
         } finally {
             setSending(false);
-            onDone();
+            onDone(name.trim());
         }
     }
 
@@ -695,13 +695,15 @@ function StepContent({
     step,
     channelId,
     onDone,
+    onGreetingDone,
 }: {
     step: WizardStep;
     channelId: string;
     onDone: () => void;
+    onGreetingDone: (name: string) => void;
 }) {
     switch (step.type) {
-        case "greeting":   return <GreetingStep data={step.data} channelId={channelId} onDone={() => onDone()} />;
+        case "greeting":   return <GreetingStep data={step.data} channelId={channelId} onDone={onGreetingDone} />;
         case "form":       return <FormStep step={step} channelId={channelId} onDone={onDone} />;
         case "checkpoint": return <CheckpointStep step={step} channelId={channelId} onDone={onDone} />;
         case "processing": return <ProcessingStep data={step.data} />;
@@ -716,7 +718,7 @@ export default function OnboardingWizard({
     channelId,
     onClose,
 }: ModalProps<"author_onboarding">) {
-    const { steps, markDone, clearSteps } = useOnboardingMessages(channelId);
+    const { steps, markDone, patchStepData, clearSteps } = useOnboardingMessages(channelId);
     const [activeIndex, setActiveIndex] = useState(0);
     const [resetting, setResetting] = useState(false);
     const autoAdvanced = useRef(false);
@@ -791,6 +793,11 @@ export default function OnboardingWizard({
                             <StepContent
                                 step={activeStep}
                                 channelId={channelId}
+                                onGreetingDone={(name: string) => {
+                                    patchStepData(activeStep.id, { prefill_name: name });
+                                    markDone(activeStep.id);
+                                    setActiveIndex(i => Math.min(i + 1, steps.length - 1));
+                                }}
                                 onDone={() => {
                                     markDone(activeStep.id);
                                     setActiveIndex(i => Math.min(i + 1, steps.length - 1));
