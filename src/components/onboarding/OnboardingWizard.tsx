@@ -115,7 +115,7 @@ const DomeBtn = styled.button<{ $side: "left" | "right" }>`
     width: 44px;
     height: 80px;
     background: rgba(245, 166, 35, 0.15);
-    border: 1px solid rgba(245, 166, 35, 0.4);
+    border: 1px solid rgba(245, 166, 35, 0.45);
     ${p => p.$side === "left"
         ? "border-radius: 40px 0 0 40px; border-right: none;"
         : "border-radius: 0 40px 40px 0; border-left: none;"}
@@ -125,13 +125,19 @@ const DomeBtn = styled.button<{ $side: "left" | "right" }>`
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.15s, color 0.15s;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     padding: 0;
+    box-shadow: ${p => p.$side === "left"
+        ? "-4px 0 18px rgba(245, 166, 35, 0.18)"
+        : "4px 0 18px rgba(245, 166, 35, 0.18)"};
     &:hover {
         background: rgba(245, 166, 35, 0.28);
         color: #fff;
+        box-shadow: ${p => p.$side === "left"
+            ? "-4px 0 26px rgba(245, 166, 35, 0.35)"
+            : "4px 0 26px rgba(245, 166, 35, 0.35)"};
     }
 `;
 
