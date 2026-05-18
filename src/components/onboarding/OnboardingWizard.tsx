@@ -292,11 +292,31 @@ const SubmitBtn = styled.button<{ $sending?: boolean; $disabled?: boolean }>`
     }
     &:active { transform: ${p => p.$disabled ? "none" : "scale(0.99)"}; }
 `;
-const SuccessMsg = styled.div`
-    color: #65E572;
-    font-size: 14px;
-    font-weight: 600;
-    padding: 12px 0;
+const ConfirmCard = styled.div`
+    border: 1px solid rgba(245, 166, 35, 0.22);
+    border-radius: 14px;
+    background: rgba(245, 166, 35, 0.06);
+    padding: 28px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+`;
+const ConfirmIcon = styled.div`
+    font-size: 28px;
+    line-height: 1;
+    margin-bottom: 4px;
+`;
+const ConfirmHeading = styled.div`
+    font-size: 18px;
+    font-weight: 800;
+    color: rgba(255,255,255,0.92);
+    letter-spacing: -0.01em;
+`;
+const ConfirmBody = styled.div`
+    font-size: 13px;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.65;
+    margin-bottom: 6px;
 `;
 
 // Checkpoint
@@ -518,14 +538,27 @@ function FormStep({
                 attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
             });
             setSubmitted(true);
-            onDone();
         } finally {
             setSending(false);
         }
     }
 
     if (submitted) {
-        return <SuccessMsg>Got it — Otto will continue shortly.</SuccessMsg>;
+        const isUpload = step.line === "book";
+        return (
+            <ConfirmCard>
+                <ConfirmIcon>{isUpload ? "📖" : "✓"}</ConfirmIcon>
+                <ConfirmHeading>{isUpload ? "Your book is on its way" : "Done"}</ConfirmHeading>
+                <ConfirmBody>
+                    {isUpload
+                        ? "Quill is processing it in the background. While that runs, let's finish your author profile."
+                        : "That step is complete."}
+                </ConfirmBody>
+                <SubmitBtn onClick={onDone}>
+                    {isUpload ? "Set up author profile →" : "Continue →"}
+                </SubmitBtn>
+            </ConfirmCard>
+        );
     }
 
     return (
@@ -638,7 +671,13 @@ function CheckpointStep({
     }
 
     if (confirmed) {
-        return <SuccessMsg>Confirmed — pipeline continuing.</SuccessMsg>;
+        return (
+            <ConfirmCard>
+                <ConfirmIcon>✓</ConfirmIcon>
+                <ConfirmHeading>Confirmed</ConfirmHeading>
+                <ConfirmBody>Pipeline continuing to the next stage.</ConfirmBody>
+            </ConfirmCard>
+        );
     }
 
     const main: string[]       = data?.main ?? data?.characters?.filter((c: any) => c.role === "Main").map((c: any) => c.name) ?? [];
@@ -818,7 +857,13 @@ export default function OnboardingWizard({
                                 }}
                                 onDone={() => {
                                     markDone(activeStep.id);
-                                    setActiveIndex(i => Math.min(i + 1, steps.length - 1));
+                                    // For book upload, jump to next pending author step, skipping processing
+                                    if (activeStep.type === "form" && activeStep.line === "book") {
+                                        const next = steps.findIndex((s, i) => i > displayIndex && s.needsAction && !s.done);
+                                        setActiveIndex(next >= 0 ? next : Math.min(displayIndex + 1, steps.length - 1));
+                                    } else {
+                                        setActiveIndex(i => Math.min(i + 1, steps.length - 1));
+                                    }
                                 }}
                             />
                         ) : null}

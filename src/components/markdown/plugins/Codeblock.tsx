@@ -226,7 +226,7 @@ const FormSuccess = styled.div`
     align-items: center;
     gap: 7px;
     font-size: 13px;
-    color: #4ade80;
+    color: rgba(255,255,255,0.55);
     font-weight: 600;
     padding: 10px 16px;
 `;
@@ -375,7 +375,7 @@ function OttoFormBlock({ raw }: { raw: string }) {
     if (submitted) {
         return (
             <FormWrap>
-                <FormSuccess>✓ Got it — Otto will continue shortly.</FormSuccess>
+                <FormSuccess>Submitted.</FormSuccess>
             </FormWrap>
         );
     }
