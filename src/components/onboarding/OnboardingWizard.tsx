@@ -538,27 +538,14 @@ function FormStep({
                 attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
             });
             setSubmitted(true);
+            onDone();
         } finally {
             setSending(false);
         }
     }
 
     if (submitted) {
-        const isUpload = step.line === "book";
-        return (
-            <ConfirmCard>
-                <ConfirmIcon>{isUpload ? "📖" : "✓"}</ConfirmIcon>
-                <ConfirmHeading>{isUpload ? "Your book is on its way" : "Done"}</ConfirmHeading>
-                <ConfirmBody>
-                    {isUpload
-                        ? "Quill is processing it in the background. While that runs, let's add your reviews."
-                        : "That step is complete."}
-                </ConfirmBody>
-                <SubmitBtn onClick={onDone}>
-                    {isUpload ? "Add Reviews →" : "Continue →"}
-                </SubmitBtn>
-            </ConfirmCard>
-        );
+        return null; // wizard-level handles what comes next
     }
 
     return (
@@ -733,26 +720,9 @@ function ProcessingStep({ data }: { data: any }) {
     );
 }
 
-function StepContent({
-    step,
-    channelId,
-    onDone,
-    onGreetingDone,
-}: {
-    step: WizardStep;
-    channelId: string;
-    onDone: () => void;
-    onGreetingDone: (name: string) => void;
-}) {
-    switch (step.type) {
-        case "greeting":   return <GreetingStep data={step.data} channelId={channelId} onDone={onGreetingDone} />;
-        case "form":       return <FormStep step={step} channelId={channelId} onDone={onDone} />;
-        case "checkpoint": return <CheckpointStep step={step} channelId={channelId} onDone={onDone} />;
-        case "processing": return <ProcessingStep data={step.data} />;
-    }
-}
+// ── state machine ─────────────────────────────────────────────────────────────
 
-// ── main modal ────────────────────────────────────────────────────────────────
+type Stage = "greeting" | "upload" | "upload_done" | "reviews" | "done";
 
 const OTTO_API = "https://otto.apricotter.com";
 
@@ -761,64 +731,142 @@ export default function OnboardingWizard({
     onClose,
 }: ModalProps<"author_onboarding">) {
     const { steps, markDone, patchStepData, clearSteps } = useOnboardingMessages(channelId);
-    const [activeIndex, setActiveIndex] = useState(0);
+    const [stage, setStage] = useState<Stage>("greeting");
     const [resetting, setResetting] = useState(false);
-    const autoAdvanced = useRef(false);
+    const stageRestored = useRef(false);
 
-    // On first load, jump to the first step that still needs action
+    // Step selectors — find by role, not by index
+    const greetingStep = steps.find(s => s.type === "greeting");
+    const uploadStep   = steps.find(s => s.type === "form" && s.line === "book");
+    const reviewStep   = steps.find(s => s.type === "form" && s.line === "author");
+
+    // Restore stage from history on first load
     useEffect(() => {
-        if (steps.length === 0 || autoAdvanced.current) return;
-        autoAdvanced.current = true;
-        const firstPending = steps.findIndex(s => s.needsAction && !s.done);
-        if (firstPending > 0) setActiveIndex(firstPending);
+        if (steps.length === 0 || stageRestored.current) return;
+        stageRestored.current = true;
+        if (uploadStep?.done) {
+            setStage(reviewStep?.done ? "done" : "reviews");
+        } else if (greetingStep?.done) {
+            setStage("upload");
+        }
     }, [steps.length]);
 
     const handleReset = useCallback(async () => {
         if (resetting) return;
         setResetting(true);
-        // Clear before the fetch so real-time messages from Otto land into a clean state
         clearSteps();
-        setActiveIndex(0);
-        autoAdvanced.current = false;
+        setStage("greeting");
+        stageRestored.current = false;
         try {
             await fetch(`${OTTO_API}/onboarding/reset`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ channelId }),
             });
-        } catch {
-            // ignore — Otto will re-greet on next message anyway
-        } finally {
+        } catch { /* ignore */ } finally {
             setResetting(false);
         }
     }, [channelId, resetting]);
 
-    const displayIndex = steps.length > 0
-        ? Math.min(activeIndex, steps.length - 1)
-        : 0;
+    // Subway map active index — derived from stage
+    const subwayActiveIndex = (() => {
+        if (stage === "greeting") return steps.findIndex(s => s.type === "greeting");
+        if (stage === "upload" || stage === "upload_done") return steps.findIndex(s => s.type === "form" && s.line === "book");
+        if (stage === "reviews") return steps.findIndex(s => s.type === "form" && s.line === "author");
+        return Math.max(0, steps.length - 1);
+    })();
 
-    const activeStep = steps[displayIndex];
+    // Subway map click → stage
+    function onSelectStep(index: number) {
+        const s = steps[index];
+        if (!s) return;
+        if (s.type === "greeting") setStage("greeting");
+        else if (s.type === "form" && s.line === "book") setStage(uploadStep?.done ? "upload_done" : "upload");
+        else if (s.type === "form" && s.line === "author") setStage("reviews");
+    }
 
-    // Find greeting index explicitly — it may not always be at index 0
-    const greetingIndex = steps.findIndex(s => s.type === "greeting");
-    const canPrev = displayIndex > 0
-        || (activeStep?.type === "form" && greetingIndex >= 0 && greetingIndex !== displayIndex);
-    const canNext = displayIndex < steps.length - 1 && !(activeStep?.needsAction && !activeStep?.done);
-
+    // Dome nav
+    const canPrev = stage !== "greeting";
+    const canNext = stage === "upload_done";
     function prev() {
-        if (!canPrev) return;
-        if (displayIndex > 0) {
-            setActiveIndex(i => i - 1);
-        } else if (greetingIndex >= 0) {
-            setActiveIndex(greetingIndex);
+        if (stage === "upload")        setStage("greeting");
+        else if (stage === "upload_done") setStage("upload");
+        else if (stage === "reviews")  setStage("upload_done");
+    }
+    function goToReviews() { setStage("reviews"); }
+
+    // Content per stage
+    function renderContent() {
+        if (steps.length === 0) return <EmptyState>Waiting for Otto…</EmptyState>;
+
+        switch (stage) {
+            case "greeting":
+                if (!greetingStep) return <EmptyState>Waiting for Otto…</EmptyState>;
+                return (
+                    <GreetingStep
+                        data={greetingStep.data}
+                        channelId={channelId}
+                        onDone={(name: string) => {
+                            patchStepData(greetingStep.id, { prefill_name: name });
+                            markDone(greetingStep.id);
+                            setStage("upload");
+                        }}
+                    />
+                );
+
+            case "upload":
+                if (!uploadStep) return <EmptyState>Waiting for upload form…</EmptyState>;
+                return (
+                    <FormStep
+                        step={uploadStep}
+                        channelId={channelId}
+                        onDone={() => {
+                            markDone(uploadStep.id);
+                            setStage("upload_done");
+                        }}
+                    />
+                );
+
+            case "upload_done":
+                return (
+                    <ConfirmCard>
+                        <ConfirmIcon>📖</ConfirmIcon>
+                        <ConfirmHeading>Your book is on its way</ConfirmHeading>
+                        <ConfirmBody>
+                            Quill is processing it in the background. While that runs, let's add your reader reviews.
+                        </ConfirmBody>
+                        <SubmitBtn onClick={goToReviews}>Add Reviews →</SubmitBtn>
+                    </ConfirmCard>
+                );
+
+            case "reviews":
+                if (!reviewStep) return (
+                    <ProcessWrap>
+                        <Spinner />
+                        <span>Loading review form…</span>
+                    </ProcessWrap>
+                );
+                return (
+                    <FormStep
+                        step={reviewStep}
+                        channelId={channelId}
+                        onDone={() => {
+                            markDone(reviewStep.id);
+                            setStage("done");
+                        }}
+                    />
+                );
+
+            case "done":
+                return (
+                    <ConfirmCard>
+                        <ConfirmIcon>✓</ConfirmIcon>
+                        <ConfirmHeading>All set</ConfirmHeading>
+                        <ConfirmBody>Your studio is being prepared. You're all done here.</ConfirmBody>
+                    </ConfirmCard>
+                );
         }
     }
-    function next() { if (canNext) setActiveIndex(i => i + 1); }
-
-    const prevStep = canPrev
-        ? (displayIndex > 0 ? steps[displayIndex - 1] : steps[greetingIndex])
-        : null;
-    const prevLabel = prevStep?.type === "greeting" ? "Welcome" : prevStep?.label ?? "Back";
 
     return (
         <Overlay>
@@ -839,38 +887,16 @@ export default function OnboardingWizard({
 
                     <SubwayMap
                         steps={steps}
-                        activeIndex={displayIndex}
-                        onSelectStep={setActiveIndex}
+                        activeIndex={subwayActiveIndex}
+                        onSelectStep={onSelectStep}
                     />
 
                     <Content>
-                        {steps.length === 0 ? (
-                            <EmptyState>Waiting for Otto…</EmptyState>
-                        ) : activeStep ? (
-                            <StepContent
-                                step={activeStep}
-                                channelId={channelId}
-                                onGreetingDone={(name: string) => {
-                                    patchStepData(activeStep.id, { prefill_name: name });
-                                    markDone(activeStep.id);
-                                    setActiveIndex(i => Math.min(i + 1, steps.length - 1));
-                                }}
-                                onDone={() => {
-                                    markDone(activeStep.id);
-                                    // For book upload, jump to next pending author step, skipping processing
-                                    if (activeStep.type === "form" && activeStep.line === "book") {
-                                        const next = steps.findIndex((s, i) => i > displayIndex && s.needsAction && !s.done);
-                                        setActiveIndex(next >= 0 ? next : Math.min(displayIndex + 1, steps.length - 1));
-                                    } else {
-                                        setActiveIndex(i => Math.min(i + 1, steps.length - 1));
-                                    }
-                                }}
-                            />
-                        ) : null}
+                        {renderContent()}
                     </Content>
                 </Shell>
                 {canNext && (
-                    <DomeBtn $side="right" onClick={next} title="Next">›</DomeBtn>
+                    <DomeBtn $side="right" onClick={goToReviews} title="Add Reviews">›</DomeBtn>
                 )}
             </ModalWrapper>
         </Overlay>
