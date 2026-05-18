@@ -71,12 +71,20 @@ export function useOnboardingMessages(channelId: string | undefined) {
         (async () => {
             const applyUserReplies = (existing: WizardStep[], list: any[]) => {
                 const userId = (client as any)?.user?._id;
-                const userMsgs = list.filter((m: any) => {
+
+                // Find the list index of the most recent greeting codeblock so we only
+                // count user replies that came AFTER it (not stale replies from a prior session).
+                const lastGreetingListIdx = list.reduce((found, m, i) =>
+                    parseCodeblock(m.content ?? "")?.type === "greeting" ? i : found, -1);
+
+                const userMsgsAfterGreeting = list.filter((m: any, i: number) => {
+                    if (i <= lastGreetingListIdx) return false;
                     const author = m.author_id ?? m.author?._id ?? m.author;
                     return userId ? author === userId : !parseCodeblock(m.content ?? "");
                 });
-                // Greeting done if user replied "My name is X"
-                const nameMsg = userMsgs.find((m: any) => /^my name is /i.test(m.content ?? ""));
+
+                // Greeting done if user replied "My name is X" after the greeting
+                const nameMsg = userMsgsAfterGreeting.find((m: any) => /^my name is /i.test(m.content ?? ""));
                 if (nameMsg) {
                     const name = nameMsg.content.replace(/^my name is /i, "").trim();
                     existing.forEach(s => {
@@ -87,8 +95,8 @@ export function useOnboardingMessages(channelId: string | undefined) {
                         }
                     });
                 }
-                // Upload form done if user sent a message with attachments
-                if (userMsgs.some((m: any) => m.attachments?.length > 0)) {
+                // Upload form done if user sent a message with attachments after the greeting
+                if (userMsgsAfterGreeting.some((m: any) => m.attachments?.length > 0)) {
                     existing.forEach(s => {
                         if (s.type === "form" && s.line === "book") {
                             s.done = true;
