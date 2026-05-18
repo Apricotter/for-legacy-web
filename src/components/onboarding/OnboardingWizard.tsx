@@ -982,10 +982,11 @@ export default function OnboardingWizard({
                                     method: "POST",
                                     headers: { "Content-Type": "application/json" },
                                     body: JSON.stringify({
-                                        Rating: reviewValues.rating ?? "",
-                                        Reviewer: reviewValues.reviewer ?? "",
-                                        ReviewDate: reviewValues.review_date ?? "",
-                                        ReviewText: reviewValues.review ?? "",
+                                        rating:      reviewValues.rating ?? "",
+                                        reviewer:    reviewValues.reviewer ?? "",
+                                        review_date: reviewValues.review_date ?? "",
+                                        source:      reviewValues.source ?? "",
+                                        review:      reviewValues.review ?? "",
                                     }),
                                 }).catch(() => {});
                             }
