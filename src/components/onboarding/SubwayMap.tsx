@@ -104,6 +104,16 @@ const StopLabel = styled.div<{ $active: boolean; $color: string }>`
     text-align: center;
 `;
 
+const SubLabel = styled.div`
+    font-size: 8px;
+    color: rgba(255,255,255,0.2);
+    white-space: nowrap;
+    text-align: center;
+    max-width: 72px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+`;
+
 const TrailingTrack = styled.div<{ $color: string }>`
     flex: 2;
     height: 2px;
@@ -117,6 +127,8 @@ interface SubwayMapProps {
     steps: WizardStep[];
     activeIndex: number;
     onSelectStep: (index: number) => void;
+    bookFilename?: string;
+    reviewCount?: number;
 }
 
 interface LineConfig {
@@ -130,7 +142,7 @@ const LINES: LineConfig[] = [
     { id: "author", label: "AUTHOR", color: "#60a5fa" },
 ];
 
-export default function SubwayMap({ steps, activeIndex, onSelectStep }: SubwayMapProps) {
+export default function SubwayMap({ steps, activeIndex, onSelectStep, bookFilename, reviewCount }: SubwayMapProps) {
     return (
         <MapWrap>
             {LINES.map(line => {
@@ -176,6 +188,12 @@ export default function SubwayMap({ steps, activeIndex, onSelectStep }: SubwayMa
                                             <StopLabel $active={globalIndex === activeIndex} $color={line.color}>
                                                 {step.label}
                                             </StopLabel>
+                                            {line.id === "book" && pos === 0 && bookFilename && (
+                                                <SubLabel title={bookFilename}>{bookFilename}</SubLabel>
+                                            )}
+                                            {line.id === "author" && pos === 0 && (reviewCount ?? 0) > 0 && (
+                                                <SubLabel>{reviewCount} review{reviewCount === 1 ? "" : "s"}</SubLabel>
+                                            )}
                                         </StopCol>
                                     </>
                                 );

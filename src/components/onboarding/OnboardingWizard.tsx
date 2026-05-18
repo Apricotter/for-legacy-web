@@ -456,11 +456,15 @@ const EmptyState = styled.div`
 
 // ── step renderers ────────────────────────────────────────────────────────────
 
-function GreetingStep({ data, channelId, onDone }: { data: any; channelId: string; onDone: (name: string) => void }) {
+function GreetingStep({ data, channelId, onDone, prefillName }: { data: any; channelId: string; onDone: (name: string) => void; prefillName?: string }) {
     const client = useClient();
     const fallback = (client as any)?.user?.username ?? (client as any)?.user?.display_name ?? "";
-    const [name, setName] = useState<string>(data?.prefill_name || fallback);
+    const [name, setName] = useState<string>(prefillName || data?.prefill_name || fallback);
     const [sending, setSending] = useState(false);
+
+    useEffect(() => {
+        if (!name && prefillName) setName(prefillName);
+    }, [prefillName]);
 
     useEffect(() => {
         if (!name && fallback) setName(fallback);
@@ -524,7 +528,7 @@ function FormStep({
 }: {
     step: WizardStep;
     channelId: string;
-    onDone: () => void;
+    onDone: (values?: Record<string, string>) => void;
     onSkip?: () => void;
 }) {
     const client = useClient();
@@ -573,7 +577,7 @@ function FormStep({
                 attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
             });
             setSubmitted(true);
-            onDone();
+            onDone(values);
         } finally {
             setSending(false);
         }
@@ -796,6 +800,7 @@ const OTTO_API = "https://otto.apricotter.com";
 
 export default function OnboardingWizard({
     channelId,
+    serverId,
     onClose,
 }: ModalProps<"author_onboarding">) {
     const { steps, markDone, patchStepData, clearSteps } = useOnboardingMessages(channelId);
@@ -803,7 +808,30 @@ export default function OnboardingWizard({
     const [resetting, setResetting] = useState(false);
     const [reviewsDone, setReviewsDone] = useState(false);
     const [reviewKey, setReviewKey] = useState(0);
+    const [profile, setProfile] = useState<any>(null);
+    const [localReviewCount, setLocalReviewCount] = useState(0);
     const stageRestored = useRef(false);
+
+    // Load profile from Mongo on mount — drives stage restoration and field prefill
+    useEffect(() => {
+        if (!serverId) return;
+        fetch(`${OTTO_API}/onboarding/${serverId}/profile`)
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+            .then(p => {
+                if (!p) return;
+                setProfile(p);
+                if (p.Reviews?.length > 0) setLocalReviewCount(p.Reviews.length);
+                stageRestored.current = true;
+                if (p.Reviews?.length > 0) {
+                    setStage("done");
+                } else if (p.BookFilename) {
+                    setStage("upload_done");
+                } else if (p.AuthorName) {
+                    setStage("upload");
+                }
+            });
+    }, [serverId]);
 
     // Step selectors — find by role, not by index
     const greetingStep = steps.find(s => s.type === "greeting");
@@ -826,17 +854,19 @@ export default function OnboardingWizard({
         setResetting(true);
         clearSteps();
         setStage("greeting");
+        setProfile(null);
+        setLocalReviewCount(0);
         stageRestored.current = false;
         try {
             await fetch(`${OTTO_API}/onboarding/reset`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ channelId }),
+                body: JSON.stringify({ channelId, serverId }),
             });
         } catch { /* ignore */ } finally {
             setResetting(false);
         }
-    }, [channelId, resetting]);
+    }, [channelId, serverId, resetting]);
 
     // Subway map active index — derived from stage
     const subwayActiveIndex = (() => {
@@ -876,9 +906,17 @@ export default function OnboardingWizard({
                     <GreetingStep
                         data={greetingStep.data}
                         channelId={channelId}
+                        prefillName={profile?.AuthorName}
                         onDone={(name: string) => {
                             patchStepData(greetingStep.id, { prefill_name: name });
                             markDone(greetingStep.id);
+                            if (serverId) {
+                                fetch(`${OTTO_API}/onboarding/${serverId}/name`, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ name }),
+                                }).catch(() => {});
+                            }
                             setStage("upload");
                         }}
                     />
@@ -937,8 +975,21 @@ export default function OnboardingWizard({
                         step={reviewStep}
                         channelId={channelId}
                         onSkip={() => setStage("done")}
-                        onDone={() => {
+                        onDone={(reviewValues) => {
                             markDone(reviewStep.id);
+                            if (serverId && reviewValues) {
+                                fetch(`${OTTO_API}/onboarding/${serverId}/review`, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                        Rating: reviewValues.rating ?? "",
+                                        Reviewer: reviewValues.reviewer ?? "",
+                                        ReviewDate: reviewValues.review_date ?? "",
+                                        ReviewText: reviewValues.review ?? "",
+                                    }),
+                                }).catch(() => {});
+                            }
+                            setLocalReviewCount(c => c + 1);
                             setReviewsDone(true);
                         }}
                     />
@@ -976,6 +1027,8 @@ export default function OnboardingWizard({
                         steps={steps}
                         activeIndex={subwayActiveIndex}
                         onSelectStep={onSelectStep}
+                        bookFilename={profile?.BookFilename}
+                        reviewCount={localReviewCount}
                     />
 
                     <Content>
