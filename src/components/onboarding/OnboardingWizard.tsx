@@ -646,6 +646,13 @@ function FormStep({
                             placeholder={field.placeholder}
                             onInput={set(field.key)}
                         />
+                    ) : field.type === "date" ? (
+                        <FormInput
+                            type="date"
+                            value={values[field.key] ?? ""}
+                            onInput={set(field.key)}
+                            style={{ colorScheme: "dark" }}
+                        />
                     ) : field.type === "select" || field.type === "combo" ? (
                         <FormSelect value={values[field.key] ?? ""} onChange={set(field.key)}>
                             <option value="">Select...</option>
