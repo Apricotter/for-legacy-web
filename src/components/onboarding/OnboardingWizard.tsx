@@ -292,6 +292,37 @@ const SubmitBtn = styled.button<{ $sending?: boolean; $disabled?: boolean }>`
     }
     &:active { transform: ${p => p.$disabled ? "none" : "scale(0.99)"}; }
 `;
+// Star rating
+const StarRow = styled.div`
+    display: flex;
+    gap: 6px;
+    margin-top: 2px;
+`;
+const StarBtn = styled.button<{ $active: boolean }>`
+    background: none;
+    border: none;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    color: ${p => p.$active ? "#F5A623" : "rgba(255,255,255,0.18)"};
+    transition: color 0.12s, transform 0.1s;
+    &:hover { color: #F5A623; transform: scale(1.15); }
+`;
+const SecondaryBtn = styled.button`
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    color: rgba(255,255,255,0.55);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 0;
+    flex: 1;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    &:hover { border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.85); }
+`;
+
 const ConfirmCard = styled.div`
     border: 1px solid rgba(245, 166, 35, 0.22);
     border-radius: 14px;
@@ -592,6 +623,23 @@ function FormStep({
                                 </div>
                             )}
                         </UploadZone>
+                    ) : field.type === "radio" ? (
+                        <StarRow>
+                            {(field.choices ?? field.options ?? []).map((choice: string) => {
+                                const n = parseInt(choice);
+                                const selected = parseInt(values[field.key] || "0");
+                                return (
+                                    <StarBtn
+                                        key={choice}
+                                        $active={n <= selected}
+                                        onClick={() => setValues(v => ({ ...v, [field.key]: choice }))}
+                                        type="button"
+                                    >
+                                        {n <= selected ? "★" : "☆"}
+                                    </StarBtn>
+                                );
+                            })}
+                        </StarRow>
                     ) : field.type === "textarea" ? (
                         <FormTextarea
                             value={values[field.key] ?? ""}
@@ -733,6 +781,8 @@ export default function OnboardingWizard({
     const { steps, markDone, patchStepData, clearSteps } = useOnboardingMessages(channelId);
     const [stage, setStage] = useState<Stage>("greeting");
     const [resetting, setResetting] = useState(false);
+    const [reviewsDone, setReviewsDone] = useState(false);
+    const [reviewKey, setReviewKey] = useState(0);
     const stageRestored = useRef(false);
 
     // Step selectors — find by role, not by index
@@ -846,13 +896,27 @@ export default function OnboardingWizard({
                         <span>Loading review form…</span>
                     </ProcessWrap>
                 );
+                if (reviewsDone) return (
+                    <ConfirmCard>
+                        <ConfirmIcon>★</ConfirmIcon>
+                        <ConfirmHeading>Review added</ConfirmHeading>
+                        <ConfirmBody>Got it. Add another review or continue when you're ready.</ConfirmBody>
+                        <div style={{ display: "flex", gap: 10 }}>
+                            <SubmitBtn style={{ flex: 1 }} onClick={() => { setReviewsDone(false); setReviewKey(k => k + 1); }}>
+                                Add another
+                            </SubmitBtn>
+                            <SecondaryBtn onClick={() => setStage("done")}>I'm done</SecondaryBtn>
+                        </div>
+                    </ConfirmCard>
+                );
                 return (
                     <FormStep
+                        key={reviewKey}
                         step={reviewStep}
                         channelId={channelId}
                         onDone={() => {
                             markDone(reviewStep.id);
-                            setStage("done");
+                            setReviewsDone(true);
                         }}
                     />
                 );
