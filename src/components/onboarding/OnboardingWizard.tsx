@@ -520,10 +520,12 @@ function FormStep({
     step,
     channelId,
     onDone,
+    onSkip,
 }: {
     step: WizardStep;
     channelId: string;
     onDone: () => void;
+    onSkip?: () => void;
 }) {
     const client = useClient();
     const schema = step.data;
@@ -542,7 +544,9 @@ function FormStep({
         setValues(v => ({ ...v, [key]: (e.target as HTMLInputElement).value }));
 
     const hasUploadField = (schema?.fields ?? []).some((f: any) => f.type === "upload" || f.type === "file");
-    const canSubmit = !hasUploadField || !!uploadFile_;
+    const hasRadioField  = (schema?.fields ?? []).some((f: any) => f.type === "radio");
+    const radioFilled    = !hasRadioField || (schema?.fields ?? []).filter((f: any) => f.type === "radio").every((f: any) => !!values[f.key]);
+    const canSubmit = (!hasUploadField || !!uploadFile_) && radioFilled;
 
     async function handleSubmit() {
         if (sending || submitted || !canSubmit) return;
@@ -670,9 +674,18 @@ function FormStep({
                     ) : null}
                 </FormField>
             ))}
-            <SubmitBtn $sending={sending} $disabled={!canSubmit} onClick={handleSubmit}>
-                {sending ? "Sending…" : (schema?.submit ?? "Submit")}
-            </SubmitBtn>
+            {onSkip ? (
+                <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                    <SecondaryBtn onClick={onSkip}>Skip</SecondaryBtn>
+                    <SubmitBtn $sending={sending} $disabled={!canSubmit} style={{ flex: 1 }} onClick={handleSubmit}>
+                        {sending ? "Sending…" : (schema?.submit ?? "Submit")}
+                    </SubmitBtn>
+                </div>
+            ) : (
+                <SubmitBtn $sending={sending} $disabled={!canSubmit} onClick={handleSubmit}>
+                    {sending ? "Sending…" : (schema?.submit ?? "Submit")}
+                </SubmitBtn>
+            )}
         </div>
     );
 }
@@ -907,12 +920,14 @@ export default function OnboardingWizard({
                     <ConfirmCard>
                         <ConfirmIcon>★</ConfirmIcon>
                         <ConfirmHeading>Review added</ConfirmHeading>
-                        <ConfirmBody>Got it. Add another review or continue when you're ready.</ConfirmBody>
+                        <ConfirmBody>Add another review or continue to the next step.</ConfirmBody>
                         <div style={{ display: "flex", gap: 10 }}>
-                            <SubmitBtn style={{ flex: 1 }} onClick={() => { setReviewsDone(false); setReviewKey(k => k + 1); }}>
+                            <SecondaryBtn onClick={() => { setReviewsDone(false); setReviewKey(k => k + 1); }}>
                                 Add another
+                            </SecondaryBtn>
+                            <SubmitBtn style={{ flex: 1 }} onClick={() => setStage("done")}>
+                                Continue →
                             </SubmitBtn>
-                            <SecondaryBtn onClick={() => setStage("done")}>I'm done</SecondaryBtn>
                         </div>
                     </ConfirmCard>
                 );
@@ -921,6 +936,7 @@ export default function OnboardingWizard({
                         key={reviewKey}
                         step={reviewStep}
                         channelId={channelId}
+                        onSkip={() => setStage("done")}
                         onDone={() => {
                             markDone(reviewStep.id);
                             setReviewsDone(true);
