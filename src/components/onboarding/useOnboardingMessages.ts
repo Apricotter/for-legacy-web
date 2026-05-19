@@ -138,7 +138,7 @@ export function useOnboardingMessages(channelId: string | undefined) {
                 for (const msg of list) {
                     if (!msg?.content) continue;
                     const parsed = parseCodeblock(msg.content);
-                    if (!parsed) continue;
+                    if (!parsed || parsed.type === "processing") continue;
                     const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
                     if (step) existing.push(step);
                 }
@@ -153,7 +153,7 @@ export function useOnboardingMessages(channelId: string | undefined) {
                     list.push(msg);
                     if (!msg?.content) return;
                     const parsed = parseCodeblock(msg.content);
-                    if (!parsed) return;
+                    if (!parsed || parsed.type === "processing") return;
                     const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
                     if (step) existing.push(step);
                 });
