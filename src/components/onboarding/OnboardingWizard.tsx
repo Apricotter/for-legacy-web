@@ -454,24 +454,22 @@ const EmptyState = styled.div`
     padding: 32px 0;
 `;
 
-const PipelineBar = styled.div<{ $active: boolean }>`
+const PipelineBar = styled.div<{ $active: boolean; $progress: number }>`
     height: 3px;
     flex-shrink: 0;
     overflow: hidden;
     background: rgba(245,166,35,0.08);
     opacity: ${p => p.$active ? 1 : 0};
-    transition: opacity 0.5s ease;
-    @keyframes shimmer {
-        0%   { transform: translateX(-250%); }
-        100% { transform: translateX(450%);  }
-    }
+    transition: opacity 0.6s ease;
+    position: relative;
     &::after {
         content: "";
-        display: block;
+        position: absolute;
+        left: 0; top: 0;
         height: 100%;
-        width: 40%;
-        background: linear-gradient(90deg, transparent, #F5A623cc, transparent);
-        animation: shimmer 1.5s ease-in-out infinite;
+        width: ${p => Math.round(p.$progress * 100)}%;
+        background: linear-gradient(90deg, #e8921acc, #F5A623);
+        transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 `;
 
@@ -1056,7 +1054,14 @@ export default function OnboardingWizard({
                     <Content>
                         {renderContent()}
                     </Content>
-                    <PipelineBar $active={steps.some(s => s.type === "processing" && !s.done)} />
+                    <PipelineBar
+                        $active={steps.some(s => s.type === "processing")}
+                        $progress={Math.min(
+                            (steps.filter(s => s.type === "processing" && s.done).length +
+                             (steps.some(s => s.type === "processing" && !s.done) ? 0.5 : 0)) / 8,
+                            1
+                        )}
+                    />
                 </Shell>
                 {canNext && (
                     <DomeBtn $side="right" onClick={goToReviews} title="Add Reviews">›</DomeBtn>

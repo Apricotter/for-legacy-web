@@ -24,6 +24,28 @@ function parseCodeblock(content: string): { type: string; data: any } | null {
     }
 }
 
+function deduplicateSteps(steps: WizardStep[]): WizardStep[] {
+    // For singleton types keep only the last occurrence; processing steps accumulate freely
+    const singletonKey = (s: WizardStep): string | null => {
+        if (s.type === "greeting") return "greeting";
+        if (s.type === "form") return `form_${s.line}`;
+        if (s.type === "checkpoint") return `checkpoint_${s.data?.step ?? s.label}`;
+        return null;
+    };
+    const seen = new Set<string>();
+    const result: WizardStep[] = [];
+    for (let i = steps.length - 1; i >= 0; i--) {
+        const s = steps[i];
+        const key = singletonKey(s);
+        if (key) {
+            if (seen.has(key)) continue;
+            seen.add(key);
+        }
+        result.unshift(s);
+    }
+    return result;
+}
+
 function blockToStep(type: string, data: any, messageId: string): WizardStep | null {
     const id = messageId;
     switch (type) {
@@ -121,7 +143,8 @@ export function useOnboardingMessages(channelId: string | undefined) {
                     if (step) existing.push(step);
                 }
                 applyUserReplies(existing, list);
-                if (existing.length > 0) setSteps(existing);
+                const deduped = deduplicateSteps(existing);
+                if (deduped.length > 0) setSteps(deduped);
             } catch {
                 const existing: WizardStep[] = [];
                 const list: any[] = [];
@@ -135,7 +158,8 @@ export function useOnboardingMessages(channelId: string | undefined) {
                     if (step) existing.push(step);
                 });
                 applyUserReplies(existing, list);
-                if (existing.length > 0) setSteps(existing);
+                const deduped = deduplicateSteps(existing);
+                if (deduped.length > 0) setSteps(deduped);
             }
         })();
     }, [channelId, client]);
@@ -159,7 +183,8 @@ export function useOnboardingMessages(channelId: string | undefined) {
             setSteps(prev => {
                 if (prev.find(s => s.id === step.id)) return prev;
                 if (step.type === "processing") {
-                    return [...prev.filter(s => s.type !== "processing"), step];
+                    // Keep completed steps; replace only the in-progress (done: false) slot
+                    return [...prev.filter(s => !(s.type === "processing" && !s.done)), step];
                 }
                 return [...prev, step];
             });
