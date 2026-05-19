@@ -17,12 +17,10 @@ export interface WizardStep {
 // Canonical step definitions — always present, always in this order.
 // Messages activate them (set data + needsAction); they never create new stops.
 const FIXED_STEP_DEFS: Omit<WizardStep, "data" | "done" | "needsAction">[] = [
-    { id: "greeting",                    type: "greeting",   line: "author", label: "Welcome"  },
-    { id: "form_book",                   type: "form",       line: "book",   label: "Upload"   },
-    { id: "checkpoint_scene_ner",        type: "checkpoint", line: "book",   label: "Cast"     },
-    { id: "checkpoint_character_dialog", type: "checkpoint", line: "book",   label: "Dialog"   },
-    { id: "checkpoint_character_voice",  type: "checkpoint", line: "book",   label: "Voice"    },
-    { id: "form_author",                 type: "form",       line: "author", label: "Reviews"  },
+    { id: "greeting",             type: "greeting",   line: "author", label: "Welcome" },
+    { id: "form_book",            type: "form",       line: "book",   label: "Upload"  },
+    { id: "checkpoint_scene_ner", type: "checkpoint", line: "book",   label: "Cast"    },
+    { id: "form_author",          type: "form",       line: "author", label: "Reviews" },
 ];
 
 function makeFixedSteps(): WizardStep[] {
