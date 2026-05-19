@@ -148,11 +148,12 @@ export default function SubwayMap({ steps, activeIndex, onSelectStep, bookFilena
             {LINES.map(line => {
                 const lineSteps = steps
                     .map((s, i) => ({ step: s, globalIndex: i }))
-                    .filter(({ step }) => step.line === line.id && step.type !== "processing");
+                    .filter(({ step, globalIndex }) =>
+                        step.line === line.id &&
+                        step.type !== "processing" &&
+                        (step.done || step.needsAction || globalIndex === activeIndex));
 
                 if (lineSteps.length === 0) return null;
-
-                // Always render the line — locked stops show as dim future steps
 
                 return (
                     <LineRow key={line.id}>
