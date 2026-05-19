@@ -64,8 +64,10 @@ export function useOnboardingMessages(channelId: string | undefined) {
 
     // Fetch existing messages from the API on mount (in-memory collection may be empty)
     useEffect(() => {
+        console.log("[useOnboardingMessages] effect run — channelId:", channelId, "client:", !!client);
         if (!channelId || !client) return;
         const channel = client.channels.get(channelId);
+        console.log("[useOnboardingMessages] channel from cache:", channel ? channel.constructor?.name : "NOT FOUND");
         if (!channel) return;
 
         (async () => {
@@ -146,6 +148,7 @@ export function useOnboardingMessages(channelId: string | undefined) {
 
     // Listen for new messages in real-time
     useEffect(() => {
+        console.log("[useOnboardingMessages] listener effect — channelId:", channelId, "client:", !!client);
         if (!channelId || !client) return;
 
         const handler = (msg: any) => {
