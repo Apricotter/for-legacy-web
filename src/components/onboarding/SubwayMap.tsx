@@ -45,13 +45,43 @@ const StopCol = styled.div`
     flex-shrink: 0;
 `;
 
-const Connector = styled.div<{ $done: boolean; $color: string }>`
+const flowAnim = `
+    @keyframes connectorFlow {
+        0%   { background-position: -200% center; }
+        100% { background-position: 200% center; }
+    }
+`;
+
+const Connector = styled.div<{ $done: boolean; $toActive: boolean; $color: string }>`
     flex: 1;
     height: 2px;
     margin-top: 8px;
-    background: ${p => p.$done ? p.$color : "var(--tertiary-background)"};
-    transition: background 0.3s;
     min-width: 12px;
+    transition: background 0.3s;
+
+    ${p => p.$toActive ? `
+        ${flowAnim}
+        background: linear-gradient(
+            to right,
+            ${p.$color}88 0%,
+            ${p.$color} 40%,
+            #fff9 60%,
+            ${p.$color} 80%,
+            ${p.$color}88 100%
+        );
+        background-size: 200% 100%;
+        animation: connectorFlow 1.6s linear infinite;
+    ` : p.$done ? `
+        background: ${p.$color};
+    ` : `
+        background: repeating-linear-gradient(
+            to right,
+            rgba(255,255,255,0.15) 0,
+            rgba(255,255,255,0.15) 3px,
+            transparent 3px,
+            transparent 7px
+        );
+    `}
 `;
 
 const Stop = styled.button<{ $state: "done" | "active" | "pending" | "locked"; $color: string }>`
@@ -132,14 +162,15 @@ interface SubwayMapProps {
 }
 
 interface LineConfig {
-    id: "book" | "author";
+    id: "book" | "book-upload" | "author";
     label: string;
     color: string;
 }
 
 const LINES: LineConfig[] = [
-    { id: "book",   label: "BOOK",   color: "#F5A623" },
-    { id: "author", label: "AUTHOR", color: "#60a5fa" },
+    { id: "book",        label: "BOOK",   color: "#F5A623" },
+    { id: "book-upload", label: "UPLOAD", color: "#F5A623" },
+    { id: "author",      label: "AUTHOR", color: "#60a5fa" },
 ];
 
 export default function SubwayMap({ steps, activeIndex, onSelectStep, bookFilename, reviewCount }: SubwayMapProps) {
@@ -172,6 +203,7 @@ export default function SubwayMap({ steps, activeIndex, onSelectStep, bookFilena
                                         {pos > 0 && (
                                             <Connector
                                                 $done={lineSteps[pos - 1].step.done}
+                                                $toActive={lineSteps[pos - 1].step.done && state === "active"}
                                                 $color={line.color}
                                             />
                                         )}
@@ -185,10 +217,12 @@ export default function SubwayMap({ steps, activeIndex, onSelectStep, bookFilena
                                                 {state === "active" && <StopDot $color={line.color} />}
                                                 {step.needsAction && !step.done && <NeedsYouDot />}
                                             </Stop>
+                                            {(state === "done" || state === "active") && (
                                             <StopLabel $active={globalIndex === activeIndex} $color={line.color}>
                                                 {step.label}
                                             </StopLabel>
-                                            {line.id === "book" && pos === 0 && bookFilename && (
+                                            )}
+                                            {line.id === "book-upload" && pos === 0 && bookFilename && (
                                                 <SubLabel title={bookFilename}>{bookFilename}</SubLabel>
                                             )}
                                             {line.id === "author" && pos === 0 && (reviewCount ?? 0) > 0 && (

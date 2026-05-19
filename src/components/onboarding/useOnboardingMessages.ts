@@ -6,7 +6,7 @@ export type WizardStepType = "greeting" | "form" | "checkpoint" | "processing";
 export interface WizardStep {
     id: string;
     type: WizardStepType;
-    line: "book" | "author";
+    line: "book" | "book-upload" | "author";
     label: string;
     data: any;
     done: boolean;
@@ -31,7 +31,7 @@ function blockToStep(type: string, data: any, messageId: string): WizardStep | n
             return { id, type: "greeting", line: "author", label: "Welcome", data, done: false, needsAction: true, messageId };
         case "form":
             if (data?.fields?.some((f: any) => f.type === "upload" || f.key === "book_file")) {
-                return { id, type: "form", line: "book", label: "Upload", data, done: false, needsAction: true, messageId };
+                return { id, type: "form", line: "book-upload", label: "Upload", data, done: false, needsAction: true, messageId };
             }
             return { id, type: "form", line: "author", label: data?.title ?? "Info", data, done: false, needsAction: true, messageId };
         case "checkpoint": {
@@ -52,7 +52,7 @@ function blockToStep(type: string, data: any, messageId: string): WizardStep | n
             };
         }
         case "processing":
-            return { id, type: "processing", line: "book", label: data?.label ?? "Processing", data, done: data?.done ?? false, needsAction: false, messageId };
+            return { id, type: "processing", line: "book-upload", label: data?.label ?? "Processing", data, done: data?.done ?? false, needsAction: false, messageId };
         default:
             return null;
     }
@@ -173,13 +173,13 @@ export function useOnboardingMessages(channelId: string | undefined) {
                 if (prev.find(s => s.id === step.id)) return prev;
                 console.log("[useOnboardingMessages] adding live step", step.type, step.label);
 
-                // New processing step → replace any existing processing step (one at a time)
+                // New processing step on book-upload → replace previous processing step (one at a time)
                 if (step.type === "processing") {
                     return [...prev.filter(s => s.type !== "processing"), step];
                 }
-                // Checkpoint on book line → drop processing steps, they've served their purpose
+                // Checkpoint on book line → drop entire book-upload processing trail, hand off to book line
                 if (step.type === "checkpoint" && step.line === "book") {
-                    return [...prev.filter(s => s.type !== "processing"), step];
+                    return [...prev.filter(s => s.line !== "book-upload"), step];
                 }
                 return [...prev, step];
             });

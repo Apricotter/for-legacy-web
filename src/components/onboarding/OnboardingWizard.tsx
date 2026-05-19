@@ -835,7 +835,7 @@ export default function OnboardingWizard({
 
     // Step selectors — find by role, not by index
     const greetingStep = steps.find(s => s.type === "greeting");
-    const uploadStep   = steps.find(s => s.type === "form" && s.line === "book");
+    const uploadStep   = steps.find(s => s.type === "form" && s.line === "book-upload");
     const reviewStep   = steps.find(s => s.type === "form" && s.line === "author");
 
     // Restore stage from history on first load
@@ -871,7 +871,7 @@ export default function OnboardingWizard({
     // Subway map active index — derived from stage
     const subwayActiveIndex = (() => {
         if (stage === "greeting") return steps.findIndex(s => s.type === "greeting");
-        if (stage === "upload" || stage === "upload_done") return steps.findIndex(s => s.type === "form" && s.line === "book");
+        if (stage === "upload" || stage === "upload_done") return steps.findIndex(s => s.type === "form" && s.line === "book-upload");
         if (stage === "reviews") return steps.findIndex(s => s.type === "form" && s.line === "author");
         return Math.max(0, steps.length - 1);
     })();
@@ -881,7 +881,7 @@ export default function OnboardingWizard({
         const s = steps[index];
         if (!s) return;
         if (s.type === "greeting") setStage("greeting");
-        else if (s.type === "form" && s.line === "book") setStage(uploadStep?.done ? "upload_done" : "upload");
+        else if (s.type === "form" && s.line === "book-upload") setStage(uploadStep?.done ? "upload_done" : "upload");
         else if (s.type === "form" && s.line === "author") setStage("reviews");
     }
 
