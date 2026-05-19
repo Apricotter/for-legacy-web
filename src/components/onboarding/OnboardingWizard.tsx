@@ -525,7 +525,7 @@ function GreetingStep({ data, channelId, onDone, prefillName }: { data: any; cha
                     value={name}
                     placeholder="Your name"
                     onInput={(e: Event) => setName((e.target as HTMLInputElement).value)}
-                    style={{ fontSize: 16 }}
+                    style={{ fontSize: 16, width: "100%" }}
                 />
             </div>
 
@@ -1066,13 +1066,15 @@ export default function OnboardingWizard({
                         </div>
                     </Header>
 
-                    <SubwayMap
-                        steps={steps}
-                        activeIndex={subwayActiveIndex}
-                        onSelectStep={onSelectStep}
-                        bookFilename={profile?.BookFilename}
-                        reviewCount={localReviewCount}
-                    />
+                    {stage !== "greeting" && (
+                        <SubwayMap
+                            steps={steps}
+                            activeIndex={subwayActiveIndex}
+                            onSelectStep={onSelectStep}
+                            bookFilename={profile?.BookFilename}
+                            reviewCount={localReviewCount}
+                        />
+                    )}
 
                     <Content>
                         {renderContent()}
