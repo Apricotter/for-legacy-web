@@ -454,6 +454,27 @@ const EmptyState = styled.div`
     padding: 32px 0;
 `;
 
+const PipelineBar = styled.div<{ $active: boolean }>`
+    height: 3px;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: rgba(245,166,35,0.08);
+    opacity: ${p => p.$active ? 1 : 0};
+    transition: opacity 0.5s ease;
+    @keyframes shimmer {
+        0%   { transform: translateX(-250%); }
+        100% { transform: translateX(450%);  }
+    }
+    &::after {
+        content: "";
+        display: block;
+        height: 100%;
+        width: 40%;
+        background: linear-gradient(90deg, transparent, #F5A623cc, transparent);
+        animation: shimmer 1.5s ease-in-out infinite;
+    }
+`;
+
 // ── step renderers ────────────────────────────────────────────────────────────
 
 function GreetingStep({ data, channelId, onDone, prefillName }: { data: any; channelId: string; onDone: (name: string) => void; prefillName?: string }) {
@@ -835,7 +856,7 @@ export default function OnboardingWizard({
 
     // Step selectors — find by role, not by index
     const greetingStep = steps.find(s => s.type === "greeting");
-    const uploadStep   = steps.find(s => s.type === "form" && s.line === "book-upload");
+    const uploadStep   = steps.find(s => s.type === "form" && s.line === "book");
     const reviewStep   = steps.find(s => s.type === "form" && s.line === "author");
 
     // Restore stage from history on first load
@@ -871,7 +892,7 @@ export default function OnboardingWizard({
     // Subway map active index — derived from stage
     const subwayActiveIndex = (() => {
         if (stage === "greeting") return steps.findIndex(s => s.type === "greeting");
-        if (stage === "upload" || stage === "upload_done") return steps.findIndex(s => s.type === "form" && s.line === "book-upload");
+        if (stage === "upload" || stage === "upload_done") return steps.findIndex(s => s.type === "form" && s.line === "book");
         if (stage === "reviews") return steps.findIndex(s => s.type === "form" && s.line === "author");
         return Math.max(0, steps.length - 1);
     })();
@@ -881,7 +902,7 @@ export default function OnboardingWizard({
         const s = steps[index];
         if (!s) return;
         if (s.type === "greeting") setStage("greeting");
-        else if (s.type === "form" && s.line === "book-upload") setStage(uploadStep?.done ? "upload_done" : "upload");
+        else if (s.type === "form" && s.line === "book") setStage(uploadStep?.done ? "upload_done" : "upload");
         else if (s.type === "form" && s.line === "author") setStage("reviews");
     }
 
@@ -1035,6 +1056,7 @@ export default function OnboardingWizard({
                     <Content>
                         {renderContent()}
                     </Content>
+                    <PipelineBar $active={steps.some(s => s.type === "processing" && !s.done)} />
                 </Shell>
                 {canNext && (
                     <DomeBtn $side="right" onClick={goToReviews} title="Add Reviews">›</DomeBtn>

@@ -6,7 +6,7 @@ export type WizardStepType = "greeting" | "form" | "checkpoint" | "processing";
 export interface WizardStep {
     id: string;
     type: WizardStepType;
-    line: "book" | "book-upload" | "author";
+    line: "book" | "author";
     label: string;
     data: any;
     done: boolean;
@@ -31,7 +31,7 @@ function blockToStep(type: string, data: any, messageId: string): WizardStep | n
             return { id, type: "greeting", line: "author", label: "Welcome", data, done: false, needsAction: true, messageId };
         case "form":
             if (data?.fields?.some((f: any) => f.type === "upload" || f.key === "book_file")) {
-                return { id, type: "form", line: "book-upload", label: "Upload", data, done: false, needsAction: true, messageId };
+                return { id, type: "form", line: "book", label: "Upload", data, done: false, needsAction: true, messageId };
             }
             return { id, type: "form", line: "author", label: data?.title ?? "Info", data, done: false, needsAction: true, messageId };
         case "checkpoint": {
@@ -52,7 +52,7 @@ function blockToStep(type: string, data: any, messageId: string): WizardStep | n
             };
         }
         case "processing":
-            return { id, type: "processing", line: "book-upload", label: data?.label ?? "Processing", data, done: data?.done ?? false, needsAction: false, messageId };
+            return { id, type: "processing", line: "book", label: data?.label ?? "Processing", data, done: data?.done ?? false, needsAction: false, messageId };
         default:
             return null;
     }
@@ -64,14 +64,11 @@ export function useOnboardingMessages(channelId: string | undefined) {
 
     // Fetch existing messages from the API on mount (in-memory collection may be empty)
     useEffect(() => {
-        console.log("[useOnboardingMessages] effect run — channelId:", channelId, "client:", !!client);
         if (!channelId || !client) return;
         const channel = client.channels.get(channelId);
-        console.log("[useOnboardingMessages] channel from cache:", channel ? channel.constructor?.name : "NOT FOUND");
         if (!channel) return;
 
         (async () => {
-            console.log("[useOnboardingMessages] fetching messages for channel", channelId);
             const applyUserReplies = (existing: WizardStep[], list: any[]) => {
                 const userId = (client as any)?.user?._id;
 
@@ -115,24 +112,14 @@ export function useOnboardingMessages(channelId: string | undefined) {
                 // fetchMessages returns newest-first; reverse to get chronological (greeting before form)
                 const raw: any[] = Array.isArray(msgs) ? msgs : (msgs?.messages ?? []);
                 const list = [...raw].reverse();
-                console.log("[useOnboardingMessages] fetched", list.length, "messages");
                 const existing: WizardStep[] = [];
                 for (const msg of list) {
                     if (!msg?.content) continue;
                     const parsed = parseCodeblock(msg.content);
                     if (!parsed) continue;
                     const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
-                    if (!step) continue;
-                    if (step.type === "processing") {
-                        const i = existing.findIndex(s => s.type === "processing");
-                        if (i >= 0) existing.splice(i, 1, step); else existing.push(step);
-                    } else if (step.type === "checkpoint" && step.line === "book") {
-                        existing.splice(0, existing.length, ...existing.filter(s => s.line !== "book-upload"), step);
-                    } else {
-                        existing.push(step);
-                    }
+                    if (step) existing.push(step);
                 }
-                console.log("[useOnboardingMessages] built", existing.length, "steps from history");
                 applyUserReplies(existing, list);
                 if (existing.length > 0) setSteps(existing);
             } catch {
@@ -145,13 +132,7 @@ export function useOnboardingMessages(channelId: string | undefined) {
                     const parsed = parseCodeblock(msg.content);
                     if (!parsed) return;
                     const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
-                    if (!step) return;
-                    if (step.type === "processing") {
-                        const i = existing.findIndex(s => s.type === "processing");
-                        if (i >= 0) existing.splice(i, 1, step); else existing.push(step);
-                    } else {
-                        existing.push(step);
-                    }
+                    if (step) existing.push(step);
                 });
                 applyUserReplies(existing, list);
                 if (existing.length > 0) setSteps(existing);
@@ -161,38 +142,24 @@ export function useOnboardingMessages(channelId: string | undefined) {
 
     // Listen for new messages in real-time
     useEffect(() => {
-        console.log("[useOnboardingMessages] listener effect — channelId:", channelId, "client:", !!client);
         if (!channelId || !client) return;
 
         const handler = (msg: any) => {
+            const msgChannelId = msg.channelId ?? msg.channel_id ?? msg._id;
+            // revolt.js v7 passes the message object directly
             const msgChannel = msg.channel_id ?? msg.channelId ?? (msg.channel as any)?._id;
-            console.log("[useOnboardingMessages] live message in", msgChannel, "watching", channelId, "content:", msg.content?.slice(0, 80));
             if (msgChannel !== channelId) return;
             if (!msg.content) return;
 
             const parsed = parseCodeblock(msg.content);
-            if (!parsed) {
-                console.log("[useOnboardingMessages] no codeblock in live message");
-                return;
-            }
-            console.log("[useOnboardingMessages] live codeblock", parsed.type, parsed.data);
+            if (!parsed) return;
             const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
-            if (!step) {
-                console.log("[useOnboardingMessages] blockToStep returned null for type", parsed.type);
-                return;
-            }
+            if (!step) return;
 
             setSteps(prev => {
                 if (prev.find(s => s.id === step.id)) return prev;
-                console.log("[useOnboardingMessages] adding live step", step.type, step.label);
-
-                // New processing step on book-upload → replace previous processing step (one at a time)
                 if (step.type === "processing") {
                     return [...prev.filter(s => s.type !== "processing"), step];
-                }
-                // Checkpoint on book line → drop entire book-upload processing trail, hand off to book line
-                if (step.type === "checkpoint" && step.line === "book") {
-                    return [...prev.filter(s => s.line !== "book-upload"), step];
                 }
                 return [...prev, step];
             });
