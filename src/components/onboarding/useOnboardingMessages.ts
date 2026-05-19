@@ -172,6 +172,15 @@ export function useOnboardingMessages(channelId: string | undefined) {
             setSteps(prev => {
                 if (prev.find(s => s.id === step.id)) return prev;
                 console.log("[useOnboardingMessages] adding live step", step.type, step.label);
+
+                // New processing step → replace any existing processing step (one at a time)
+                if (step.type === "processing") {
+                    return [...prev.filter(s => s.type !== "processing"), step];
+                }
+                // Checkpoint on book line → drop processing steps, they've served their purpose
+                if (step.type === "checkpoint" && step.line === "book") {
+                    return [...prev.filter(s => s.type !== "processing"), step];
+                }
                 return [...prev, step];
             });
         };
