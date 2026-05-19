@@ -69,6 +69,7 @@ export function useOnboardingMessages(channelId: string | undefined) {
         if (!channel) return;
 
         (async () => {
+            console.log("[useOnboardingMessages] fetching messages for channel", channelId);
             const applyUserReplies = (existing: WizardStep[], list: any[]) => {
                 const userId = (client as any)?.user?._id;
 
@@ -112,14 +113,17 @@ export function useOnboardingMessages(channelId: string | undefined) {
                 // fetchMessages returns newest-first; reverse to get chronological (greeting before form)
                 const raw: any[] = Array.isArray(msgs) ? msgs : (msgs?.messages ?? []);
                 const list = [...raw].reverse();
+                console.log("[useOnboardingMessages] fetched", list.length, "messages");
                 const existing: WizardStep[] = [];
                 for (const msg of list) {
                     if (!msg?.content) continue;
                     const parsed = parseCodeblock(msg.content);
                     if (!parsed) continue;
+                    console.log("[useOnboardingMessages] parsed codeblock", parsed.type, parsed.data);
                     const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
                     if (step) existing.push(step);
                 }
+                console.log("[useOnboardingMessages] built", existing.length, "steps from history");
                 applyUserReplies(existing, list);
                 if (existing.length > 0) setSteps(existing);
             } catch {
@@ -145,19 +149,26 @@ export function useOnboardingMessages(channelId: string | undefined) {
         if (!channelId || !client) return;
 
         const handler = (msg: any) => {
-            const msgChannelId = msg.channelId ?? msg.channel_id ?? msg._id;
-            // revolt.js v7 passes the message object directly
             const msgChannel = msg.channel_id ?? msg.channelId ?? (msg.channel as any)?._id;
+            console.log("[useOnboardingMessages] live message in", msgChannel, "watching", channelId, "content:", msg.content?.slice(0, 80));
             if (msgChannel !== channelId) return;
             if (!msg.content) return;
 
             const parsed = parseCodeblock(msg.content);
-            if (!parsed) return;
+            if (!parsed) {
+                console.log("[useOnboardingMessages] no codeblock in live message");
+                return;
+            }
+            console.log("[useOnboardingMessages] live codeblock", parsed.type, parsed.data);
             const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
-            if (!step) return;
+            if (!step) {
+                console.log("[useOnboardingMessages] blockToStep returned null for type", parsed.type);
+                return;
+            }
 
             setSteps(prev => {
                 if (prev.find(s => s.id === step.id)) return prev;
+                console.log("[useOnboardingMessages] adding live step", step.type, step.label);
                 return [...prev, step];
             });
         };
