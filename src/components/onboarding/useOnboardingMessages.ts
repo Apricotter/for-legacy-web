@@ -14,6 +14,21 @@ export interface WizardStep {
     messageId?: string;
 }
 
+// Canonical step definitions — always present, always in this order.
+// Messages activate them (set data + needsAction); they never create new stops.
+const FIXED_STEP_DEFS: Omit<WizardStep, "data" | "done" | "needsAction">[] = [
+    { id: "greeting",                    type: "greeting",   line: "author", label: "Welcome"  },
+    { id: "form_book",                   type: "form",       line: "book",   label: "Upload"   },
+    { id: "checkpoint_scene_ner",        type: "checkpoint", line: "book",   label: "Cast"     },
+    { id: "checkpoint_character_dialog", type: "checkpoint", line: "book",   label: "Dialog"   },
+    { id: "checkpoint_character_voice",  type: "checkpoint", line: "book",   label: "Voice"    },
+    { id: "form_author",                 type: "form",       line: "author", label: "Reviews"  },
+];
+
+function makeFixedSteps(): WizardStep[] {
+    return FIXED_STEP_DEFS.map(def => ({ ...def, data: null, done: false, needsAction: false }));
+}
+
 function parseCodeblock(content: string): { type: string; data: any } | null {
     const match = content.match(/```(\w+)\n([\s\S]*?)```/);
     if (!match) return null;
@@ -24,169 +39,139 @@ function parseCodeblock(content: string): { type: string; data: any } | null {
     }
 }
 
-function deduplicateSteps(steps: WizardStep[]): WizardStep[] {
-    // For singleton types keep only the last occurrence; processing steps accumulate freely
-    const singletonKey = (s: WizardStep): string | null => {
-        if (s.type === "greeting") return "greeting";
-        if (s.type === "form") return `form_${s.line}`;
-        if (s.type === "checkpoint") return `checkpoint_${s.data?.step ?? s.label}`;
-        return null;
-    };
-    const seen = new Set<string>();
-    const result: WizardStep[] = [];
-    for (let i = steps.length - 1; i >= 0; i--) {
-        const s = steps[i];
-        const key = singletonKey(s);
-        if (key) {
-            if (seen.has(key)) continue;
-            seen.add(key);
-        }
-        result.unshift(s);
+// Map a codeblock type+data to the fixed step it should update
+function stepIdForBlock(type: string, data: any): string | null {
+    if (type === "greeting") return "greeting";
+    if (type === "form") {
+        const isUpload = data?.fields?.some((f: any) => f.type === "upload" || f.key === "book_file");
+        return isUpload ? "form_book" : "form_author";
     }
-    return result;
+    if (type === "checkpoint" && data?.step) return `checkpoint_${data.step}`;
+    return null;
 }
 
-function blockToStep(type: string, data: any, messageId: string): WizardStep | null {
-    const id = messageId;
-    switch (type) {
-        case "greeting":
-            return { id, type: "greeting", line: "author", label: "Welcome", data, done: false, needsAction: true, messageId };
-        case "form":
-            if (data?.fields?.some((f: any) => f.type === "upload" || f.key === "book_file")) {
-                return { id, type: "form", line: "book", label: "Upload", data, done: false, needsAction: true, messageId };
-            }
-            return { id, type: "form", line: "author", label: data?.title ?? "Info", data, done: false, needsAction: true, messageId };
-        case "checkpoint": {
-            const labels: Record<string, string> = {
-                scene_ner: "Cast",
-                character_dialog: "Dialog",
-                character_voice: "Voice",
-            };
-            return {
-                id,
-                type: "checkpoint",
-                line: "book",
-                label: labels[data?.step] ?? data?.step ?? "Review",
-                data,
-                done: false,
-                needsAction: true,
-                messageId,
-            };
-        }
-        case "processing":
-            return { id, type: "processing", line: "book", label: data?.label ?? "Processing", data, done: data?.done ?? false, needsAction: false, messageId };
-        default:
-            return null;
-    }
+// Apply a codeblock to the fixed step array (activate the target step)
+function activateStep(steps: WizardStep[], type: string, data: any, messageId: string): WizardStep[] {
+    const targetId = stepIdForBlock(type, data);
+    if (!targetId) return steps;
+    return steps.map(s => s.id === targetId ? { ...s, data, needsAction: true, messageId } : s);
 }
 
 export function useOnboardingMessages(channelId: string | undefined) {
     const client = useClient();
-    const [steps, setSteps] = useState<WizardStep[]>([]);
 
-    // Fetch existing messages from the API on mount (in-memory collection may be empty)
+    // Fixed stops — indices are stable (0–5 always map to the same step)
+    const [fixed, setFixed] = useState<WizardStep[]>(makeFixedSteps);
+    // Processing steps are ephemeral (live only) — one in-progress slot + completed history
+    const [processingSteps, setProcessing] = useState<WizardStep[]>([]);
+
+    // Expose as a single array: fixed steps first, then processing (SubwayMap filters processing out)
+    const steps = [...fixed, ...processingSteps];
+
     useEffect(() => {
         if (!channelId || !client) return;
         const channel = client.channels.get(channelId);
         if (!channel) return;
 
         (async () => {
-            const applyUserReplies = (existing: WizardStep[], list: any[]) => {
+            const applyHistory = (msgs: any[]) => {
                 const userId = (client as any)?.user?._id;
 
-                // Find the list index of the most recent greeting codeblock so we only
-                // count user replies that came AFTER it (not stale replies from a prior session).
-                const lastGreetingListIdx = list.reduce((found, m, i) =>
+                // Find the last greeting so we only read user replies after the most recent session start
+                const lastGreetingIdx = msgs.reduce((found, m, i) =>
                     parseCodeblock(m.content ?? "")?.type === "greeting" ? i : found, -1);
 
-                const userMsgsAfterGreeting = list.filter((m: any, i: number) => {
-                    if (i <= lastGreetingListIdx) return false;
+                const userMsgsAfterGreeting = msgs.filter((m: any, i: number) => {
+                    if (i <= lastGreetingIdx) return false;
                     const author = m.author_id ?? m.author?._id ?? m.author;
                     return userId ? author === userId : !parseCodeblock(m.content ?? "");
                 });
 
-                // Greeting done if user replied "My name is X" after the greeting
-                const nameMsg = userMsgsAfterGreeting.find((m: any) => /^my name is /i.test(m.content ?? ""));
-                if (nameMsg) {
-                    const name = nameMsg.content.replace(/^my name is /i, "").trim();
-                    existing.forEach(s => {
-                        if (s.type === "greeting") {
-                            s.done = true;
-                            s.needsAction = false;
-                            s.data = { ...s.data, prefill_name: name };
-                        }
-                    });
-                }
-                // Upload form done if user sent a message with attachments after the greeting
-                if (userMsgsAfterGreeting.some((m: any) => m.attachments?.length > 0)) {
-                    existing.forEach(s => {
-                        if (s.type === "form" && s.line === "book") {
-                            s.done = true;
-                            s.needsAction = false;
-                        }
-                    });
-                }
+                setFixed(prev => {
+                    let next = [...prev.map(s => ({ ...s }))];
+
+                    // Apply all non-processing codeblocks to activate steps
+                    for (const msg of msgs) {
+                        if (!msg?.content) continue;
+                        const parsed = parseCodeblock(msg.content);
+                        if (!parsed || parsed.type === "processing") continue;
+                        next = activateStep(next, parsed.type, parsed.data, msg._id ?? msg.id);
+                    }
+
+                    // Mark greeting done if user replied "My name is X" after it
+                    const nameMsg = userMsgsAfterGreeting.find((m: any) =>
+                        /^my name is /i.test(m.content ?? ""));
+                    if (nameMsg) {
+                        const name = nameMsg.content.replace(/^my name is /i, "").trim();
+                        next = next.map(s => s.id === "greeting"
+                            ? { ...s, done: true, needsAction: false, data: { ...s.data, prefill_name: name } }
+                            : s);
+                    }
+
+                    // Mark upload done if user sent an attachment after greeting
+                    if (userMsgsAfterGreeting.some((m: any) => m.attachments?.length > 0)) {
+                        next = next.map(s => s.id === "form_book"
+                            ? { ...s, done: true, needsAction: false }
+                            : s);
+                    }
+
+                    return next;
+                });
             };
 
             try {
-                // @ts-ignore — revolt.js v7 Channel
+                // @ts-ignore — revolt.js v7
                 const msgs = await (channel as any).fetchMessages({ limit: 100 });
-                // fetchMessages returns newest-first; reverse to get chronological (greeting before form)
                 const raw: any[] = Array.isArray(msgs) ? msgs : (msgs?.messages ?? []);
-                const list = [...raw].reverse();
-                const existing: WizardStep[] = [];
-                for (const msg of list) {
-                    if (!msg?.content) continue;
-                    const parsed = parseCodeblock(msg.content);
-                    if (!parsed || parsed.type === "processing") continue;
-                    const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
-                    if (step) existing.push(step);
-                }
-                applyUserReplies(existing, list);
-                const deduped = deduplicateSteps(existing);
-                if (deduped.length > 0) setSteps(deduped);
+                applyHistory([...raw].reverse());
             } catch {
-                const existing: WizardStep[] = [];
-                const list: any[] = [];
+                const fallback: any[] = [];
                 // @ts-ignore
-                channel.messages?.forEach?.((msg: any) => {
-                    list.push(msg);
-                    if (!msg?.content) return;
-                    const parsed = parseCodeblock(msg.content);
-                    if (!parsed || parsed.type === "processing") return;
-                    const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
-                    if (step) existing.push(step);
-                });
-                applyUserReplies(existing, list);
-                const deduped = deduplicateSteps(existing);
-                if (deduped.length > 0) setSteps(deduped);
+                channel.messages?.forEach?.((m: any) => fallback.push(m));
+                applyHistory(fallback);
             }
         })();
     }, [channelId, client]);
 
-    // Listen for new messages in real-time
+    // Live message handler
     useEffect(() => {
         if (!channelId || !client) return;
 
         const handler = (msg: any) => {
-            const msgChannelId = msg.channelId ?? msg.channel_id ?? msg._id;
-            // revolt.js v7 passes the message object directly
             const msgChannel = msg.channel_id ?? msg.channelId ?? (msg.channel as any)?._id;
             if (msgChannel !== channelId) return;
             if (!msg.content) return;
 
             const parsed = parseCodeblock(msg.content);
             if (!parsed) return;
-            const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
-            if (!step) return;
 
-            setSteps(prev => {
-                if (prev.find(s => s.id === step.id)) return prev;
-                if (step.type === "processing") {
-                    // Keep completed steps; replace only the in-progress (done: false) slot
+            if (parsed.type === "processing") {
+                const step: WizardStep = {
+                    id:          msg._id ?? msg.id,
+                    type:        "processing",
+                    line:        "book",
+                    label:       parsed.data?.label ?? "Processing",
+                    data:        parsed.data,
+                    done:        parsed.data?.done ?? false,
+                    needsAction: false,
+                    messageId:   msg._id ?? msg.id,
+                };
+                setProcessing(prev => {
+                    if (prev.find(s => s.id === step.id)) return prev;
+                    // Keep completed steps; replace in-progress slot
                     return [...prev.filter(s => !(s.type === "processing" && !s.done)), step];
-                }
-                return [...prev, step];
+                });
+                return;
+            }
+
+            // Non-processing: activate the matching fixed step
+            const targetId = stepIdForBlock(parsed.type, parsed.data);
+            if (!targetId) return;
+            setFixed(prev => {
+                const target = prev.find(s => s.id === targetId);
+                // Skip if already activated by this exact message
+                if (target?.messageId === (msg._id ?? msg.id)) return prev;
+                return activateStep(prev, parsed.type, parsed.data, msg._id ?? msg.id);
             });
         };
 
@@ -195,14 +180,17 @@ export function useOnboardingMessages(channelId: string | undefined) {
     }, [channelId, client]);
 
     const markDone = (stepId: string) => {
-        setSteps(prev => prev.map(s => s.id === stepId ? { ...s, done: true, needsAction: false } : s));
+        setFixed(prev => prev.map(s => s.id === stepId ? { ...s, done: true, needsAction: false } : s));
     };
 
     const patchStepData = (stepId: string, patch: any) => {
-        setSteps(prev => prev.map(s => s.id === stepId ? { ...s, data: { ...s.data, ...patch } } : s));
+        setFixed(prev => prev.map(s => s.id === stepId ? { ...s, data: { ...s.data, ...patch } } : s));
     };
 
-    const clearSteps = () => setSteps([]);
+    const clearSteps = () => {
+        setFixed(makeFixedSteps());
+        setProcessing([]);
+    };
 
     return { steps, markDone, patchStepData, clearSteps };
 }

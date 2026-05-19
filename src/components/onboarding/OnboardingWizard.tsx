@@ -813,7 +813,7 @@ function ProcessingStep({ data }: { data: any }) {
 
 // ── state machine ─────────────────────────────────────────────────────────────
 
-type Stage = "greeting" | "upload" | "upload_done" | "reviews" | "done";
+type Stage = "greeting" | "upload" | "upload_done" | "checkpoint" | "reviews" | "done";
 
 const OTTO_API = "https://otto.apricotter.com";
 
@@ -852,10 +852,11 @@ export default function OnboardingWizard({
             });
     }, [serverId]);
 
-    // Step selectors — find by role, not by index
-    const greetingStep = steps.find(s => s.type === "greeting");
-    const uploadStep   = steps.find(s => s.type === "form" && s.line === "book");
-    const reviewStep   = steps.find(s => s.type === "form" && s.line === "author");
+    // Step selectors — fixed steps always exist; data === null means not yet activated
+    const greetingStep      = steps.find(s => s.id === "greeting");
+    const uploadStep        = steps.find(s => s.id === "form_book");
+    const reviewStep        = steps.find(s => s.id === "form_author");
+    const activeCheckpoint  = steps.find(s => s.type === "checkpoint" && s.needsAction && !s.done);
 
     // Restore stage from history on first load
     useEffect(() => {
@@ -867,6 +868,11 @@ export default function OnboardingWizard({
             setStage("upload");
         }
     }, [steps.length]);
+
+    // Auto-transition to checkpoint when one becomes active
+    useEffect(() => {
+        if (activeCheckpoint && stage === "upload_done") setStage("checkpoint");
+    }, [activeCheckpoint?.id]);
 
     const handleReset = useCallback(async () => {
         if (resetting) return;
@@ -889,19 +895,22 @@ export default function OnboardingWizard({
 
     // Subway map active index — derived from stage
     const subwayActiveIndex = (() => {
-        if (stage === "greeting") return steps.findIndex(s => s.type === "greeting");
-        if (stage === "upload" || stage === "upload_done") return steps.findIndex(s => s.type === "form" && s.line === "book");
-        if (stage === "reviews") return steps.findIndex(s => s.type === "form" && s.line === "author");
-        return Math.max(0, steps.length - 1);
+        if (stage === "greeting")    return steps.findIndex(s => s.id === "greeting");
+        if (stage === "upload" || stage === "upload_done")
+                                     return steps.findIndex(s => s.id === "form_book");
+        if (stage === "checkpoint")  return activeCheckpoint ? steps.findIndex(s => s.id === activeCheckpoint.id) : -1;
+        if (stage === "reviews")     return steps.findIndex(s => s.id === "form_author");
+        return -1;
     })();
 
     // Subway map click → stage
     function onSelectStep(index: number) {
         const s = steps[index];
         if (!s) return;
-        if (s.type === "greeting") setStage("greeting");
-        else if (s.type === "form" && s.line === "book") setStage(uploadStep?.done ? "upload_done" : "upload");
-        else if (s.type === "form" && s.line === "author") setStage("reviews");
+        if (s.id === "greeting")   setStage("greeting");
+        else if (s.id === "form_book")   setStage(uploadStep?.done ? "upload_done" : "upload");
+        else if (s.type === "checkpoint" && s.needsAction) setStage("checkpoint");
+        else if (s.id === "form_author") setStage("reviews");
     }
 
     // Dome nav
@@ -920,7 +929,7 @@ export default function OnboardingWizard({
 
         switch (stage) {
             case "greeting":
-                if (!greetingStep) return <EmptyState>Waiting for Otto…</EmptyState>;
+                if (!greetingStep?.data) return <EmptyState>Waiting for Otto…</EmptyState>;
                 return (
                     <GreetingStep
                         data={greetingStep.data}
@@ -942,7 +951,7 @@ export default function OnboardingWizard({
                 );
 
             case "upload":
-                if (!uploadStep) return <EmptyState>Waiting for upload form…</EmptyState>;
+                if (!uploadStep?.data) return <EmptyState>Waiting for upload form…</EmptyState>;
                 return (
                     <FormStep
                         step={uploadStep}
@@ -964,6 +973,23 @@ export default function OnboardingWizard({
                         </ConfirmBody>
                         <SubmitBtn onClick={goToReviews}>Add Reviews →</SubmitBtn>
                     </ConfirmCard>
+                );
+
+            case "checkpoint":
+                if (!activeCheckpoint) return <EmptyState>Waiting for review…</EmptyState>;
+                return (
+                    <CheckpointStep
+                        step={activeCheckpoint}
+                        channelId={channelId}
+                        onDone={() => {
+                            markDone(activeCheckpoint.id);
+                            // Stay on checkpoint stage if another checkpoint is pending, else go to reviews
+                            const nextCheckpoint = steps.find(
+                                s => s.type === "checkpoint" && s.needsAction && !s.done && s.id !== activeCheckpoint.id
+                            );
+                            setStage(nextCheckpoint ? "checkpoint" : "reviews");
+                        }}
+                    />
                 );
 
             case "reviews":
