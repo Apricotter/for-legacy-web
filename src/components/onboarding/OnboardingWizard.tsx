@@ -477,17 +477,12 @@ const PipelineBar = styled.div<{ $active: boolean; $progress: number }>`
 
 function GreetingStep({ data, channelId, onDone, prefillName }: { data: any; channelId: string; onDone: (name: string) => void; prefillName?: string }) {
     const client = useClient();
-    const fallback = (client as any)?.user?.username ?? (client as any)?.user?.display_name ?? "";
-    const [name, setName] = useState<string>(prefillName || data?.prefill_name || fallback);
+    const [name, setName] = useState<string>(prefillName || data?.prefill_name || "");
     const [sending, setSending] = useState(false);
 
     useEffect(() => {
-        if (!name && prefillName) setName(prefillName);
+        if (prefillName && !name) setName(prefillName);
     }, [prefillName]);
-
-    useEffect(() => {
-        if (!name && fallback) setName(fallback);
-    }, [fallback]);
 
     const canStart = name.trim().length > 0;
 
@@ -507,8 +502,21 @@ function GreetingStep({ data, channelId, onDone, prefillName }: { data: any; cha
 
     return (
         <div>
-            <GreetTitle>{data?.title ?? "Welcome"}</GreetTitle>
-            {data?.description && <GreetDesc>{data.description}</GreetDesc>}
+            <GreetTitle>{data?.title ?? "Welcome to your studio"}</GreetTitle>
+
+            {Array.isArray(data?.steps) && data.steps.length > 0 && (
+                <>
+                    <GreetDesc>We're going to get you set up in {data.steps.length} easy steps</GreetDesc>
+                    <GreetSteps style={{ marginBottom: 20 }}>
+                        {data.steps.map((s: string, i: number) => (
+                            <GreetStep key={i}>
+                                <GreetNum>{i + 1}</GreetNum>
+                                <span>{s}</span>
+                            </GreetStep>
+                        ))}
+                    </GreetSteps>
+                </>
+            )}
 
             <div style={{ marginBottom: 20 }}>
                 <FormLabel as="div" style={{ marginBottom: 6 }}>What should we call you?</FormLabel>
@@ -520,17 +528,6 @@ function GreetingStep({ data, channelId, onDone, prefillName }: { data: any; cha
                     style={{ fontSize: 16 }}
                 />
             </div>
-
-            {Array.isArray(data?.steps) && data.steps.length > 0 && (
-                <GreetSteps style={{ marginBottom: 20 }}>
-                    {data.steps.map((s: string, i: number) => (
-                        <GreetStep key={i}>
-                            <GreetNum>{i + 1}</GreetNum>
-                            <span>{s}</span>
-                        </GreetStep>
-                    ))}
-                </GreetSteps>
-            )}
 
             <SubmitBtn $sending={sending} $disabled={!canStart} onClick={handleStart}>
                 {sending ? "Starting…" : "Get Started"}
