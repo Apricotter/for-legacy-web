@@ -121,9 +121,16 @@ export function useOnboardingMessages(channelId: string | undefined) {
                     if (!msg?.content) continue;
                     const parsed = parseCodeblock(msg.content);
                     if (!parsed) continue;
-                    console.log("[useOnboardingMessages] parsed codeblock", parsed.type, parsed.data);
                     const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
-                    if (step) existing.push(step);
+                    if (!step) continue;
+                    if (step.type === "processing") {
+                        const i = existing.findIndex(s => s.type === "processing");
+                        if (i >= 0) existing.splice(i, 1, step); else existing.push(step);
+                    } else if (step.type === "checkpoint" && step.line === "book") {
+                        existing.splice(0, existing.length, ...existing.filter(s => s.line !== "book-upload"), step);
+                    } else {
+                        existing.push(step);
+                    }
                 }
                 console.log("[useOnboardingMessages] built", existing.length, "steps from history");
                 applyUserReplies(existing, list);
@@ -138,7 +145,13 @@ export function useOnboardingMessages(channelId: string | undefined) {
                     const parsed = parseCodeblock(msg.content);
                     if (!parsed) return;
                     const step = blockToStep(parsed.type, parsed.data, msg._id ?? msg.id);
-                    if (step) existing.push(step);
+                    if (!step) return;
+                    if (step.type === "processing") {
+                        const i = existing.findIndex(s => s.type === "processing");
+                        if (i >= 0) existing.splice(i, 1, step); else existing.push(step);
+                    } else {
+                        existing.push(step);
+                    }
                 });
                 applyUserReplies(existing, list);
                 if (existing.length > 0) setSteps(existing);
