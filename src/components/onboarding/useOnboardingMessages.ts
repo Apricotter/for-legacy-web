@@ -52,7 +52,7 @@ function blockToStep(type: string, data: any, messageId: string): WizardStep | n
             };
         }
         case "processing":
-            return { id, type: "processing", line: "book", label: data?.label ?? "Processing", data, done: false, needsAction: false, messageId };
+            return { id, type: "processing", line: "book", label: data?.label ?? "Processing", data, done: data?.done ?? false, needsAction: false, messageId };
         default:
             return null;
     }
