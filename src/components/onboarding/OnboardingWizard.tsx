@@ -848,9 +848,9 @@ export default function OnboardingWizard({
             .then(r => r.ok ? r.json() : null)
             .catch(() => null)
             .then(inv => {
-                console.log("[invitation]", inv);
                 if (!inv?.metadata) return;
-                const name = inv.metadata.name ?? inv.metadata.ownerName ?? "";
+                const raw = inv.metadata.name ?? inv.metadata.ownerName ?? "";
+                const name = raw.replace(/[-_]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()).trim();
                 if (name) setInvitationName(name);
             });
     }, []);
