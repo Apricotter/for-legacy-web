@@ -98,6 +98,10 @@ const Content = styled.div`
     padding: 22px 26px 26px;
     min-height: 180px;
     color: rgba(255,255,255,0.92);
+
+    p, h1, h2, h3, h4 {
+        color: rgba(255,255,255,0.92);
+    }
 `;
 
 const ModalWrapper = styled.div`
@@ -150,7 +154,7 @@ const GreetTitle = styled.div`
 `;
 const GreetDesc = styled.div`
     font-size: 14px;
-    color: rgba(255,255,255,0.58);
+    color: rgba(255,255,255,0.82);
     line-height: 1.65;
     margin-bottom: 20px;
 `;
@@ -647,10 +651,9 @@ function FormStep({
                                 </div>
                             ) : (
                                 <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
-                                    <div style={{ fontSize: 32, lineHeight: 1 }}>📖</div>
-                                    <div style={{ fontWeight: 700, color: "rgba(255,255,255,0.9)", fontSize: 15 }}>Drop your manuscript here</div>
-                                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", marginBottom: 2 }}>PDF, EPUB or TXT</div>
-                                    <UploadCta>↑ &nbsp;Choose file</UploadCta>
+                                    <div style={{ fontWeight: 700, color: "rgba(255,255,255,0.9)", fontSize: 15 }}>Let's start with your book</div>
+                                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", marginBottom: 2 }}>Drop it here or browse — PDF, EPUB or TXT</div>
+                                    <UploadCta>Upload Book</UploadCta>
                                 </div>
                             )}
                         </UploadZone>
