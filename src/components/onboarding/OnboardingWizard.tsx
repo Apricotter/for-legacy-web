@@ -479,10 +479,16 @@ function GreetingStep({ data, channelId, onDone, prefillName }: { data: any; cha
     const client = useClient();
     const [name, setName] = useState<string>(prefillName || data?.prefill_name || "");
     const [sending, setSending] = useState(false);
+    const nameRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (prefillName && !name) setName(prefillName);
     }, [prefillName]);
+
+    useEffect(() => {
+        const t = setTimeout(() => nameRef.current?.focus(), 400);
+        return () => clearTimeout(t);
+    }, []);
 
     const canStart = name.trim().length > 0;
 
@@ -521,6 +527,7 @@ function GreetingStep({ data, channelId, onDone, prefillName }: { data: any; cha
             <div style={{ marginBottom: 20 }}>
                 <FormLabel as="div" style={{ marginBottom: 6 }}>What should we call you?</FormLabel>
                 <FormInput
+                    ref={nameRef}
                     type="text"
                     value={name}
                     placeholder="Your name"
@@ -819,14 +826,34 @@ export default function OnboardingWizard({
     serverId,
     onClose,
 }: ModalProps<"author_onboarding">) {
+    const client = useClient();
     const { steps, markDone, patchStepData, clearSteps } = useOnboardingMessages(channelId);
     const [stage, setStage] = useState<Stage>("greeting");
     const [resetting, setResetting] = useState(false);
     const [reviewsDone, setReviewsDone] = useState(false);
     const [reviewKey, setReviewKey] = useState(0);
     const [profile, setProfile] = useState<any>(null);
+    const [invitationName, setInvitationName] = useState<string>("");
     const [localReviewCount, setLocalReviewCount] = useState(0);
     const stageRestored = useRef(false);
+
+    // Fetch invitation metadata to prefill author name on greeting step
+    useEffect(() => {
+        const apiUrl = (import.meta.env.VITE_API_URL as string ?? "").replace(/\/$/, "");
+        const token = (client as any)?.session?.token;
+        if (!token) return;
+        fetch(`${apiUrl}/users/@me/invitation`, {
+            headers: { "x-session-token": token },
+        })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+            .then(inv => {
+                console.log("[invitation]", inv);
+                if (!inv?.metadata) return;
+                const name = inv.metadata.name ?? inv.metadata.ownerName ?? "";
+                if (name) setInvitationName(name);
+            });
+    }, []);
 
     // Load profile from Mongo on mount — drives stage restoration and field prefill
     useEffect(() => {
@@ -931,7 +958,7 @@ export default function OnboardingWizard({
                     <GreetingStep
                         data={greetingStep.data}
                         channelId={channelId}
-                        prefillName={profile?.AuthorName}
+                        prefillName={profile?.AuthorName || invitationName}
                         onDone={(name: string) => {
                             patchStepData(greetingStep.id, { prefill_name: name });
                             markDone(greetingStep.id);

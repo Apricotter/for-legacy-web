@@ -190,7 +190,12 @@
 
                 input {
                     background: var(--secondary-background);
-                    color: var(--foreground);
+                    color: #111;
+
+                    &::selection {
+                        background: #f4b978;
+                        color: #111;
+                    }
                 }
 
                 button {
