@@ -8,6 +8,30 @@ import { ModalProps } from "../../controllers/modals/types";
 import SubwayMap from "./SubwayMap";
 import { useOnboardingMessages, WizardStep } from "./useOnboardingMessages";
 
+// ── pipeline step registry ────────────────────────────────────────────────────
+
+const PIPELINE_STEPS = [
+    "extract", "tokenize", "scene_builder", "chunk",
+    "scene_enrich_labels", "scene_enrich_gliner",
+    "character_roster",
+    "embed", "booknlp", "detect_narration",
+    "character_dialog",
+    "build_graph", "prune_graph", "drop_bg_characters",
+    "describe_characters", "character_portraits", "scene_stills",
+] as const;
+
+type BookProgress = {
+    jobId: string;
+    slug: string;
+    name: string;
+    status: "running" | "checkpoint" | "complete" | "error";
+    currentStep: string;
+    checkpointStep?: string;
+    checkpointSummary?: string;
+    checkpointData?: any;
+    updatedAt: string;
+};
+
 // ── overlay ───────────────────────────────────────────────────────────────────
 
 const Overlay = styled.div`
@@ -714,9 +738,9 @@ function FormStep({
                         />
                     ) : field.type === "select" || field.type === "combo" ? (
                         <FormSelect value={values[field.key] ?? ""} onChange={set(field.key)}>
-                            <option value="">Select...</option>
+                            <option value="" style={{ color: "#000" }}>Select...</option>
                             {(field.options ?? field.choices ?? []).map((o: string) => (
-                                <option key={o} value={o}>{o}</option>
+                                <option key={o} value={o} style={{ color: "#000" }}>{o}</option>
                             ))}
                         </FormSelect>
                     ) : field.type === "text" || field.type === "input" ? (
@@ -858,6 +882,7 @@ export default function OnboardingWizard({
     const [reviewsDone, setReviewsDone] = useState(false);
     const [reviewKey, setReviewKey] = useState(0);
     const [profile, setProfile] = useState<any>(null);
+    const [bookProgress, setBookProgress] = useState<BookProgress | null>(null);
     const [invitationName, setInvitationName] = useState<string>("");
     const [localReviewCount, setLocalReviewCount] = useState(0);
     const stageRestored = useRef(false);
@@ -904,6 +929,25 @@ export default function OnboardingWizard({
             });
     }, [serverId]);
 
+    // Hydrate bookProgress from profile on initial load / page refresh
+    useEffect(() => {
+        if (!profile?.books?.length) return;
+        setBookProgress(profile.books[profile.books.length - 1]);
+    }, [profile]);
+
+    // Each new WS processing message = fetch profile once to get latest currentStep
+    const processingStepCount = steps.filter(s => s.type === "processing").length;
+    useEffect(() => {
+        if (!processingStepCount || !serverId) return;
+        fetch(`${OTTO_API}/onboarding/${serverId}/profile`)
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+            .then(p => {
+                const prog: BookProgress | undefined = p?.books?.[p.books.length - 1];
+                if (prog) setBookProgress(prog);
+            });
+    }, [processingStepCount]);
+
     // Step selectors — fixed steps always exist; data === null means not yet activated
     const greetingStep      = steps.find(s => s.id === "greeting");
     const uploadStep        = steps.find(s => s.id === "form_book");
@@ -933,6 +977,7 @@ export default function OnboardingWizard({
         clearSteps();
         setStage("greeting");
         setProfile(null);
+        setBookProgress(null);
         setLocalReviewCount(0);
         stageRestored.current = false;
         try {
@@ -1135,14 +1180,22 @@ export default function OnboardingWizard({
                     <Content>
                         {renderContent()}
                     </Content>
-                    <PipelineBar
-                        $active={steps.some(s => s.type === "processing")}
-                        $progress={Math.min(
-                            (steps.filter(s => s.type === "processing" && s.done).length +
-                             (steps.some(s => s.type === "processing" && !s.done) ? 0.5 : 0)) / 8,
-                            1
-                        )}
-                    />
+                    {(() => {
+                        const stepIdx = bookProgress?.currentStep
+                            ? PIPELINE_STEPS.indexOf(bookProgress.currentStep as any)
+                            : -1;
+                        const progressFraction = bookProgress?.status === "complete"
+                            ? 1
+                            : stepIdx >= 0
+                                ? (stepIdx + 1) / PIPELINE_STEPS.length
+                                : 0;
+                        return (
+                            <PipelineBar
+                                $active={!!bookProgress && bookProgress.status !== "complete" || steps.some(s => s.type === "processing")}
+                                $progress={progressFraction}
+                            />
+                        );
+                    })()}
                 </Shell>
                 {canNext && (
                     <DomeBtn $side="right" onClick={goToReviews} title="Add Reviews">›</DomeBtn>
