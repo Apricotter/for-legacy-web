@@ -867,13 +867,13 @@ export default function OnboardingWizard({
             .then(p => {
                 if (!p) return;
                 setProfile(p);
-                if (p.Reviews?.length > 0) setLocalReviewCount(p.Reviews.length);
+                if (p.reviews?.length > 0) setLocalReviewCount(p.reviews.length);
                 stageRestored.current = true;
-                if (p.Reviews?.length > 0) {
+                if (p.reviews?.length > 0) {
                     setStage("done");
-                } else if (p.BookFilename) {
+                } else if (p.bookFilename) {
                     setStage("upload_done");
-                } else if (p.AuthorName) {
+                } else if (p.authorName) {
                     setStage("upload");
                 }
             });
@@ -961,7 +961,7 @@ export default function OnboardingWizard({
                     <GreetingStep
                         data={greetingStep.data}
                         channelId={channelId}
-                        prefillName={profile?.AuthorName || invitationName}
+                        prefillName={profile?.authorName || invitationName}
                         onDone={(name: string) => {
                             patchStepData(greetingStep.id, { prefill_name: name });
                             markDone(greetingStep.id);
@@ -1101,7 +1101,7 @@ export default function OnboardingWizard({
                             steps={steps}
                             activeIndex={subwayActiveIndex}
                             onSelectStep={onSelectStep}
-                            bookFilename={profile?.BookFilename}
+                            bookFilename={profile?.bookFilename}
                             reviewCount={localReviewCount}
                         />
                     )}
