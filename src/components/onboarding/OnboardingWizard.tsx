@@ -401,10 +401,46 @@ const CharChip = styled.div<{ $role?: "Main" | "Supporting" | "Minor" }>`
         p.$role === "Supporting" ? "#93c5fd"  :
         "rgba(255,255,255,0.6)"};
 `;
+const CharScrollList = styled.div`
+    max-height: 210px;
+    overflow-y: auto;
+    margin: 14px 0;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 4px 0;
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+`;
+const CharRow = styled.label`
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    &:last-child { border-bottom: none; }
+    &:hover { background: rgba(255,255,255,0.03); }
+`;
+const CharRowName = styled.span`
+    font-size: 13px;
+    color: rgba(255,255,255,0.85);
+    flex: 1;
+`;
+const CharRoleTag = styled.span<{ $role: string }>`
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: ${p =>
+        p.$role === "Main"       ? "#F4B978" :
+        p.$role === "Supporting" ? "#93c5fd"  :
+        "rgba(255,255,255,0.3)"};
+`;
 const CheckpointActions = styled.div`
     display: flex;
     gap: 10px;
-    margin-top: 20px;
+    margin-top: 4px;
 `;
 const ConfirmBtn = styled.button`
     background: rgba(101, 229, 114, 0.12);
@@ -415,20 +451,9 @@ const ConfirmBtn = styled.button`
     font-weight: 700;
     padding: 10px 22px;
     cursor: pointer;
+    flex: 1;
     transition: background 0.15s;
     &:hover { background: rgba(101, 229, 114, 0.2); }
-`;
-const EditBtn = styled.button`
-    background: transparent;
-    color: var(--secondary-foreground);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    padding: 10px 22px;
-    cursor: pointer;
-    transition: border-color 0.15s, color 0.15s;
-    &:hover { border-color: rgba(255,255,255,0.3); color: var(--foreground); }
 `;
 
 // Processing
@@ -765,45 +790,42 @@ function CheckpointStep({
         );
     }
 
-    const main: string[]       = data?.main ?? data?.characters?.filter((c: any) => c.role === "Main").map((c: any) => c.name) ?? [];
-    const supporting: string[] = data?.supporting ?? data?.characters?.filter((c: any) => c.role === "Supporting").map((c: any) => c.name) ?? [];
-    const minor: string[]      = data?.minor ?? data?.characters?.filter((c: any) => c.role === "Minor").map((c: any) => c.name) ?? [];
+    type CharEntry = { name: string; role: "Main" | "Supporting" | "Minor" };
+    const allChars: CharEntry[] = (data?.characters ?? [])
+        .filter((c: any) => c.role !== "Background")
+        .map((c: any) => ({ name: c.name as string, role: c.role as "Main" | "Supporting" | "Minor" }));
+
+    const [checked, setChecked] = useState<Record<string, boolean>>(() =>
+        Object.fromEntries(allChars.map(c => [c.name, true]))
+    );
+    const toggle = (name: string) => setChecked(prev => ({ ...prev, [name]: !prev[name] }));
 
     return (
         <div>
-            <CheckpointTitle>{data?.title ?? "Review"}</CheckpointTitle>
-            <CheckpointSub>{data?.subtitle ?? "Does this look right? Confirm to continue the pipeline."}</CheckpointSub>
+            <CheckpointTitle>Please confirm your Cast</CheckpointTitle>
+            <CheckpointSub>
+                {allChars.length} characters identified. Uncheck anyone who shouldn't be included.
+            </CheckpointSub>
 
-            {main.length > 0 && (
-                <CharGroup>
-                    <CharGroupLabel>Main</CharGroupLabel>
-                    <CharList>
-                        {main.map((n: string) => <CharChip key={n} $role="Main">{n}</CharChip>)}
-                    </CharList>
-                </CharGroup>
-            )}
-            {supporting.length > 0 && (
-                <CharGroup>
-                    <CharGroupLabel>Supporting</CharGroupLabel>
-                    <CharList>
-                        {supporting.map((n: string) => <CharChip key={n} $role="Supporting">{n}</CharChip>)}
-                    </CharList>
-                </CharGroup>
-            )}
-            {minor.length > 0 && (
-                <CharGroup>
-                    <CharGroupLabel>Minor</CharGroupLabel>
-                    <CharList>
-                        {minor.map((n: string) => <CharChip key={n}>{n}</CharChip>)}
-                    </CharList>
-                </CharGroup>
-            )}
+            <CharScrollList>
+                {allChars.map(({ name, role }) => (
+                    <CharRow key={name}>
+                        <input
+                            type="checkbox"
+                            checked={checked[name] ?? true}
+                            onChange={() => toggle(name)}
+                            style={{ accentColor: "#65E572", cursor: "pointer", flexShrink: 0 }}
+                        />
+                        <CharRowName>{name}</CharRowName>
+                        <CharRoleTag $role={role}>{role}</CharRoleTag>
+                    </CharRow>
+                ))}
+            </CharScrollList>
 
             <CheckpointActions>
                 <ConfirmBtn onClick={handleConfirm} disabled={confirming}>
-                    {confirming ? "Confirming…" : "Looks good"}
+                    {confirming ? "Confirming…" : "Looks good →"}
                 </ConfirmBtn>
-                <EditBtn>Edit</EditBtn>
             </CheckpointActions>
         </div>
     );
