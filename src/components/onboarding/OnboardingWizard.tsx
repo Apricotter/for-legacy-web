@@ -861,6 +861,7 @@ export default function OnboardingWizard({
     const [invitationName, setInvitationName] = useState<string>("");
     const [localReviewCount, setLocalReviewCount] = useState(0);
     const stageRestored = useRef(false);
+    const profileEpoch  = useRef(0);
 
     // Fetch invitation metadata to prefill author name on greeting step
     useEffect(() => {
@@ -883,10 +884,12 @@ export default function OnboardingWizard({
     // Load profile from Mongo on mount — drives stage restoration and field prefill
     useEffect(() => {
         if (!serverId) return;
+        const epoch = profileEpoch.current;
         fetch(`${OTTO_API}/onboarding/${serverId}/profile`)
             .then(r => r.ok ? r.json() : null)
             .catch(() => null)
             .then(p => {
+                if (profileEpoch.current !== epoch) return; // stale — reset happened while fetching
                 if (!p) return;
                 setProfile(p);
                 if (p.reviews?.length > 0) setLocalReviewCount(p.reviews.length);
@@ -926,6 +929,7 @@ export default function OnboardingWizard({
     const handleReset = useCallback(async () => {
         if (resetting) return;
         setResetting(true);
+        profileEpoch.current += 1;
         clearSteps();
         setStage("greeting");
         setProfile(null);
