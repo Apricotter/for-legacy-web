@@ -1690,6 +1690,21 @@ export default function OnboardingWizard({
         setBookProgress(profile.books[profile.books.length - 1]);
     }, [profile]);
 
+    // Poll profile every 5 s while book is actively running so the progress bar stays live
+    useEffect(() => {
+        if (!serverId || bookProgress?.status !== "running") return;
+        const id = setInterval(() => {
+            fetch(`${OTTO_API}/onboarding/${serverId}/profile`)
+                .then(r => r.ok ? r.json() : null)
+                .catch(() => null)
+                .then(p => {
+                    const prog: BookProgress | undefined = p?.books?.[p.books.length - 1];
+                    if (prog) setBookProgress(prog);
+                });
+        }, 5000);
+        return () => clearInterval(id);
+    }, [serverId, bookProgress?.status]);
+
     // When profile shows a checkpoint, hydrate the checkpoint step so it shows on refresh
     useEffect(() => {
         if (!bookProgress || bookProgress.status !== "checkpoint") return;
