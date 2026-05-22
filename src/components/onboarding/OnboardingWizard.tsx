@@ -909,12 +909,29 @@ const PreviewRight = styled.div`
     overflow: hidden;
     background: rgba(255,255,255,0.018);
 `;
+const PreviewNameRow = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+`;
 const PreviewName = styled.div`
     font-size: 16px;
     font-weight: 700;
     color: rgba(255,255,255,0.92);
     letter-spacing: -0.01em;
-    margin-bottom: 2px;
+`;
+const PreviewEditBtn = styled.button`
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.28);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 4px;
+    line-height: 1;
+    transition: color 0.15s;
+    flex-shrink: 0;
+    &:hover { color: #F5A623; }
 `;
 const PreviewRoleTag = styled.div`
     font-size: 10px;
@@ -1339,7 +1356,10 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
                             : <PreviewPortraitPlaceholder>👤</PreviewPortraitPlaceholder>}
                     </PreviewPortraitCol>
                     <PreviewRight>
-                        <PreviewName>{char.name}</PreviewName>
+                        <PreviewNameRow>
+                            <PreviewName>{char.name}</PreviewName>
+                            <PreviewEditBtn onClick={() => setEditModal(char.name)} title="Edit character">✏</PreviewEditBtn>
+                        </PreviewNameRow>
                         <PreviewRoleTag>{char.role}</PreviewRoleTag>
                         <PreviewDesc>
                             {currentEdit.description || <span style={{ opacity: 0.45 }}>No description yet.</span>}
