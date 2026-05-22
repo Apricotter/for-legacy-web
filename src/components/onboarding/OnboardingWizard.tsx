@@ -937,17 +937,19 @@ export default function OnboardingWizard({
 
     // When profile shows a checkpoint, hydrate the checkpoint step so it shows on refresh
     useEffect(() => {
-        if (!bookProgress || bookProgress.status !== "checkpoint" || !bookProgress.checkpointData) return;
+        if (!bookProgress || bookProgress.status !== "checkpoint") return;
         try {
-            const parsed = typeof bookProgress.checkpointData === "string"
-                ? JSON.parse(bookProgress.checkpointData)
-                : bookProgress.checkpointData;
+            const parsed = bookProgress.checkpointData
+                ? (typeof bookProgress.checkpointData === "string"
+                    ? JSON.parse(bookProgress.checkpointData)
+                    : bookProgress.checkpointData)
+                : {};
             activateCheckpoint({
                 ...parsed,
                 step:        bookProgress.checkpointStep,
                 advance_url: `https://quill.apricotter.com/onboarding/${serverId}/advance`,
             });
-        } catch { /* malformed checkpointData — leave checkpoint deactivated */ }
+        } catch { /* malformed checkpointData — activate with empty characters */ }
     }, [bookProgress?.status, bookProgress?.checkpointStep]);
 
     // Each new WS processing message = fetch profile once to get latest currentStep
