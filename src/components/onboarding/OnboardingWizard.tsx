@@ -1674,8 +1674,11 @@ export default function OnboardingWizard({
                 setProfile(p);
                 if (p.reviews?.length > 0) setLocalReviewCount(p.reviews.length);
                 stageRestored.current = true;
+                const lastBook = p.books?.[p.books.length - 1];
                 if (p.reviews?.length > 0) {
                     setStage("done");
+                } else if (lastBook?.status === "checkpoint") {
+                    setStage("checkpoint");
                 } else if (p.bookFilename) {
                     setStage("upload_done");
                 } else if (p.authorName) {
@@ -1737,9 +1740,10 @@ export default function OnboardingWizard({
         }
     }, [steps.length]);
 
-    // Auto-transition to checkpoint when one becomes active
+    // Auto-transition to checkpoint when one becomes active (from any non-terminal stage)
     useEffect(() => {
-        if (activeCheckpoint && stage === "upload_done") setStage("checkpoint");
+        if (activeCheckpoint && stage !== "checkpoint" && stage !== "reviews" && stage !== "done")
+            setStage("checkpoint");
     }, [activeCheckpoint?.id]);
 
     const handleReset = useCallback(async () => {
@@ -1779,7 +1783,7 @@ export default function OnboardingWizard({
         if (!s) return;
         if (s.id === "greeting")   setStage("greeting");
         else if (s.id === "form_book")   setStage(uploadStep?.done ? "upload_done" : "upload");
-        else if (s.type === "checkpoint" && s.needsAction) setStage("checkpoint");
+        else if (s.type === "checkpoint") setStage("checkpoint");
         else if (s.id === "form_author") setStage("reviews");
     }
 
