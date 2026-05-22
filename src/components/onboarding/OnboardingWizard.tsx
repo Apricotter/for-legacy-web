@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "preact/hooks";
+import { Pencil } from "@styled-icons/boxicons-regular";
 import styled from "styled-components/macro";
 
 import { uploadFile } from "../../controllers/client/jsx/legacy/FileUploads";
@@ -1358,7 +1359,7 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
                     <PreviewRight>
                         <PreviewNameRow>
                             <PreviewName>{char.name}</PreviewName>
-                            <PreviewEditBtn onClick={() => setEditModal(char.name)} title="Edit character">✏</PreviewEditBtn>
+                            <PreviewEditBtn onClick={() => setEditModal(char.name)} title="Edit character"><Pencil size={15} /></PreviewEditBtn>
                         </PreviewNameRow>
                         <PreviewRoleTag>{char.role}</PreviewRoleTag>
                         <PreviewDesc>
