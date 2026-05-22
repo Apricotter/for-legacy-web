@@ -838,7 +838,7 @@ function CheckpointStep({
                             type="checkbox"
                             checked={checked[name] ?? true}
                             onChange={() => toggle(name)}
-                            style={{ accentColor: "#65E572", cursor: "pointer", flexShrink: 0 }}
+                            style={{ accentColor: "#F5A623", cursor: "pointer", flexShrink: 0 }}
                         />
                         <CharRowName>{name}</CharRowName>
                         <CharRoleTag $role={role}>{role}</CharRoleTag>
@@ -847,9 +847,9 @@ function CheckpointStep({
             </CharScrollList>
 
             <CheckpointActions>
-                <ConfirmBtn onClick={handleConfirm} disabled={confirming}>
+                <SubmitBtn $sending={confirming} onClick={handleConfirm}>
                     {confirming ? "Confirming…" : "Looks good →"}
-                </ConfirmBtn>
+                </SubmitBtn>
             </CheckpointActions>
         </div>
     );
