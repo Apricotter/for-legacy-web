@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "preact/hooks";
-import { Pencil } from "@styled-icons/boxicons-regular";
+import { EditAlt } from "@styled-icons/boxicons-regular";
 import styled from "styled-components/macro";
 
 import { uploadFile } from "../../controllers/client/jsx/legacy/FileUploads";
@@ -925,14 +925,15 @@ const PreviewName = styled.div`
 const PreviewEditBtn = styled.button`
     background: none;
     border: none;
-    color: rgba(255,255,255,0.28);
+    color: #F5A623;
     font-size: 14px;
     cursor: pointer;
     padding: 2px 4px;
     line-height: 1;
-    transition: color 0.15s;
+    transition: color 0.15s, opacity 0.15s;
     flex-shrink: 0;
-    &:hover { color: #F5A623; }
+    opacity: 0.75;
+    &:hover { opacity: 1; }
 `;
 const PreviewRoleTag = styled.div`
     font-size: 10px;
@@ -1359,7 +1360,7 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
                     <PreviewRight>
                         <PreviewNameRow>
                             <PreviewName>{char.name}</PreviewName>
-                            <PreviewEditBtn onClick={() => setEditModal(char.name)} title="Edit character"><Pencil size={15} /></PreviewEditBtn>
+                            <PreviewEditBtn onClick={() => setEditModal(char.name)} title="Edit character"><EditAlt size={15} /></PreviewEditBtn>
                         </PreviewNameRow>
                         <PreviewRoleTag>{char.role}</PreviewRoleTag>
                         <PreviewDesc>
