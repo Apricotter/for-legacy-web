@@ -1176,13 +1176,41 @@ const AttrChip = styled.div`
     background: rgba(255,255,255,0.05);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 20px;
-    padding: 4px 11px;
+    padding: 4px 8px 4px 11px;
     font-size: 12px;
     color: rgba(255,255,255,0.65);
     line-height: 1.4;
     text-decoration: underline;
     text-decoration-color: rgba(245,166,35,0.55);
     text-underline-offset: 3px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+`;
+const AttrChipRemove = styled.button`
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.3);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    transition: color 0.12s;
+    &:hover { color: rgba(255,100,100,0.8); }
+`;
+const AttrAddBtn = styled.button`
+    background: none;
+    border: 1px solid rgba(245,166,35,0.4);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #F5A623;
+    cursor: pointer;
+    line-height: 1.2;
+    transition: background 0.15s, border-color 0.15s;
+    &:hover { background: rgba(245,166,35,0.1); border-color: #F5A623; }
 `;
 const AttrTip = styled.div`
     display: flex;
@@ -1253,6 +1281,16 @@ function CharacterEditorModal({
         commitChips(next);
         setEditChipIdx(null);
     }
+
+    function removeChip(idx: number) {
+        commitChips(chips.filter((_, i) => i !== idx));
+    }
+
+    function addChip() {
+        const next = [...chips, ""];
+        setChips(next);
+        setEditChipIdx(next.length - 1);
+    }
     const [chat,        setChat]        = useState<ChatMsg[]>([]);
     const [instruction, setInstruction] = useState("");
     const [sending,     setSending]     = useState(false);
@@ -1315,23 +1353,25 @@ function CharacterEditorModal({
                                     <span style={{ color: "#F5A623", fontWeight: 700 }}>Tip</span>
                                     <span style={{ color: "rgba(255,255,255,0.8)" }}>Click a chip to edit</span>
                                 </AttrTip>
-                                {chips.length > 0
-                                    ? <AttrList>
-                                        {chips.map((chip, i) =>
-                                            editChipIdx === i
-                                                ? <AttrChipInput
-                                                    key={i}
-                                                    value={chip}
-                                                    onInput={(e: any) => updateChip(i, e.target.value)}
-                                                    onBlur={() => finaliseChip(i)}
-                                                    onKeyDown={(e: any) => e.key === "Enter" && finaliseChip(i)}
-                                                    style={{ width: Math.max(60, chip.length * 8) + "px" }}
-                                                    autoFocus
-                                                  />
-                                                : <AttrChip key={i} style={{ cursor: "pointer" }} onClick={() => setEditChipIdx(i)}>{chip}</AttrChip>
-                                        )}
-                                      </AttrList>
-                                    : <AttrText style={{ opacity: 0.38 }}>No attributes yet.</AttrText>}
+                                <AttrList>
+                                    {chips.map((chip, i) =>
+                                        editChipIdx === i
+                                            ? <AttrChipInput
+                                                key={i}
+                                                value={chip}
+                                                onInput={(e: any) => updateChip(i, e.target.value)}
+                                                onBlur={() => finaliseChip(i)}
+                                                onKeyDown={(e: any) => e.key === "Enter" && finaliseChip(i)}
+                                                style={{ width: Math.max(60, chip.length * 8) + "px" }}
+                                                autoFocus
+                                              />
+                                            : <AttrChip key={i} onClick={() => setEditChipIdx(i)}>
+                                                <span>{chip}</span>
+                                                <AttrChipRemove onClick={(e: any) => { e.stopPropagation(); removeChip(i); }}>×</AttrChipRemove>
+                                              </AttrChip>
+                                    )}
+                                    <AttrAddBtn onClick={addChip}>+</AttrAddBtn>
+                                </AttrList>
                             </div>
                             {char.appearance?.introduction && (
                                 <div>
