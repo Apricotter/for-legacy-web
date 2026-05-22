@@ -983,8 +983,8 @@ const ModalOverlay = styled.div`
 `;
 const EditorShell = styled.div`
     position: relative;
-    width: min(1100px, 95vw);
-    height: min(720px, 92vh);
+    width: 90vw;
+    height: 90vh;
     background: rgba(10,6,2,0.97);
     border: 1px solid rgba(255,255,255,0.08);
     border-top: 1px solid rgba(244,185,120,0.28);
@@ -993,6 +993,22 @@ const EditorShell = styled.div`
     display: flex;
     flex-direction: column;
     box-shadow: 0 40px 120px rgba(0,0,0,0.88);
+`;
+const EditorCloseBtn = styled.button`
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    z-index: 20;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.4);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+    &:hover { color: rgba(255,255,255,0.9); background: rgba(255,255,255,0.07); }
 `;
 const EditorBody = styled.div`
     flex: 1;
@@ -1210,6 +1226,7 @@ function CharacterEditorModal({
     return (
         <ModalOverlay onClick={(e: any) => e.target === e.currentTarget && onClose()}>
             <EditorShell>
+                <EditorCloseBtn onClick={onClose} title="Close">×</EditorCloseBtn>
                 <EditorBody>
                     <EditorPortraitCol>
                         {char.portraitUrl
