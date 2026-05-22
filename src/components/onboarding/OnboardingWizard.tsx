@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "preact/hooks";
 import { createPortal } from "preact/compat";
-import { EditAlt } from "@styled-icons/boxicons-regular";
+import { EditAlt, Bulb } from "@styled-icons/boxicons-regular";
 import styled from "styled-components/macro";
 
 import { uploadFile } from "../../controllers/client/jsx/legacy/FileUploads";
@@ -1179,6 +1179,18 @@ const AttrChip = styled.div`
     font-size: 12px;
     color: rgba(255,255,255,0.65);
     line-height: 1.4;
+    text-decoration: underline;
+    text-decoration-color: rgba(245,166,35,0.55);
+    text-underline-offset: 3px;
+`;
+const AttrTip = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.28);
+    margin-bottom: 8px;
+    font-weight: 500;
 `;
 
 type CharAppearance = { introduction?: string; imagePrompt?: string };
@@ -1297,6 +1309,7 @@ function CharacterEditorModal({
                         <EditorScrollArea>
                             <div>
                                 <AttrSectionLabel>Attributes</AttrSectionLabel>
+                                <AttrTip><Bulb size={13} /><span><b>Tip:</b> Click a chip to edit</span></AttrTip>
                                 {chips.length > 0
                                     ? <AttrList>
                                         {chips.map((chip, i) =>
