@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "preact/hooks";
+import { createPortal } from "preact/compat";
 import { EditAlt } from "@styled-icons/boxicons-regular";
 import styled from "styled-components/macro";
 
@@ -1224,7 +1225,7 @@ function CharacterEditorModal({
     }
 
     return (
-        <ModalOverlay onClick={(e: any) => e.target === e.currentTarget && onClose()}>
+        {createPortal(<ModalOverlay onClick={(e: any) => e.target === e.currentTarget && onClose()}>
             <EditorShell>
                 <EditorCloseBtn onClick={onClose} title="Close">×</EditorCloseBtn>
                 <EditorBody>
@@ -1307,7 +1308,7 @@ function CharacterEditorModal({
                     </SubmitBtn>
                 </EditorFooter>
             </EditorShell>
-        </ModalOverlay>
+        </ModalOverlay>, document.body)}
     );
 }
 
