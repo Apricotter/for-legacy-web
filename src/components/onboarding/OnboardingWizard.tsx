@@ -874,27 +874,26 @@ const ReviewNav = styled.div`
 // Preview card (inside wizard Shell)
 const PreviewCard = styled.div`
     display: flex;
-    height: 200px;
+    height: 260px;
     border-radius: 14px;
     overflow: hidden;
     border: 1px solid rgba(255,255,255,0.08);
 `;
 const PreviewPortraitCol = styled.div`
-    width: 42%;
+    width: 38%;
     flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
     overflow: hidden;
 `;
 const PreviewPortraitImg = styled.img`
-    flex: 1;
     width: 100%;
+    height: 100%;
     object-fit: cover;
+    object-position: center top;
     display: block;
-    min-height: 0;
 `;
 const PreviewPortraitPlaceholder = styled.div`
-    flex: 1;
+    width: 100%;
+    height: 100%;
     background: rgba(255,255,255,0.05);
     display: flex;
     align-items: center;
@@ -902,23 +901,9 @@ const PreviewPortraitPlaceholder = styled.div`
     font-size: 48px;
     color: rgba(255,255,255,0.18);
 `;
-const PreviewPortraitLink = styled.button`
-    flex-shrink: 0;
-    background: rgba(0,0,0,0.55);
-    border: none;
-    border-top: 1px solid rgba(255,255,255,0.07);
-    color: rgba(255,255,255,0.4);
-    font-size: 11px;
-    padding: 7px 10px;
-    cursor: pointer;
-    text-align: center;
-    width: 100%;
-    transition: color 0.15s, background 0.15s;
-    &:hover { color: #F5A623; background: rgba(0,0,0,0.7); }
-`;
 const PreviewRight = styled.div`
     flex: 1;
-    padding: 14px 16px;
+    padding: 16px 18px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -945,8 +930,23 @@ const PreviewDesc = styled.div`
     line-height: 1.65;
     overflow: hidden;
     display: -webkit-box;
-    -webkit-line-clamp: 6;
+    -webkit-line-clamp: 5;
     -webkit-box-orient: vertical;
+`;
+const PreviewDetailsLink = styled.button`
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: #F5A623;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    padding: 8px 0 0;
+    text-align: left;
+    transition: color 0.15s;
+    &:hover { color: #f9b830; }
 `;
 
 // ── Character editor modal ─────────────────────────────────────────────────────
@@ -1337,9 +1337,6 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
                         {char.portraitUrl
                             ? <PreviewPortraitImg src={char.portraitUrl} alt={char.name} />
                             : <PreviewPortraitPlaceholder>👤</PreviewPortraitPlaceholder>}
-                        <PreviewPortraitLink onClick={() => setEditModal(char.name)}>
-                            See Full Details
-                        </PreviewPortraitLink>
                     </PreviewPortraitCol>
                     <PreviewRight>
                         <PreviewName>{char.name}</PreviewName>
@@ -1347,6 +1344,9 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
                         <PreviewDesc>
                             {currentEdit.description || <span style={{ opacity: 0.45 }}>No description yet.</span>}
                         </PreviewDesc>
+                        <PreviewDetailsLink onClick={() => setEditModal(char.name)}>
+                            See Full Details
+                        </PreviewDetailsLink>
                     </PreviewRight>
                 </PreviewCard>
 
