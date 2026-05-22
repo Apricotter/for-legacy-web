@@ -1166,9 +1166,31 @@ const PromptPopoverLabel = styled.div`
     color: rgba(255,255,255,0.28);
     flex-shrink: 0;
 `;
+const AttrList = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+`;
+const AttrChip = styled.div`
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 4px 11px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.65);
+    line-height: 1.4;
+`;
 
-type CharEditState = { description: string; imagePrompt: string };
-type ChatMsg       = { role: "user" | "assistant"; text: string };
+type CharAppearance = { introduction?: string; imagePrompt?: string };
+type CharEditState  = { description: string; imagePrompt: string };
+type ChatMsg        = { role: "user" | "assistant"; text: string };
+
+function parseAttrChips(imagePrompt: string): string[] {
+    return imagePrompt
+        .split(",")
+        .map(s => s.trim())
+        .filter(s => s.length > 0 && s.length < 60);
+}
 
 function CharacterEditorModal({
     char,
@@ -1177,7 +1199,7 @@ function CharacterEditorModal({
     onSave,
     onClose,
 }: {
-    char: { name: string; role: string; description?: string; portraitUrl?: string; imagePrompt?: string };
+    char: { name: string; role: string; description?: string; portraitUrl?: string; appearance?: CharAppearance };
     jobId: string;
     editState: CharEditState;
     onSave: (s: CharEditState) => void;
@@ -1185,6 +1207,7 @@ function CharacterEditorModal({
 }) {
     const [localDesc,   setLocalDesc]   = useState(editState.description);
     const [localPrompt, setLocalPrompt] = useState(editState.imagePrompt);
+    const attrChips = parseAttrChips(localPrompt);
     const [chat,        setChat]        = useState<ChatMsg[]>([]);
     const [instruction, setInstruction] = useState("");
     const [sending,     setSending]     = useState(false);
@@ -1241,11 +1264,17 @@ function CharacterEditorModal({
                         </EditorRightHeader>
                         <EditorScrollArea>
                             <div>
-                                <AttrSectionLabel>Description</AttrSectionLabel>
-                                <AttrText>
-                                    {localDesc || <span style={{ opacity: 0.38 }}>No description yet.</span>}
-                                </AttrText>
+                                <AttrSectionLabel>Attributes</AttrSectionLabel>
+                                {attrChips.length > 0
+                                    ? <AttrList>{attrChips.map((chip, i) => <AttrChip key={i}>{chip}</AttrChip>)}</AttrList>
+                                    : <AttrText style={{ opacity: 0.38 }}>No attributes yet.</AttrText>}
                             </div>
+                            {char.appearance?.introduction && (
+                                <div>
+                                    <AttrSectionLabel>Appearance</AttrSectionLabel>
+                                    <AttrText>{char.appearance.introduction}</AttrText>
+                                </div>
+                            )}
                             {chat.length > 0 && (
                                 <div>
                                     <AttrSectionLabel>AI Chat</AttrSectionLabel>
@@ -1316,7 +1345,7 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
     jobId: string;
     onDone: () => void;
 }) {
-    type CharEntry = { name: string; role: string; description?: string; portraitUrl?: string; imagePrompt?: string };
+    type CharEntry = { name: string; role: string; description?: string; portraitUrl?: string; appearance?: CharAppearance };
 
     const data  = step.data;
     const chars: CharEntry[] = data?.characters ?? [];
@@ -1325,7 +1354,7 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
     const [edits,      setEdits]      = useState<Record<string, CharEditState>>(() =>
         Object.fromEntries(chars.map(c => [c.name, {
             description: c.description ?? "",
-            imagePrompt: c.imagePrompt ?? "",
+            imagePrompt: c.appearance?.imagePrompt ?? "",
         }])));
     const [editModal,    setEditModal]    = useState<string | null>(null);
     const [hasViewed,    setHasViewed]    = useState(false);
@@ -1362,7 +1391,7 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
 
     if (!char) return null;
 
-    const currentEdit = edits[char.name] ?? { description: char.description ?? "", imagePrompt: char.imagePrompt ?? "" };
+    const currentEdit = edits[char.name] ?? { description: char.description ?? "", imagePrompt: char.appearance?.imagePrompt ?? "" };
 
     return (
         <>
@@ -1412,7 +1441,7 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
                 <CharacterEditorModal
                     char={editingChar}
                     jobId={jobId}
-                    editState={edits[editModal] ?? { description: editingChar.description ?? "", imagePrompt: editingChar.imagePrompt ?? "" }}
+                    editState={edits[editModal] ?? { description: editingChar.description ?? "", imagePrompt: editingChar.appearance?.imagePrompt ?? "" }}
                     onSave={state => setEdits(prev => ({ ...prev, [editModal]: state }))}
                     onClose={() => setEditModal(null)}
                 />
