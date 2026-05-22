@@ -19,7 +19,7 @@ const PIPELINE_STEPS = [
     "embed", "booknlp", "detect_narration",
     "character_dialog",
     "build_graph", "prune_graph", "drop_bg_characters",
-    "describe_characters", "character_portraits", "character_review", "scene_stills",
+    "describe_characters", "character_review", "character_portraits", "scene_stills",
 ] as const;
 
 type BookProgress = {
