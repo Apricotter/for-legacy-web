@@ -855,126 +855,448 @@ function CheckpointStep({
     );
 }
 
-// ── Character review checkpoint (card-by-card) ────────────────────────────────
+// ── Character review checkpoint ───────────────────────────────────────────────
 
 const QUILL_API = "https://quill.apricotter.com";
 
-const ReviewCard = styled.div`
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-`;
 const ReviewCounter = styled.div`
     font-size: 12px;
     color: rgba(255,255,255,0.4);
     letter-spacing: 0.04em;
     text-transform: uppercase;
 `;
-const ReviewPortrait = styled.img`
-    width: 96px;
-    height: 96px;
-    border-radius: 12px;
-    object-fit: cover;
-    background: rgba(255,255,255,0.06);
-    flex-shrink: 0;
-`;
-const ReviewPortraitPlaceholder = styled.div`
-    width: 96px;
-    height: 96px;
-    border-radius: 12px;
-    background: rgba(255,255,255,0.06);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    flex-shrink: 0;
-`;
-const ReviewHeader = styled.div`
-    display: flex;
-    gap: 14px;
-    align-items: flex-start;
-`;
-const ReviewMeta = styled.div`
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding-top: 4px;
-`;
-const ReviewName = styled.div`
-    font-size: 17px;
-    font-weight: 700;
-    color: rgba(255,255,255,0.92);
-`;
-const ReviewRole = styled.div`
-    font-size: 12px;
-    color: rgba(255,255,255,0.45);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-`;
-const ReviewSection = styled.div`
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-`;
-const ReviewLabel = styled.div`
-    font-size: 11px;
-    color: rgba(255,255,255,0.35);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-`;
-const ReviewActions = styled.div`
+const ReviewNav = styled.div`
     display: flex;
     gap: 8px;
     margin-top: 4px;
 `;
-const ReviewNav = styled.div`
+
+// Preview card (inside wizard Shell)
+const PreviewCard = styled.div`
     display: flex;
-    gap: 8px;
-    margin-top: 8px;
+    height: 200px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+`;
+const PreviewPortraitCol = styled.div`
+    width: 42%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+`;
+const PreviewPortraitImg = styled.img`
+    flex: 1;
+    width: 100%;
+    object-fit: cover;
+    display: block;
+    min-height: 0;
+`;
+const PreviewPortraitPlaceholder = styled.div`
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    color: rgba(255,255,255,0.18);
+`;
+const PreviewPortraitLink = styled.button`
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.55);
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.4);
+    font-size: 11px;
+    padding: 7px 10px;
+    cursor: pointer;
+    text-align: center;
+    width: 100%;
+    transition: color 0.15s, background 0.15s;
+    &:hover { color: #F5A623; background: rgba(0,0,0,0.7); }
+`;
+const PreviewRight = styled.div`
+    flex: 1;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: rgba(255,255,255,0.018);
+`;
+const PreviewName = styled.div`
+    font-size: 16px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.92);
+    letter-spacing: -0.01em;
+    margin-bottom: 2px;
+`;
+const PreviewRoleTag = styled.div`
+    font-size: 10px;
+    color: rgba(255,255,255,0.36);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+`;
+const PreviewDesc = styled.div`
+    flex: 1;
+    font-size: 12.5px;
+    color: rgba(255,255,255,0.52);
+    line-height: 1.65;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
 `;
 
-function CharacterReviewCheckpoint({ step, jobId, onDone }: {
-    step: import("./useOnboardingMessages").WizardStep;
+// ── Character editor modal ─────────────────────────────────────────────────────
+
+const ModalOverlay = styled.div`
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+`;
+const EditorShell = styled.div`
+    position: relative;
+    width: min(1100px, 95vw);
+    height: min(720px, 92vh);
+    background: rgba(10,6,2,0.97);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-top: 1px solid rgba(244,185,120,0.28);
+    border-radius: 20px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 40px 120px rgba(0,0,0,0.88);
+`;
+const EditorBody = styled.div`
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    min-height: 0;
+`;
+const EditorPortraitCol = styled.div`
+    width: 50%;
+    flex-shrink: 0;
+    overflow: hidden;
+`;
+const EditorPortraitImg = styled.img`
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+`;
+const EditorPortraitPlaceholder = styled.div`
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 96px;
+    color: rgba(255,255,255,0.14);
+`;
+const EditorRight = styled.div`
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-left: 1px solid rgba(255,255,255,0.07);
+    position: relative;
+`;
+const EditorRightHeader = styled.div`
+    padding: 20px 22px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+`;
+const EditorCharName = styled.div`
+    font-size: 20px;
+    font-weight: 800;
+    color: rgba(255,255,255,0.95);
+    letter-spacing: -0.02em;
+`;
+const EditorCharRole = styled.div`
+    font-size: 12px;
+    color: rgba(255,255,255,0.38);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-top: 3px;
+`;
+const EditorScrollArea = styled.div`
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 22px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-height: 0;
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+`;
+const AttrSectionLabel = styled.div`
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.26);
+    margin-bottom: 8px;
+`;
+const AttrText = styled.div`
+    font-size: 13px;
+    color: rgba(255,255,255,0.68);
+    line-height: 1.7;
+`;
+const ChatThread = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+`;
+const ChatBubble = styled.div<{ $role: "user" | "assistant" }>`
+    max-width: 92%;
+    align-self: ${p => p.$role === "user" ? "flex-end" : "flex-start"};
+    background: ${p => p.$role === "user" ? "rgba(245,166,35,0.13)" : "rgba(255,255,255,0.05)"};
+    border: 1px solid ${p => p.$role === "user" ? "rgba(245,166,35,0.28)" : "rgba(255,255,255,0.09)"};
+    border-radius: ${p => p.$role === "user" ? "12px 12px 2px 12px" : "12px 12px 12px 2px"};
+    padding: 8px 12px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.78);
+    line-height: 1.5;
+`;
+const EditorChatRow = styled.div`
+    padding: 10px 22px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+`;
+const PromptToggleBtn = styled.button`
+    margin: 0 22px 10px;
+    width: calc(100% - 44px);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 8px;
+    color: rgba(255,255,255,0.4);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 14px;
+    cursor: pointer;
+    text-align: left;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    &:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.16); }
+`;
+const EditorFooter = styled.div`
+    padding: 14px 22px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+`;
+const PromptPopoverPanel = styled.div<{ $open: boolean }>`
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: ${p => p.$open ? "70%" : "0"};
+    background: rgba(8,4,1,0.97);
+    border-top: 1px solid rgba(244,185,120,0.28);
+    overflow: hidden;
+    transition: height 0.28s cubic-bezier(0.4,0,0.2,1);
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+`;
+const PromptPopoverInner = styled.div`
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 22px;
+    gap: 12px;
+    overflow: hidden;
+    min-height: 0;
+`;
+const PromptPopoverLabel = styled.div`
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.28);
+    flex-shrink: 0;
+`;
+
+type CharEditState = { description: string; imagePrompt: string };
+type ChatMsg       = { role: "user" | "assistant"; text: string };
+
+function CharacterEditorModal({
+    char,
+    jobId,
+    editState,
+    onSave,
+    onClose,
+}: {
+    char: { name: string; role: string; description?: string; portraitUrl?: string; imagePrompt?: string };
     jobId: string;
-    onDone: () => void;
+    editState: CharEditState;
+    onSave: (s: CharEditState) => void;
+    onClose: () => void;
 }) {
-    type CharEntry = { name: string; role: string; description?: string; portraitUrl?: string };
-    const data   = step.data;
-    const chars: CharEntry[] = data?.characters ?? [];
+    const [localDesc,   setLocalDesc]   = useState(editState.description);
+    const [localPrompt, setLocalPrompt] = useState(editState.imagePrompt);
+    const [chat,        setChat]        = useState<ChatMsg[]>([]);
+    const [instruction, setInstruction] = useState("");
+    const [sending,     setSending]     = useState(false);
+    const [promptOpen,  setPromptOpen]  = useState(false);
+    const chatEndRef = useRef<HTMLDivElement>(null);
 
-    const [cardIdx,      setCardIdx]      = useState(0);
-    const [edits,        setEdits]        = useState<Record<string, string>>(() =>
-        Object.fromEntries(chars.map(c => [c.name, c.description ?? ""])));
-    const [instruction,  setInstruction]  = useState("");
-    const [regenerating, setRegenerating] = useState(false);
-    const [confirming,   setConfirming]   = useState(false);
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [chat.length]);
 
-    const char = chars[cardIdx];
-    if (!char) return null;
-
-    const isLast = cardIdx === chars.length - 1;
-
-    async function handleRegenerate() {
-        if (regenerating || !jobId) return;
-        setRegenerating(true);
+    async function handleInstruction() {
+        const text = instruction.trim();
+        if (!text || sending) return;
+        setSending(true);
+        setInstruction("");
+        setChat(h => [...h, { role: "user", text }]);
         try {
             const r = await fetch(
                 `${QUILL_API}/admin/jobs/${jobId}/characters/${encodeURIComponent(char.name)}/redescribe`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ instruction }),
+                    body: JSON.stringify({ instruction: text, currentDescription: localDesc }),
                 }
             );
             if (r.ok) {
                 const { description } = await r.json();
-                setEdits(prev => ({ ...prev, [char.name]: description }));
-                setInstruction("");
+                setLocalDesc(description);
+                setChat(h => [...h, { role: "assistant", text: description }]);
+            } else {
+                setChat(h => [...h, { role: "assistant", text: "Could not regenerate — please try again." }]);
             }
+        } catch {
+            setChat(h => [...h, { role: "assistant", text: "Network error — please try again." }]);
         } finally {
-            setRegenerating(false);
+            setSending(false);
         }
     }
+
+    return (
+        <ModalOverlay onClick={(e: any) => e.target === e.currentTarget && onClose()}>
+            <EditorShell>
+                <EditorBody>
+                    <EditorPortraitCol>
+                        {char.portraitUrl
+                            ? <EditorPortraitImg src={char.portraitUrl} alt={char.name} />
+                            : <EditorPortraitPlaceholder>👤</EditorPortraitPlaceholder>}
+                    </EditorPortraitCol>
+                    <EditorRight>
+                        <EditorRightHeader>
+                            <EditorCharName>{char.name}</EditorCharName>
+                            <EditorCharRole>{char.role}</EditorCharRole>
+                        </EditorRightHeader>
+                        <EditorScrollArea>
+                            <div>
+                                <AttrSectionLabel>Description</AttrSectionLabel>
+                                <AttrText>
+                                    {localDesc || <span style={{ opacity: 0.38 }}>No description yet.</span>}
+                                </AttrText>
+                            </div>
+                            {chat.length > 0 && (
+                                <div>
+                                    <AttrSectionLabel>AI Chat</AttrSectionLabel>
+                                    <ChatThread>
+                                        {chat.map((m, i) => (
+                                            <ChatBubble key={i} $role={m.role}>{m.text}</ChatBubble>
+                                        ))}
+                                        <div ref={chatEndRef} />
+                                    </ChatThread>
+                                </div>
+                            )}
+                        </EditorScrollArea>
+                        <EditorChatRow>
+                            <FormInput
+                                type="text"
+                                value={instruction}
+                                placeholder="Ask Quill to rewrite… (e.g. make her sound older)"
+                                onInput={(e: any) => setInstruction(e.target.value)}
+                                onKeyDown={(e: any) => e.key === "Enter" && handleInstruction()}
+                                style={{ flex: 1 }}
+                            />
+                            <SubmitBtn
+                                $sending={sending}
+                                $disabled={!instruction.trim() || sending}
+                                onClick={handleInstruction}
+                                style={{ width: "auto", padding: "9px 16px", margin: 0, flexShrink: 0 }}
+                            >
+                                {sending ? "…" : "→"}
+                            </SubmitBtn>
+                        </EditorChatRow>
+                        <PromptToggleBtn onClick={() => setPromptOpen(p => !p)}>
+                            {promptOpen ? "▾" : "▸"} Prompt
+                        </PromptToggleBtn>
+                        <PromptPopoverPanel $open={promptOpen}>
+                            <PromptPopoverInner>
+                                <PromptPopoverLabel>Diffusion Prompt</PromptPopoverLabel>
+                                <FormTextarea
+                                    value={localPrompt}
+                                    onInput={(e: any) => setLocalPrompt(e.target.value)}
+                                    placeholder="Diffusion prompt…"
+                                    style={{ flex: 1, resize: "none", minHeight: 0, overflowY: "auto" as any }}
+                                />
+                                <SecondaryBtn
+                                    style={{ flex: "none" as any, padding: "9px 0" }}
+                                    onClick={() => setPromptOpen(false)}
+                                >
+                                    Close
+                                </SecondaryBtn>
+                            </PromptPopoverInner>
+                        </PromptPopoverPanel>
+                    </EditorRight>
+                </EditorBody>
+                <EditorFooter>
+                    <SecondaryBtn style={{ flex: 1 }} onClick={onClose}>Cancel</SecondaryBtn>
+                    <SubmitBtn
+                        style={{ flex: 2, margin: 0 }}
+                        onClick={() => { onSave({ description: localDesc, imagePrompt: localPrompt }); onClose(); }}
+                    >
+                        Save changes →
+                    </SubmitBtn>
+                </EditorFooter>
+            </EditorShell>
+        </ModalOverlay>
+    );
+}
+
+function CharacterReviewCheckpoint({ step, jobId, onDone }: {
+    step: WizardStep;
+    jobId: string;
+    onDone: () => void;
+}) {
+    type CharEntry = { name: string; role: string; description?: string; portraitUrl?: string; imagePrompt?: string };
+
+    const data  = step.data;
+    const chars: CharEntry[] = data?.characters ?? [];
+
+    const [cardIdx,    setCardIdx]    = useState(0);
+    const [edits,      setEdits]      = useState<Record<string, CharEditState>>(() =>
+        Object.fromEntries(chars.map(c => [c.name, {
+            description: c.description ?? "",
+            imagePrompt: c.imagePrompt ?? "",
+        }])));
+    const [editModal,  setEditModal]  = useState<string | null>(null);
+    const [confirming, setConfirming] = useState(false);
+
+    const char        = chars[cardIdx];
+    const isLast      = cardIdx === chars.length - 1;
+    const editingChar = editModal ? chars.find(c => c.name === editModal) : null;
 
     async function handleConfirm() {
         if (confirming) return;
@@ -983,10 +1305,9 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
             const characters = chars.map(c => ({
                 name:        c.name,
                 role:        c.role,
-                description: edits[c.name] ?? c.description ?? "",
+                description: edits[c.name]?.description ?? c.description ?? "",
                 portraitUrl: c.portraitUrl,
             }));
-
             if (jobId) {
                 await fetch(`${QUILL_API}/admin/jobs/${jobId}/characters/approve`, {
                     method: "POST",
@@ -994,7 +1315,6 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
                     body: JSON.stringify({ characters }),
                 });
             }
-
             const advanceUrl: string | undefined = data?.advance_url;
             if (advanceUrl) await fetch(advanceUrl, { method: "POST" });
             onDone();
@@ -1003,69 +1323,61 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
         }
     }
 
+    if (!char) return null;
+
+    const currentEdit = edits[char.name] ?? { description: char.description ?? "", imagePrompt: char.imagePrompt ?? "" };
+
     return (
-        <ReviewCard>
-            <ReviewCounter>Character {cardIdx + 1} of {chars.length}</ReviewCounter>
+        <>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <ReviewCounter>Character {cardIdx + 1} of {chars.length}</ReviewCounter>
 
-            <ReviewHeader>
-                {char.portraitUrl
-                    ? <ReviewPortrait src={char.portraitUrl} alt={char.name} />
-                    : <ReviewPortraitPlaceholder>👤</ReviewPortraitPlaceholder>}
-                <ReviewMeta>
-                    <ReviewName>{char.name}</ReviewName>
-                    <ReviewRole>{char.role}</ReviewRole>
-                </ReviewMeta>
-            </ReviewHeader>
+                <PreviewCard>
+                    <PreviewPortraitCol>
+                        {char.portraitUrl
+                            ? <PreviewPortraitImg src={char.portraitUrl} alt={char.name} />
+                            : <PreviewPortraitPlaceholder>👤</PreviewPortraitPlaceholder>}
+                        <PreviewPortraitLink onClick={() => setEditModal(char.name)}>
+                            See Full Details
+                        </PreviewPortraitLink>
+                    </PreviewPortraitCol>
+                    <PreviewRight>
+                        <PreviewName>{char.name}</PreviewName>
+                        <PreviewRoleTag>{char.role}</PreviewRoleTag>
+                        <PreviewDesc>
+                            {currentEdit.description || <span style={{ opacity: 0.45 }}>No description yet.</span>}
+                        </PreviewDesc>
+                    </PreviewRight>
+                </PreviewCard>
 
-            <ReviewSection>
-                <ReviewLabel>Description</ReviewLabel>
-                <FormTextarea
-                    value={edits[char.name] ?? ""}
-                    onInput={(e: any) => setEdits(prev => ({ ...prev, [char.name]: e.target.value }))}
-                    rows={4}
-                    placeholder="No description yet…"
-                    style={{ width: "100%", boxSizing: "border-box" }}
+                <ReviewNav>
+                    {cardIdx > 0 && (
+                        <SecondaryBtn onClick={() => setCardIdx(i => i - 1)} style={{ flex: 1 }}>
+                            ← Back
+                        </SecondaryBtn>
+                    )}
+                    {!isLast ? (
+                        <SubmitBtn onClick={() => setCardIdx(i => i + 1)} style={{ flex: 1, margin: 0 }}>
+                            Next →
+                        </SubmitBtn>
+                    ) : (
+                        <SubmitBtn $sending={confirming} onClick={handleConfirm} style={{ flex: 1, margin: 0 }}>
+                            {confirming ? "Saving…" : "Confirm Cast →"}
+                        </SubmitBtn>
+                    )}
+                </ReviewNav>
+            </div>
+
+            {editModal && editingChar && (
+                <CharacterEditorModal
+                    char={editingChar}
+                    jobId={jobId}
+                    editState={edits[editModal] ?? { description: editingChar.description ?? "", imagePrompt: editingChar.imagePrompt ?? "" }}
+                    onSave={state => setEdits(prev => ({ ...prev, [editModal]: state }))}
+                    onClose={() => setEditModal(null)}
                 />
-            </ReviewSection>
-
-            <ReviewSection>
-                <ReviewLabel>AI Rewrite</ReviewLabel>
-                <FormInput
-                    type="text"
-                    value={instruction}
-                    onInput={(e: any) => setInstruction(e.target.value)}
-                    placeholder="e.g. make her sound more mysterious…"
-                    onKeyDown={(e: any) => e.key === "Enter" && handleRegenerate()}
-                />
-                <ReviewActions>
-                    <SubmitBtn
-                        $sending={regenerating}
-                        $disabled={!instruction.trim() || regenerating}
-                        onClick={handleRegenerate}
-                        style={{ width: "auto", padding: "10px 18px" }}
-                    >
-                        {regenerating ? "Rewriting…" : "Regenerate →"}
-                    </SubmitBtn>
-                </ReviewActions>
-            </ReviewSection>
-
-            <ReviewNav>
-                {cardIdx > 0 && (
-                    <SecondaryBtn onClick={() => setCardIdx(i => i - 1)} style={{ flex: 1 }}>
-                        ← Back
-                    </SecondaryBtn>
-                )}
-                {!isLast ? (
-                    <SubmitBtn onClick={() => setCardIdx(i => i + 1)} style={{ flex: 1 }}>
-                        Next →
-                    </SubmitBtn>
-                ) : (
-                    <SubmitBtn $sending={confirming} onClick={handleConfirm} style={{ flex: 1 }}>
-                        {confirming ? "Saving…" : "Confirm Cast →"}
-                    </SubmitBtn>
-                )}
-            </ReviewNav>
-        </ReviewCard>
+            )}
+        </>
     );
 }
 
