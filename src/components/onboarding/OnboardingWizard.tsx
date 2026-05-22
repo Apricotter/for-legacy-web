@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "preact/hooks";
 import { createPortal } from "preact/compat";
-import { EditAlt, Bulb } from "@styled-icons/boxicons-regular";
+import { EditAlt, Bulb, Refresh } from "@styled-icons/boxicons-regular";
 import styled from "styled-components/macro";
 
 import { uploadFile } from "../../controllers/client/jsx/legacy/FileUploads";
@@ -1020,23 +1020,57 @@ const EditorBody = styled.div`
 const EditorPortraitCol = styled.div`
     width: 40%;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
+    background: #0a0602;
+`;
+const EditorPortraitImgWrap = styled.div`
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    min-height: 0;
 `;
 const EditorPortraitImg = styled.img`
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
     display: block;
 `;
 const EditorPortraitPlaceholder = styled.div`
-    width: 100%;
-    height: 100%;
-    background: rgba(255,255,255,0.04);
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 96px;
     color: rgba(255,255,255,0.14);
+`;
+const RegenBtn = styled.button<{ $dirty: boolean }>`
+    flex-shrink: 0;
+    margin: 12px;
+    padding: 10px 0;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: ${p => p.$dirty ? "pointer" : "not-allowed"};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+    background: ${p => p.$dirty ? "#F5A623" : "transparent"};
+    border: 1.5px solid ${p => p.$dirty ? "#F5A623" : "rgba(245,166,35,0.3)"};
+    color: ${p => p.$dirty ? "#1a0e00" : "rgba(245,166,35,0.4)"};
+    box-shadow: ${p => p.$dirty ? "0 4px 20px rgba(245,166,35,0.35)" : "none"};
+    &:hover:not([disabled]) {
+        background: ${p => p.$dirty ? "#f9b830" : "rgba(245,166,35,0.06)"};
+        border-color: ${p => p.$dirty ? "#f9b830" : "rgba(245,166,35,0.55)"};
+        color: ${p => p.$dirty ? "#1a0e00" : "rgba(245,166,35,0.7)"};
+    }
 `;
 const EditorRight = styled.div`
     flex: 1;
@@ -1292,11 +1326,24 @@ function CharacterEditorModal({
         setChips(next);
         setEditChipIdx(next.length - 1);
     }
+    const initialChips = useRef<string[]>(parseAttrChips(editState.imagePrompt));
+    const isDirty = chips.length !== initialChips.current.length || chips.some((c, i) => c !== initialChips.current[i]);
+
+    async function handleRegen() {
+        // TODO: wire to ComfyUI endpoint when portrait regen is built
+    }
+
     const [chat,        setChat]        = useState<ChatMsg[]>([]);
     const [instruction, setInstruction] = useState("");
     const [sending,     setSending]     = useState(false);
     const [promptOpen,  setPromptOpen]  = useState(false);
-    const chatEndRef = useRef<HTMLDivElement>(null);
+    const chatEndRef   = useRef<HTMLDivElement>(null);
+    const chatInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const t = setTimeout(() => chatInputRef.current?.focus(), 400);
+        return () => clearTimeout(t);
+    }, []);
 
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1337,9 +1384,14 @@ function CharacterEditorModal({
                 <EditorCloseBtn onClick={onClose} title="Close">×</EditorCloseBtn>
                 <EditorBody>
                     <EditorPortraitCol>
-                        {char.portraitUrl
-                            ? <EditorPortraitImg src={char.portraitUrl} alt={char.name} />
-                            : <EditorPortraitPlaceholder>👤</EditorPortraitPlaceholder>}
+                        <EditorPortraitImgWrap>
+                            {char.portraitUrl
+                                ? <EditorPortraitImg src={char.portraitUrl} alt={char.name} />
+                                : <EditorPortraitPlaceholder>👤</EditorPortraitPlaceholder>}
+                        </EditorPortraitImgWrap>
+                        <RegenBtn $dirty={isDirty} disabled={!isDirty} onClick={handleRegen}>
+                            <Refresh size={14} /> Regenerate Portrait
+                        </RegenBtn>
                     </EditorPortraitCol>
                     <EditorRight>
                         <EditorRightHeader>
@@ -1394,6 +1446,7 @@ function CharacterEditorModal({
                         </EditorScrollArea>
                         <EditorChatRow>
                             <FormInput
+                                ref={chatInputRef}
                                 type="text"
                                 value={instruction}
                                 placeholder="Ask Quill to rewrite… (e.g. make her sound older)"
