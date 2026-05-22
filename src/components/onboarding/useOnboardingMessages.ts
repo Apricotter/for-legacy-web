@@ -92,7 +92,7 @@ export function useOnboardingMessages(channelId: string | undefined) {
                     for (const msg of msgs) {
                         if (!msg?.content) continue;
                         const parsed = parseCodeblock(msg.content);
-                        if (!parsed || parsed.type === "processing") continue;
+                        if (!parsed || parsed.type === "processing" || parsed.type === "checkpoint") continue;
                         next = activateStep(next, parsed.type, parsed.data, msg._id ?? msg.id);
                     }
 
