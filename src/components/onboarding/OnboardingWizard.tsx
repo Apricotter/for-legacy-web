@@ -876,7 +876,7 @@ export default function OnboardingWizard({
     onClose,
 }: ModalProps<"author_onboarding">) {
     const client = useClient();
-    const { steps, markDone, patchStepData, clearSteps } = useOnboardingMessages(channelId);
+    const { steps, markDone, patchStepData, clearSteps, activateCheckpoint } = useOnboardingMessages(channelId);
     const [stage, setStage] = useState<Stage>("greeting");
     const [resetting, setResetting] = useState(false);
     const [reviewsDone, setReviewsDone] = useState(false);
@@ -934,6 +934,21 @@ export default function OnboardingWizard({
         if (!profile?.books?.length) return;
         setBookProgress(profile.books[profile.books.length - 1]);
     }, [profile]);
+
+    // When profile shows a checkpoint, hydrate the checkpoint step so it shows on refresh
+    useEffect(() => {
+        if (!bookProgress || bookProgress.status !== "checkpoint" || !bookProgress.checkpointData) return;
+        try {
+            const parsed = typeof bookProgress.checkpointData === "string"
+                ? JSON.parse(bookProgress.checkpointData)
+                : bookProgress.checkpointData;
+            activateCheckpoint({
+                ...parsed,
+                step:        bookProgress.checkpointStep,
+                advance_url: `https://quill.apricotter.com/onboarding/${serverId}/advance`,
+            });
+        } catch { /* malformed checkpointData — leave checkpoint deactivated */ }
+    }, [bookProgress?.status, bookProgress?.checkpointStep]);
 
     // Each new WS processing message = fetch profile once to get latest currentStep
     const processingStepCount = steps.filter(s => s.type === "processing").length;

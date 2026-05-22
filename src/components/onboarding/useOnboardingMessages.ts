@@ -17,10 +17,10 @@ export interface WizardStep {
 // Canonical step definitions — always present, always in this order.
 // Messages activate them (set data + needsAction); they never create new stops.
 const FIXED_STEP_DEFS: Omit<WizardStep, "data" | "done" | "needsAction">[] = [
-    { id: "greeting",             type: "greeting",   line: "author", label: "Welcome" },
-    { id: "form_book",            type: "form",       line: "book",   label: "Upload"  },
-    { id: "checkpoint_scene_ner", type: "checkpoint", line: "book",   label: "Cast"    },
-    { id: "form_author",          type: "form",       line: "author", label: "Reviews" },
+    { id: "greeting",                    type: "greeting",   line: "author", label: "Welcome" },
+    { id: "form_book",                   type: "form",       line: "book",   label: "Upload"  },
+    { id: "checkpoint_character_roster", type: "checkpoint", line: "book",   label: "Cast"    },
+    { id: "form_author",                 type: "form",       line: "author", label: "Reviews" },
 ];
 
 function makeFixedSteps(): WizardStep[] {
@@ -177,6 +177,12 @@ export function useOnboardingMessages(channelId: string | undefined) {
         return () => (client as any).off?.("message", handler);
     }, [channelId, client]);
 
+    const activateCheckpoint = (data: any) => {
+        setFixed(prev => prev.map(s =>
+            s.type === "checkpoint" ? { ...s, data, needsAction: true } : s
+        ));
+    };
+
     const markDone = (stepId: string) => {
         setFixed(prev => prev.map(s => s.id === stepId ? { ...s, done: true, needsAction: false } : s));
     };
@@ -190,5 +196,5 @@ export function useOnboardingMessages(channelId: string | undefined) {
         setProcessing([]);
     };
 
-    return { steps, markDone, patchStepData, clearSteps };
+    return { steps, markDone, patchStepData, clearSteps, activateCheckpoint };
 }
