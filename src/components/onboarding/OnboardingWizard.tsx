@@ -1190,27 +1190,28 @@ const AttrChip = styled.div`
 const AttrChipRemove = styled.button`
     background: none;
     border: none;
-    color: rgba(255,255,255,0.3);
+    color: #F5A623;
     font-size: 13px;
     line-height: 1;
     cursor: pointer;
     padding: 0;
     flex-shrink: 0;
-    transition: color 0.12s;
-    &:hover { color: rgba(255,100,100,0.8); }
+    opacity: 0.7;
+    transition: opacity 0.12s;
+    &:hover { opacity: 1; }
 `;
 const AttrAddBtn = styled.button`
-    background: none;
-    border: 1px solid rgba(245,166,35,0.4);
+    background: #F5A623;
+    border: none;
     border-radius: 20px;
-    padding: 4px 10px;
+    padding: 4px 11px;
     font-size: 14px;
-    font-weight: 700;
-    color: #F5A623;
+    font-weight: 800;
+    color: #1a0e00;
     cursor: pointer;
     line-height: 1.2;
-    transition: background 0.15s, border-color 0.15s;
-    &:hover { background: rgba(245,166,35,0.1); border-color: #F5A623; }
+    transition: background 0.15s;
+    &:hover { background: #f9b830; }
 `;
 const AttrTip = styled.div`
     display: flex;
