@@ -1191,7 +1191,7 @@ export default function OnboardingWizard({
                                 : 0;
                         return (
                             <PipelineBar
-                                $active={!!bookProgress && bookProgress.status !== "complete" || steps.some(s => s.type === "processing")}
+                                $active={!!bookProgress && bookProgress.status !== "error" || steps.some(s => s.type === "processing")}
                                 $progress={progressFraction}
                             />
                         );
