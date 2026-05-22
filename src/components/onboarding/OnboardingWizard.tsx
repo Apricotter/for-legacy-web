@@ -1500,45 +1500,255 @@ function CharacterEditorModal({
         </ModalOverlay>, document.body);
 }
 
+// ── Roster row styled components ─────────────────────────────────────────────
+
+const RosterList = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 340px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+`;
+const RosterRow = styled.div`
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.02);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+`;
+const RosterRowHeader = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+`;
+const RosterRowName = styled.div`
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.92);
+    flex: 1;
+`;
+const RosterRowDesc = styled.div`
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+`;
+const RosterRowBtn = styled.button`
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 5px;
+    border-radius: 5px;
+    font-size: 12px;
+    transition: background 0.12s, color 0.12s;
+    flex-shrink: 0;
+`;
+const RosterAddRow = styled.button`
+    border: 1px dashed rgba(245,166,35,0.35);
+    border-radius: 10px;
+    padding: 9px 12px;
+    background: none;
+    color: #F5A623;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s, background 0.15s;
+    &:hover { border-color: #F5A623; background: rgba(245,166,35,0.05); }
+`;
+
+// ── Simple description editor modal (pre-portrait) ────────────────────────────
+
+const DescEditorShell = styled.div`
+    position: relative;
+    width: min(520px, 92vw);
+    max-height: 80vh;
+    background: rgba(10,6,2,0.97);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-top: 1px solid rgba(244,185,120,0.28);
+    border-radius: 18px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.85);
+`;
+
+function CharDescEditorModal({
+    name: initialName,
+    role,
+    description: initialDesc,
+    jobId,
+    isNew,
+    onSave,
+    onClose,
+}: {
+    name: string;
+    role: string;
+    description: string;
+    jobId: string;
+    isNew?: boolean;
+    onSave: (name: string, role: string, description: string) => void;
+    onClose: () => void;
+}) {
+    const [localName, setLocalName]   = useState(initialName);
+    const [localRole, setLocalRole]   = useState(role);
+    const [localDesc, setLocalDesc]   = useState(initialDesc);
+    const [chat,      setChat]        = useState<ChatMsg[]>([]);
+    const [instruction, setInstruction] = useState("");
+    const [sending,   setSending]     = useState(false);
+    const chatEndRef   = useRef<HTMLDivElement>(null);
+    const chatInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const t = setTimeout(() => chatInputRef.current?.focus(), 300);
+        return () => clearTimeout(t);
+    }, []);
+
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [chat.length]);
+
+    async function handleInstruction() {
+        const text = instruction.trim();
+        if (!text || sending) return;
+        setSending(true);
+        setInstruction("");
+        setChat(h => [...h, { role: "user", text }]);
+        try {
+            const r = await fetch(
+                `${QUILL_API}/admin/jobs/${jobId}/characters/${encodeURIComponent(localName)}/redescribe`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ instruction: text, currentDescription: localDesc }),
+                }
+            );
+            if (r.ok) {
+                const { description } = await r.json();
+                setLocalDesc(description);
+                setChat(h => [...h, { role: "assistant", text: description }]);
+            } else {
+                setChat(h => [...h, { role: "assistant", text: "Could not regenerate — please try again." }]);
+            }
+        } catch {
+            setChat(h => [...h, { role: "assistant", text: "Network error — please try again." }]);
+        } finally {
+            setSending(false);
+        }
+    }
+
+    return createPortal(
+        <ModalOverlay onClick={(e: any) => e.target === e.currentTarget && onClose()}>
+            <DescEditorShell>
+                <EditorCloseBtn onClick={onClose}>×</EditorCloseBtn>
+                <EditorScrollArea style={{ padding: "20px 22px 12px" }}>
+                    <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+                        <FormField style={{ flex: 2, margin: 0 }}>
+                            <FormLabel>Name</FormLabel>
+                            <FormInput
+                                type="text"
+                                value={localName}
+                                onInput={(e: any) => setLocalName(e.target.value)}
+                            />
+                        </FormField>
+                        <FormField style={{ flex: 1, margin: 0 }}>
+                            <FormLabel>Role</FormLabel>
+                            <FormSelect value={localRole} onChange={(e: any) => setLocalRole(e.target.value)}>
+                                <option value="Main" style={{ color: "#000" }}>Main</option>
+                                <option value="Supporting" style={{ color: "#000" }}>Supporting</option>
+                                <option value="Minor" style={{ color: "#000" }}>Minor</option>
+                            </FormSelect>
+                        </FormField>
+                    </div>
+                    <FormField style={{ margin: 0, marginBottom: 14 }}>
+                        <FormLabel>Description</FormLabel>
+                        <FormTextarea
+                            value={localDesc}
+                            onInput={(e: any) => setLocalDesc(e.target.value)}
+                            placeholder="Character description…"
+                            style={{ minHeight: 100 }}
+                        />
+                    </FormField>
+                    {chat.length > 0 && (
+                        <ChatThread style={{ marginBottom: 8 }}>
+                            {chat.map((m, i) => (
+                                <ChatBubble key={i} $role={m.role}>{m.text}</ChatBubble>
+                            ))}
+                            <div ref={chatEndRef} />
+                        </ChatThread>
+                    )}
+                </EditorScrollArea>
+                <EditorChatRow>
+                    <FormInput
+                        ref={chatInputRef}
+                        type="text"
+                        value={instruction}
+                        placeholder="Ask Quill to rewrite… (e.g. make them sound older)"
+                        onInput={(e: any) => setInstruction(e.target.value)}
+                        onKeyDown={(e: any) => e.key === "Enter" && handleInstruction()}
+                        style={{ flex: 1 }}
+                    />
+                    <SubmitBtn
+                        $sending={sending}
+                        $disabled={!instruction.trim() || sending}
+                        onClick={handleInstruction}
+                        style={{ width: "auto", padding: "9px 16px", margin: 0, flexShrink: 0 }}
+                    >
+                        {sending ? "…" : "→"}
+                    </SubmitBtn>
+                </EditorChatRow>
+                <EditorFooter>
+                    <div style={{ display: "flex", gap: 10 }}>
+                        <SecondaryBtn style={{ width: 120 }} onClick={onClose}>Cancel</SecondaryBtn>
+                        <SubmitBtn
+                            style={{ width: 120, margin: 0 }}
+                            onClick={() => { onSave(localName.trim() || initialName, localRole, localDesc); onClose(); }}
+                        >
+                            {isNew ? "Add" : "Save"}
+                        </SubmitBtn>
+                    </div>
+                </EditorFooter>
+            </DescEditorShell>
+        </ModalOverlay>, document.body
+    );
+}
+
 function CharacterReviewCheckpoint({ step, jobId, onDone }: {
     step: WizardStep;
     jobId: string;
     onDone: () => void;
 }) {
-    type CharEntry = { name: string; role: string; description?: string; portraitUrl?: string; appearance?: CharAppearance };
+    type CharEntry = { name: string; role: string; description: string };
 
-    const data  = step.data;
-    const chars: CharEntry[] = data?.characters ?? [];
+    const data = step.data;
+    const initial: CharEntry[] = (data?.characters ?? []).map((c: any) => ({
+        name:        c.name ?? "",
+        role:        c.role ?? "Supporting",
+        description: c.description ?? "",
+    }));
 
-    const [cardIdx,    setCardIdx]    = useState(0);
-    const [edits,      setEdits]      = useState<Record<string, CharEditState>>(() =>
-        Object.fromEntries(chars.map(c => [c.name, {
-            description: c.description ?? "",
-            imagePrompt: c.appearance?.imagePrompt ?? "",
-        }])));
-    const [editModal,    setEditModal]    = useState<string | null>(null);
-    const [hasViewed,    setHasViewed]    = useState(false);
-    const [confirming,   setConfirming]   = useState(false);
-
-    const char        = chars[cardIdx];
-    const isLast      = cardIdx === chars.length - 1;
-    const editingChar = editModal ? chars.find(c => c.name === editModal) : null;
+    const [chars,      setChars]      = useState<CharEntry[]>(initial);
+    const [editIdx,    setEditIdx]    = useState<number | null>(null);
+    const [addOpen,    setAddOpen]    = useState(false);
+    const [confirming, setConfirming] = useState(false);
 
     async function handleConfirm() {
         if (confirming) return;
         setConfirming(true);
         try {
-            const characters = chars.map(c => ({
-                name:        c.name,
-                role:        c.role,
-                description: edits[c.name]?.description ?? c.description ?? "",
-                portraitUrl: c.portraitUrl,
-            }));
             if (jobId) {
                 await fetch(`${QUILL_API}/admin/jobs/${jobId}/characters/approve`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ characters }),
+                    body: JSON.stringify({ characters: chars }),
                 });
             }
             const advanceUrl: string | undefined = data?.advance_url;
@@ -1549,61 +1759,69 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
         }
     }
 
-    if (!char) return null;
-
-    const currentEdit = edits[char.name] ?? { description: char.description ?? "", imagePrompt: char.appearance?.imagePrompt ?? "" };
-
     return (
         <>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <ReviewCounter>Character {cardIdx + 1} of {chars.length}</ReviewCounter>
+            <CheckpointTitle>Your Cast</CheckpointTitle>
+            <CheckpointSub>{chars.length} characters · review, edit or remove before portraits are generated.</CheckpointSub>
 
-                <PreviewCard>
-                    <PreviewPortraitCol>
-                        {char.portraitUrl
-                            ? <PreviewPortraitImg src={char.portraitUrl} alt={char.name} />
-                            : <PreviewPortraitPlaceholder>👤</PreviewPortraitPlaceholder>}
-                    </PreviewPortraitCol>
-                    <PreviewRight>
-                        <PreviewNameRow>
-                            <PreviewName>{char.name}</PreviewName>
-                            <PreviewEditBtn onClick={() => { setEditModal(char.name); setHasViewed(true); }} title="Edit character"><EditAlt size={15} /></PreviewEditBtn>
-                        </PreviewNameRow>
-                        <PreviewRoleTag>{char.role}</PreviewRoleTag>
-                        <PreviewDesc>
-                            {currentEdit.description || <span style={{ opacity: 0.45 }}>No description yet.</span>}
-                        </PreviewDesc>
-                        <PreviewDetailsLink onClick={() => { setEditModal(char.name); setHasViewed(true); }}>
-                            See Full Details
-                        </PreviewDetailsLink>
-                    </PreviewRight>
-                </PreviewCard>
+            <RosterList>
+                {chars.map((c, i) => (
+                    <RosterRow key={i}>
+                        <RosterRowHeader>
+                            <RosterRowName>{c.name}</RosterRowName>
+                            <CharRoleTag $role={c.role}>{c.role}</CharRoleTag>
+                            <RosterRowBtn
+                                onClick={() => setEditIdx(i)}
+                                style={{ color: "#F5A623" }}
+                                title="Edit"
+                            >
+                                <EditAlt size={13} />
+                            </RosterRowBtn>
+                            <RosterRowBtn
+                                onClick={() => setChars(prev => prev.filter((_, j) => j !== i))}
+                                style={{ color: "rgba(255,80,80,0.7)" }}
+                                title="Remove"
+                            >
+                                ×
+                            </RosterRowBtn>
+                        </RosterRowHeader>
+                        {c.description && <RosterRowDesc>{c.description}</RosterRowDesc>}
+                    </RosterRow>
+                ))}
+            </RosterList>
 
-                <ReviewNav>
-                    {cardIdx > 0 && (
-                        <SecondaryBtn onClick={() => setCardIdx(i => i - 1)} style={{ flex: 1 }}>
-                            ← Back
-                        </SecondaryBtn>
-                    )}
-                    {!isLast ? (
-                        <SubmitBtn onClick={() => setCardIdx(i => i + 1)} style={{ flex: 1, margin: 0 }}>
-                            Next →
-                        </SubmitBtn>
-                    ) : (
-                        <SubmitBtn $sending={confirming} $disabled={!hasViewed} disabled={!hasViewed} onClick={handleConfirm} style={{ flex: 1, margin: 0 }}>
-                            {confirming ? "Saving…" : "Confirm Cast →"}
-                        </SubmitBtn>
-                    )}
-                </ReviewNav>
-            </div>
+            <RosterAddRow onClick={() => setAddOpen(true)} style={{ marginBottom: 12 }}>
+                + Add character
+            </RosterAddRow>
 
-            {editModal && editingChar && (
-                <CharacterEditorModal
-                    char={editingChar}
+            <SubmitBtn $sending={confirming} onClick={handleConfirm}>
+                {confirming ? "Saving…" : "Confirm Cast →"}
+            </SubmitBtn>
+
+            {editIdx !== null && (
+                <CharDescEditorModal
+                    name={chars[editIdx].name}
+                    role={chars[editIdx].role}
+                    description={chars[editIdx].description}
                     jobId={jobId}
-                    editState={edits[editModal] ?? { description: editingChar.description ?? "", imagePrompt: editingChar.appearance?.imagePrompt ?? "" }}
-                    onSave={state => setEdits(prev => ({ ...prev, [editModal]: state }))}
-                    onClose={() => setEditModal(null)}
+                    onSave={(name, role, description) =>
+                        setChars(prev => prev.map((c, i) => i === editIdx ? { name, role, description } : c))
+                    }
+                    onClose={() => setEditIdx(null)}
+                />
+            )}
+
+            {addOpen && (
+                <CharDescEditorModal
+                    name=""
+                    role="Supporting"
+                    description=""
+                    jobId={jobId}
+                    isNew
+                    onSave={(name, role, description) => {
+                        if (name) setChars(prev => [...prev, { name, role, description }]);
+                    }}
+                    onClose={() => setAddOpen(false)}
                 />
             )}
         </>
