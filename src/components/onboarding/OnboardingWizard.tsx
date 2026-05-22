@@ -1224,7 +1224,7 @@ function CharacterEditorModal({
         }
     }
 
-    return (
+    return createPortal(
         <ModalOverlay onClick={(e: any) => e.target === e.currentTarget && onClose()}>
             <EditorShell>
                 <EditorCloseBtn onClick={onClose} title="Close">×</EditorCloseBtn>
