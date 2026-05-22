@@ -1185,7 +1185,7 @@ export default function OnboardingWizard({
                             ? PIPELINE_STEPS.indexOf(bookProgress.currentStep as any)
                             : -1;
                         const progressFraction = bookProgress?.status === "complete"
-                            ? 1
+                            ? 0.99
                             : stepIdx >= 0
                                 ? (stepIdx + 1) / PIPELINE_STEPS.length
                                 : 0;
