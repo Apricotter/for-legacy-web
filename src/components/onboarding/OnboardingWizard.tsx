@@ -1192,6 +1192,19 @@ function parseAttrChips(imagePrompt: string): string[] {
         .filter(s => s.length > 0 && s.length < 60);
 }
 
+const AttrChipInput = styled.input`
+    background: rgba(245,166,35,0.1);
+    border: 1px solid rgba(245,166,35,0.45);
+    border-radius: 20px;
+    padding: 4px 11px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.9);
+    line-height: 1.4;
+    outline: none;
+    min-width: 60px;
+    width: auto;
+`;
+
 function CharacterEditorModal({
     char,
     jobId,
@@ -1205,9 +1218,28 @@ function CharacterEditorModal({
     onSave: (s: CharEditState) => void;
     onClose: () => void;
 }) {
-    const [localDesc,   setLocalDesc]   = useState(editState.description);
-    const [localPrompt, setLocalPrompt] = useState(editState.imagePrompt);
-    const attrChips = parseAttrChips(localPrompt);
+    const [localDesc,    setLocalDesc]    = useState(editState.description);
+    const [localPrompt,  setLocalPrompt]  = useState(editState.imagePrompt);
+    const [chips,        setChips]        = useState<string[]>(() => parseAttrChips(editState.imagePrompt));
+    const [editChipIdx,  setEditChipIdx]  = useState<number | null>(null);
+
+    function commitChips(next: string[]) {
+        setChips(next);
+        setLocalPrompt(next.filter(c => c.trim()).join(", "));
+    }
+
+    function updateChip(idx: number, value: string) {
+        const next = [...chips];
+        next[idx] = value;
+        setChips(next);
+    }
+
+    function finaliseChip(idx: number) {
+        const trimmed = chips[idx].trim();
+        const next = trimmed ? chips.map((c, i) => i === idx ? trimmed : c) : chips.filter((_, i) => i !== idx);
+        commitChips(next);
+        setEditChipIdx(null);
+    }
     const [chat,        setChat]        = useState<ChatMsg[]>([]);
     const [instruction, setInstruction] = useState("");
     const [sending,     setSending]     = useState(false);
@@ -1265,8 +1297,22 @@ function CharacterEditorModal({
                         <EditorScrollArea>
                             <div>
                                 <AttrSectionLabel>Attributes</AttrSectionLabel>
-                                {attrChips.length > 0
-                                    ? <AttrList>{attrChips.map((chip, i) => <AttrChip key={i}>{chip}</AttrChip>)}</AttrList>
+                                {chips.length > 0
+                                    ? <AttrList>
+                                        {chips.map((chip, i) =>
+                                            editChipIdx === i
+                                                ? <AttrChipInput
+                                                    key={i}
+                                                    value={chip}
+                                                    onInput={(e: any) => updateChip(i, e.target.value)}
+                                                    onBlur={() => finaliseChip(i)}
+                                                    onKeyDown={(e: any) => e.key === "Enter" && finaliseChip(i)}
+                                                    style={{ width: Math.max(60, chip.length * 8) + "px" }}
+                                                    autoFocus
+                                                  />
+                                                : <AttrChip key={i} style={{ cursor: "pointer" }} onClick={() => setEditChipIdx(i)}>{chip}</AttrChip>
+                                        )}
+                                      </AttrList>
                                     : <AttrText style={{ opacity: 0.38 }}>No attributes yet.</AttrText>}
                             </div>
                             {char.appearance?.introduction && (
