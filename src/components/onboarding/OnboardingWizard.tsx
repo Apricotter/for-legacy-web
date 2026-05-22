@@ -1225,7 +1225,7 @@ function CharacterEditorModal({
     }
 
     return (
-        {createPortal(<ModalOverlay onClick={(e: any) => e.target === e.currentTarget && onClose()}>
+        <ModalOverlay onClick={(e: any) => e.target === e.currentTarget && onClose()}>
             <EditorShell>
                 <EditorCloseBtn onClick={onClose} title="Close">×</EditorCloseBtn>
                 <EditorBody>
@@ -1308,8 +1308,7 @@ function CharacterEditorModal({
                     </SubmitBtn>
                 </EditorFooter>
             </EditorShell>
-        </ModalOverlay>, document.body)}
-    );
+        </ModalOverlay>, document.body);
 }
 
 function CharacterReviewCheckpoint({ step, jobId, onDone }: {
