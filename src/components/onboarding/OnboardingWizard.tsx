@@ -1309,7 +1309,11 @@ function CharacterEditorModal({
                         <EditorScrollArea>
                             <div>
                                 <AttrSectionLabel>Attributes</AttrSectionLabel>
-                                <AttrTip><Bulb size={13} /><span><b>Tip:</b> Click a chip to edit</span></AttrTip>
+                                <AttrTip>
+                                    <Bulb size={13} style={{ color: "#F5A623", flexShrink: 0 }} />
+                                    <span style={{ color: "#F5A623", fontWeight: 700 }}>Tip</span>
+                                    <span style={{ color: "rgba(255,255,255,0.8)" }}>Click a chip to edit</span>
+                                </AttrTip>
                                 {chips.length > 0
                                     ? <AttrList>
                                         {chips.map((chip, i) =>
