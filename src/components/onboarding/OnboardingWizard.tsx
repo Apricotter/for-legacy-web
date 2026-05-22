@@ -1384,7 +1384,7 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
                             Next →
                         </SubmitBtn>
                     ) : (
-                        <SubmitBtn $sending={confirming} $disabled={!hasViewed} onClick={handleConfirm} style={{ flex: 1, margin: 0 }}>
+                        <SubmitBtn $sending={confirming} $disabled={!hasViewed} disabled={!hasViewed} onClick={handleConfirm} style={{ flex: 1, margin: 0 }}>
                             {confirming ? "Saving…" : "Confirm Cast →"}
                         </SubmitBtn>
                     )}
