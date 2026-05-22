@@ -17,7 +17,7 @@ const PIPELINE_STEPS = [
     "embed", "booknlp", "detect_narration",
     "character_dialog",
     "build_graph", "prune_graph", "drop_bg_characters",
-    "describe_characters", "character_portraits", "scene_stills",
+    "describe_characters", "character_portraits", "character_review", "scene_stills",
 ] as const;
 
 type BookProgress = {
@@ -855,6 +855,220 @@ function CheckpointStep({
     );
 }
 
+// ── Character review checkpoint (card-by-card) ────────────────────────────────
+
+const QUILL_API = "https://quill.apricotter.com";
+
+const ReviewCard = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+`;
+const ReviewCounter = styled.div`
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+`;
+const ReviewPortrait = styled.img`
+    width: 96px;
+    height: 96px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: rgba(255,255,255,0.06);
+    flex-shrink: 0;
+`;
+const ReviewPortraitPlaceholder = styled.div`
+    width: 96px;
+    height: 96px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+`;
+const ReviewHeader = styled.div`
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+`;
+const ReviewMeta = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 4px;
+`;
+const ReviewName = styled.div`
+    font-size: 17px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.92);
+`;
+const ReviewRole = styled.div`
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+`;
+const ReviewSection = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+`;
+const ReviewLabel = styled.div`
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+`;
+const ReviewActions = styled.div`
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+`;
+const ReviewNav = styled.div`
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+`;
+
+function CharacterReviewCheckpoint({ step, jobId, onDone }: {
+    step: import("./useOnboardingMessages").WizardStep;
+    jobId: string;
+    onDone: () => void;
+}) {
+    type CharEntry = { name: string; role: string; description?: string; portraitUrl?: string };
+    const data   = step.data;
+    const chars: CharEntry[] = data?.characters ?? [];
+
+    const [cardIdx,      setCardIdx]      = useState(0);
+    const [edits,        setEdits]        = useState<Record<string, string>>(() =>
+        Object.fromEntries(chars.map(c => [c.name, c.description ?? ""])));
+    const [instruction,  setInstruction]  = useState("");
+    const [regenerating, setRegenerating] = useState(false);
+    const [confirming,   setConfirming]   = useState(false);
+
+    const char = chars[cardIdx];
+    if (!char) return null;
+
+    const isLast = cardIdx === chars.length - 1;
+
+    async function handleRegenerate() {
+        if (regenerating || !jobId) return;
+        setRegenerating(true);
+        try {
+            const r = await fetch(
+                `${QUILL_API}/admin/jobs/${jobId}/characters/${encodeURIComponent(char.name)}/redescribe`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ instruction }),
+                }
+            );
+            if (r.ok) {
+                const { description } = await r.json();
+                setEdits(prev => ({ ...prev, [char.name]: description }));
+                setInstruction("");
+            }
+        } finally {
+            setRegenerating(false);
+        }
+    }
+
+    async function handleConfirm() {
+        if (confirming) return;
+        setConfirming(true);
+        try {
+            const characters = chars.map(c => ({
+                name:        c.name,
+                role:        c.role,
+                description: edits[c.name] ?? c.description ?? "",
+                portraitUrl: c.portraitUrl,
+            }));
+
+            if (jobId) {
+                await fetch(`${QUILL_API}/admin/jobs/${jobId}/characters/approve`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ characters }),
+                });
+            }
+
+            const advanceUrl: string | undefined = data?.advance_url;
+            if (advanceUrl) await fetch(advanceUrl, { method: "POST" });
+            onDone();
+        } finally {
+            setConfirming(false);
+        }
+    }
+
+    return (
+        <ReviewCard>
+            <ReviewCounter>Character {cardIdx + 1} of {chars.length}</ReviewCounter>
+
+            <ReviewHeader>
+                {char.portraitUrl
+                    ? <ReviewPortrait src={char.portraitUrl} alt={char.name} />
+                    : <ReviewPortraitPlaceholder>👤</ReviewPortraitPlaceholder>}
+                <ReviewMeta>
+                    <ReviewName>{char.name}</ReviewName>
+                    <ReviewRole>{char.role}</ReviewRole>
+                </ReviewMeta>
+            </ReviewHeader>
+
+            <ReviewSection>
+                <ReviewLabel>Description</ReviewLabel>
+                <FormTextarea
+                    value={edits[char.name] ?? ""}
+                    onInput={(e: any) => setEdits(prev => ({ ...prev, [char.name]: e.target.value }))}
+                    rows={4}
+                    placeholder="No description yet…"
+                    style={{ width: "100%", boxSizing: "border-box" }}
+                />
+            </ReviewSection>
+
+            <ReviewSection>
+                <ReviewLabel>AI Rewrite</ReviewLabel>
+                <FormInput
+                    type="text"
+                    value={instruction}
+                    onInput={(e: any) => setInstruction(e.target.value)}
+                    placeholder="e.g. make her sound more mysterious…"
+                    onKeyDown={(e: any) => e.key === "Enter" && handleRegenerate()}
+                />
+                <ReviewActions>
+                    <SubmitBtn
+                        $sending={regenerating}
+                        $disabled={!instruction.trim() || regenerating}
+                        onClick={handleRegenerate}
+                        style={{ width: "auto", padding: "10px 18px" }}
+                    >
+                        {regenerating ? "Rewriting…" : "Regenerate →"}
+                    </SubmitBtn>
+                </ReviewActions>
+            </ReviewSection>
+
+            <ReviewNav>
+                {cardIdx > 0 && (
+                    <SecondaryBtn onClick={() => setCardIdx(i => i - 1)} style={{ flex: 1 }}>
+                        ← Back
+                    </SecondaryBtn>
+                )}
+                {!isLast ? (
+                    <SubmitBtn onClick={() => setCardIdx(i => i + 1)} style={{ flex: 1 }}>
+                        Next →
+                    </SubmitBtn>
+                ) : (
+                    <SubmitBtn $sending={confirming} onClick={handleConfirm} style={{ flex: 1 }}>
+                        {confirming ? "Saving…" : "Confirm Cast →"}
+                    </SubmitBtn>
+                )}
+            </ReviewNav>
+        </ReviewCard>
+    );
+}
+
 function ProcessingStep({ data }: { data: any }) {
     return (
         <ProcessWrap>
@@ -944,7 +1158,7 @@ export default function OnboardingWizard({
                     ? JSON.parse(bookProgress.checkpointData)
                     : bookProgress.checkpointData)
                 : {};
-            activateCheckpoint({
+            activateCheckpoint(bookProgress.checkpointStep ?? "", {
                 ...parsed,
                 step:        bookProgress.checkpointStep,
                 advance_url: `https://quill.apricotter.com/onboarding/${serverId}/advance`,
@@ -1090,22 +1304,32 @@ export default function OnboardingWizard({
                     </ConfirmCard>
                 );
 
-            case "checkpoint":
+            case "checkpoint": {
                 if (!activeCheckpoint) return <EmptyState>Waiting for review…</EmptyState>;
+                const onCheckpointDone = () => {
+                    markDone(activeCheckpoint.id);
+                    const nextCheckpoint = steps.find(
+                        s => s.type === "checkpoint" && s.needsAction && !s.done && s.id !== activeCheckpoint.id
+                    );
+                    setStage(nextCheckpoint ? "checkpoint" : "reviews");
+                };
+                if (activeCheckpoint.id === "checkpoint_character_review") {
+                    return (
+                        <CharacterReviewCheckpoint
+                            step={activeCheckpoint}
+                            jobId={bookProgress?.jobId ?? ""}
+                            onDone={onCheckpointDone}
+                        />
+                    );
+                }
                 return (
                     <CheckpointStep
                         step={activeCheckpoint}
                         channelId={channelId}
-                        onDone={() => {
-                            markDone(activeCheckpoint.id);
-                            // Stay on checkpoint stage if another checkpoint is pending, else go to reviews
-                            const nextCheckpoint = steps.find(
-                                s => s.type === "checkpoint" && s.needsAction && !s.done && s.id !== activeCheckpoint.id
-                            );
-                            setStage(nextCheckpoint ? "checkpoint" : "reviews");
-                        }}
+                        onDone={onCheckpointDone}
                     />
                 );
+            }
 
             case "reviews":
                 if (!reviewStep) return (
