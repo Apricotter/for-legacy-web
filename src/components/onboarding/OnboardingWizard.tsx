@@ -1310,8 +1310,9 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
             description: c.description ?? "",
             imagePrompt: c.imagePrompt ?? "",
         }])));
-    const [editModal,  setEditModal]  = useState<string | null>(null);
-    const [confirming, setConfirming] = useState(false);
+    const [editModal,    setEditModal]    = useState<string | null>(null);
+    const [hasViewed,    setHasViewed]    = useState(false);
+    const [confirming,   setConfirming]   = useState(false);
 
     const char        = chars[cardIdx];
     const isLast      = cardIdx === chars.length - 1;
@@ -1360,13 +1361,13 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
                     <PreviewRight>
                         <PreviewNameRow>
                             <PreviewName>{char.name}</PreviewName>
-                            <PreviewEditBtn onClick={() => setEditModal(char.name)} title="Edit character"><EditAlt size={15} /></PreviewEditBtn>
+                            <PreviewEditBtn onClick={() => { setEditModal(char.name); setHasViewed(true); }} title="Edit character"><EditAlt size={15} /></PreviewEditBtn>
                         </PreviewNameRow>
                         <PreviewRoleTag>{char.role}</PreviewRoleTag>
                         <PreviewDesc>
                             {currentEdit.description || <span style={{ opacity: 0.45 }}>No description yet.</span>}
                         </PreviewDesc>
-                        <PreviewDetailsLink onClick={() => setEditModal(char.name)}>
+                        <PreviewDetailsLink onClick={() => { setEditModal(char.name); setHasViewed(true); }}>
                             See Full Details
                         </PreviewDetailsLink>
                     </PreviewRight>
@@ -1383,7 +1384,7 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
                             Next →
                         </SubmitBtn>
                     ) : (
-                        <SubmitBtn $sending={confirming} onClick={handleConfirm} style={{ flex: 1, margin: 0 }}>
+                        <SubmitBtn $sending={confirming} $disabled={!hasViewed} onClick={handleConfirm} style={{ flex: 1, margin: 0 }}>
                             {confirming ? "Saving…" : "Confirm Cast →"}
                         </SubmitBtn>
                     )}
