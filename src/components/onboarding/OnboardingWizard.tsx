@@ -1928,10 +1928,10 @@ export default function OnboardingWizard({
         } catch { /* malformed checkpointData — activate with empty characters */ }
     }, [bookProgress?.status, bookProgress?.checkpointStep]);
 
-    // Each new WS processing message = fetch profile once to get latest currentStep
+    // Fetch profile to sync bookProgress whenever processing activity changes or stage reaches upload_done
     const processingStepCount = steps.filter(s => s.type === "processing").length;
-    useEffect(() => {
-        if (!processingStepCount || !serverId) return;
+    const fetchBookProgress = useCallback(() => {
+        if (!serverId) return;
         fetch(`${OTTO_API}/onboarding/${serverId}/profile`)
             .then(r => r.ok ? r.json() : null)
             .catch(() => null)
@@ -1939,7 +1939,14 @@ export default function OnboardingWizard({
                 const prog: BookProgress | undefined = p?.books?.[p.books.length - 1];
                 if (prog) setBookProgress(prog);
             });
+    }, [serverId]);
+    useEffect(() => {
+        if (!processingStepCount || !serverId) return;
+        fetchBookProgress();
     }, [processingStepCount]);
+    useEffect(() => {
+        if (stage === "upload_done") fetchBookProgress();
+    }, [stage]);
 
     // Step selectors — fixed steps always exist; data === null means not yet activated
     const greetingStep      = steps.find(s => s.id === "greeting");
