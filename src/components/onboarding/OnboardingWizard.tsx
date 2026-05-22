@@ -1018,7 +1018,7 @@ const EditorBody = styled.div`
     min-height: 0;
 `;
 const EditorPortraitCol = styled.div`
-    width: 50%;
+    width: 40%;
     flex-shrink: 0;
     overflow: hidden;
 `;
@@ -1114,25 +1114,26 @@ const EditorChatRow = styled.div`
 `;
 const PromptToggleBtn = styled.button`
     margin: 0 22px 10px;
-    width: calc(100% - 44px);
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.09);
-    border-radius: 8px;
-    color: rgba(255,255,255,0.4);
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.75);
     font-size: 12px;
-    font-weight: 600;
-    padding: 8px 14px;
+    font-weight: 500;
+    padding: 4px 0;
     cursor: pointer;
     text-align: left;
     flex-shrink: 0;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
-    &:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.16); }
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: rgba(255,255,255,0.35);
+    transition: color 0.15s;
+    &:hover { color: rgba(255,255,255,1); }
 `;
 const EditorFooter = styled.div`
     padding: 14px 22px;
     border-top: 1px solid rgba(255,255,255,0.07);
     display: flex;
-    gap: 10px;
+    justify-content: flex-end;
     flex-shrink: 0;
 `;
 const PromptPopoverPanel = styled.div<{ $open: boolean }>`
@@ -1391,13 +1392,15 @@ function CharacterEditorModal({
                     </EditorRight>
                 </EditorBody>
                 <EditorFooter>
-                    <SecondaryBtn style={{ flex: 1 }} onClick={onClose}>Cancel</SecondaryBtn>
-                    <SubmitBtn
-                        style={{ flex: 2, margin: 0 }}
-                        onClick={() => { onSave({ description: localDesc, imagePrompt: localPrompt }); onClose(); }}
-                    >
-                        Save changes →
-                    </SubmitBtn>
+                    <div style={{ display: "flex", gap: 10 }}>
+                        <SecondaryBtn style={{ width: 130 }} onClick={onClose}>Cancel</SecondaryBtn>
+                        <SubmitBtn
+                            style={{ width: 130, margin: 0 }}
+                            onClick={() => { onSave({ description: localDesc, imagePrompt: localPrompt }); onClose(); }}
+                        >
+                            Save changes
+                        </SubmitBtn>
+                    </div>
                 </EditorFooter>
             </EditorShell>
         </ModalOverlay>, document.body);
