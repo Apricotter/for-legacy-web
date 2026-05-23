@@ -15,11 +15,14 @@ import { useOnboardingMessages, WizardStep } from "./useOnboardingMessages";
 const PIPELINE_STEPS = [
     "extract", "tokenize", "scene_builder", "chunk",
     "scene_enrich_labels", "scene_enrich_gliner",
+    "embed", "summarize", "gliner",
     "character_roster",
-    "embed", "booknlp", "detect_narration",
+    "booknlp", "detect_narration",
     "character_dialog",
     "build_graph", "prune_graph", "drop_bg_characters",
-    "describe_characters", "character_review", "character_portraits", "scene_stills",
+    "describe_characters", "character_portraits",
+    "character_review",
+    "scene_stills",
 ] as const;
 
 type BookProgress = {
