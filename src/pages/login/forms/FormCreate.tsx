@@ -24,7 +24,7 @@ export function FormCreate() {
     const [error, setError] = useState<string | undefined>(undefined);
     const [done, setDone] = useState(false);
 
-    const prefilledCode = getParam("code");
+    const prefilledCode = getParam("code") || sessionStorage.getItem("invite_code") || "";
     if (prefilledCode) sessionStorage.setItem("invite_code", prefilledCode);
 
     useEffect(() => { page("accept_invitation", { hasInviteCode: !!prefilledCode }); }, []);
