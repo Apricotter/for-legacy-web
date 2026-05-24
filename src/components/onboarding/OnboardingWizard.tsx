@@ -1924,7 +1924,7 @@ export default function OnboardingWizard({
             activateCheckpoint(bookProgress.checkpointStep ?? "", {
                 ...parsed,
                 step:        bookProgress.checkpointStep,
-                advance_url: `https://quill.apricotter.com/onboarding/${serverId}/advance`,
+                advance_url: `${OTTO_API}/onboarding/${serverId}/advance`,
             });
         } catch { /* malformed checkpointData — activate with empty characters */ }
     }, [bookProgress?.status, bookProgress?.checkpointStep]);
@@ -1948,6 +1948,27 @@ export default function OnboardingWizard({
     useEffect(() => {
         if (stage === "upload_done") fetchBookProgress();
     }, [stage]);
+
+    // Keep bookProgress fresh while pipeline is actively running
+    useEffect(() => {
+        if (bookProgress?.status !== "running") return;
+        const id = setInterval(fetchBookProgress, 5000);
+        return () => clearInterval(id);
+    }, [bookProgress?.status, fetchBookProgress]);
+
+    // Auto-advance stage if backend moved past checkpoint (e.g., manual advance via admin tool)
+    useEffect(() => {
+        if (stage !== "checkpoint") return;
+        if (!bookProgress) return;
+        if (bookProgress.status === "checkpoint") return;
+        const active = steps.find(s => s.type === "checkpoint" && s.needsAction && !s.done);
+        if (!active) return;
+        markDone(active.id);
+        const nextCheckpoint = steps.find(
+            s => s.type === "checkpoint" && s.needsAction && !s.done && s.id !== active.id
+        );
+        setStage(nextCheckpoint ? "checkpoint" : "reviews");
+    }, [bookProgress?.status, stage]);
 
     // Step selectors — fixed steps always exist; data === null means not yet activated
     const greetingStep      = steps.find(s => s.id === "greeting");
