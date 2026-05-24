@@ -27,7 +27,7 @@ export function FormCreate() {
     const prefilledCode = getParam("code");
     if (prefilledCode) sessionStorage.setItem("invite_code", prefilledCode);
 
-    useEffect(() => { page("signup", { hasInviteCode: !!prefilledCode }); }, []);
+    useEffect(() => { page("accept_invitation", { hasInviteCode: !!prefilledCode }); }, []);
 
     const { handleSubmit, register, setValue } = useForm<FormInputs>({
         defaultValues: {
