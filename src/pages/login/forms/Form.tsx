@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 import styles from "../Login.module.scss";
 import { Text } from "preact-i18n";
-import { useState } from "preact/hooks";
+import { useState, useEffect } from "preact/hooks";
 
 import { Button, Category, Preloader } from "@revoltchat/ui";
 
@@ -17,6 +17,7 @@ import { takeError } from "../../../controllers/client/jsx/error";
 import FormField from "../FormField";
 import { CaptchaBlock, CaptchaProps } from "./CaptchaBlock";
 import { MailProvider } from "./MailProvider";
+import { page as pageView, track } from "../../../lib/analytics";
 
 interface Props {
     page: "create" | "login" | "send_reset" | "reset" | "resend";
@@ -50,6 +51,8 @@ export const Form = observer(({ page, callback }: Props) => {
     const [error, setGlobalError] = useState<string | undefined>(undefined);
     const [captcha, setCaptcha] = useState<CaptchaProps | undefined>(undefined);
 
+    useEffect(() => { pageView(page); }, []);
+
     const { handleSubmit, register, errors, setError } = useForm<FormInputs>({
         defaultValues: {
             email: "",
@@ -61,11 +64,13 @@ export const Form = observer(({ page, callback }: Props) => {
     async function onSubmit(data: FormInputs) {
         setGlobalError(undefined);
         setLoading(true);
+        track(`${page}_started`);
 
         function onError(err: unknown) {
             setLoading(false);
 
             const error = takeError(err);
+            track(`${page}_failed`, { error });
             switch (error) {
                 case "email_in_use":
                     return setError("email", { type: "", message: error });
@@ -89,6 +94,7 @@ export const Form = observer(({ page, callback }: Props) => {
                         setCaptcha(undefined);
                         try {
                             await callback({ ...data, captcha });
+                            track(`${page}_success`);
                             setSuccess(data.email);
                         } catch (err) {
                             onError(err);
@@ -101,6 +107,7 @@ export const Form = observer(({ page, callback }: Props) => {
                 });
             } else {
                 await callback(data);
+                track(`${page}_success`);
                 setSuccess(data.email);
             }
         } catch (err) {
