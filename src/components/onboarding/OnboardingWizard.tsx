@@ -34,6 +34,8 @@ type BookProgress = {
     checkpointStep?: string;
     checkpointSummary?: string;
     checkpointData?: any;
+    portraitsUrl?: string;
+    sceneStillsUrl?: string;
     updatedAt: string;
 };
 
@@ -1727,13 +1729,22 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
     jobId: string;
     onDone: () => void;
 }) {
-    type CharEntry = { name: string; role: string; description: string };
+    type CharAppearanceEntry = { introduction?: string; imagePrompt?: string };
+    type CharEntry = {
+        name: string;
+        role: string;
+        description: string;
+        portraitUrl?: string;
+        appearance?: CharAppearanceEntry;
+    };
 
     const data = step.data;
     const initial: CharEntry[] = (data?.characters ?? []).map((c: any) => ({
         name:        c.name ?? "",
         role:        c.role ?? "Supporting",
         description: c.description ?? "",
+        portraitUrl: c.portraitUrl,
+        appearance:  c.appearance,
     }));
 
     const [chars,      setChars]      = useState<CharEntry[]>(initial);
@@ -1895,10 +1906,10 @@ export default function OnboardingWizard({
                 if (p.reviews?.length > 0) setLocalReviewCount(p.reviews.length);
                 stageRestored.current = true;
                 const lastBook = p.books?.[p.books.length - 1];
-                if (p.reviews?.length > 0) {
-                    setStage("done");
-                } else if (lastBook?.status === "checkpoint") {
+                if (lastBook?.status === "checkpoint") {
                     setStage("checkpoint");
+                } else if (p.reviews?.length > 0) {
+                    setStage("done");
                 } else if (p.bookFilename) {
                     setStage("upload_done");
                 } else if (p.authorName) {
@@ -1972,6 +1983,12 @@ export default function OnboardingWizard({
         if (stage === "done") return;
         setStage("done");
     }, [bookProgress?.status]);
+
+    // Notify backend that the author has finished onboarding
+    useEffect(() => {
+        if (stage !== "done" || !serverId) return;
+        fetch(`${OTTO_API}/onboarding/${serverId}/complete`, { method: "POST" }).catch(() => {});
+    }, [stage, serverId]);
 
     // Auto-advance stage if backend moved past checkpoint (e.g., manual advance via admin tool)
     useEffect(() => {
@@ -2209,8 +2226,26 @@ export default function OnboardingWizard({
                 return (
                     <ConfirmCard>
                         <ConfirmIcon>✓</ConfirmIcon>
-                        <ConfirmHeading>All set</ConfirmHeading>
-                        <ConfirmBody>Your studio is being prepared. You're all done here.</ConfirmBody>
+                        <ConfirmHeading>Your studio is ready</ConfirmHeading>
+                        {bookProgress?.portraitsUrl || bookProgress?.sceneStillsUrl ? (
+                            <ConfirmBody style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
+                                <span>Processing complete. Your book world is live.</span>
+                                {bookProgress.portraitsUrl && (
+                                    <a href={bookProgress.portraitsUrl} target="_blank" rel="noopener noreferrer"
+                                        style={{ color: "#2980b9", textDecoration: "underline" }}>
+                                        View character portraits
+                                    </a>
+                                )}
+                                {bookProgress.sceneStillsUrl && (
+                                    <a href={bookProgress.sceneStillsUrl} target="_blank" rel="noopener noreferrer"
+                                        style={{ color: "#2980b9", textDecoration: "underline" }}>
+                                        View scene stills
+                                    </a>
+                                )}
+                            </ConfirmBody>
+                        ) : (
+                            <ConfirmBody>Processing complete. Portraits and scene stills will appear here shortly.</ConfirmBody>
+                        )}
                     </ConfirmCard>
                 );
         }
