@@ -10,6 +10,7 @@ import { useClient } from "../controllers/client/ClientController";
 import { modalController } from "../controllers/modals/ModalController";
 import ContextMenus from "../lib/ContextMenus";
 import { isTouchscreenDevice } from "../lib/isTouchscreenDevice";
+import { track } from "../lib/analytics";
 
 import { Titlebar } from "../components/native/Titlebar";
 import BottomNavigation from "../components/navigation/BottomNavigation";
@@ -110,10 +111,13 @@ const WizardLauncher = observer(() => {
         const startHere = channels.find((c: any) => c?.name === "start-here");
         if (!startHere) return;
         launched.current = true;
+        const serverId  = (studioServer as any)._id;
+        const channelId = (startHere as any)._id;
+        track("wizard_opened", { serverId, channelId });
         modalController.push({
             type: "author_onboarding",
-            serverId: (studioServer as any)._id,
-            channelId: (startHere as any)._id,
+            serverId,
+            channelId,
         });
     });
 

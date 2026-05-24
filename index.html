@@ -72,6 +72,76 @@
             rel="apple-touch-startup-image"
         />
 
+        <!-- RudderStack Analytics -->
+        <script type="text/javascript">
+        (function() {
+          "use strict";
+          window.RudderSnippetVersion = "3.2.0";
+          var identifier = "rudderanalytics";
+          if (!window[identifier]) { window[identifier] = []; }
+          var rudderanalytics = window[identifier];
+          if (Array.isArray(rudderanalytics)) {
+            if (rudderanalytics.snippetExecuted === true && window.console && console.error) {
+              console.error("RudderStack JavaScript SDK snippet included more than once.");
+            } else {
+              rudderanalytics.snippetExecuted = true;
+              window.rudderAnalyticsBuildType = "legacy";
+              var sdkBaseUrl = "https://cdn.rudderlabs.com";
+              var sdkVersion = "v3";
+              var sdkFileName = "rsa.min.js";
+              var scriptLoadingMode = "async";
+              var methods = ["setDefaultInstanceKey","load","ready","page","track","identify","alias","group","reset","setAnonymousId","startSession","endSession","consent","addCustomIntegration"];
+              for (var i = 0; i < methods.length; i++) {
+                var method = methods[i];
+                rudderanalytics[method] = function(methodName) {
+                  return function() {
+                    if (Array.isArray(window[identifier])) {
+                      rudderanalytics.push([methodName].concat(Array.prototype.slice.call(arguments)));
+                    } else {
+                      var _m = window[identifier][methodName];
+                      if (_m) _m.apply(window[identifier], arguments);
+                    }
+                  };
+                }(method);
+              }
+              try {
+                new Function('class Test{field=()=>{};test({prop=[]}={}){return prop?(prop?.property??[...prop]):import("");}}');
+                window.rudderAnalyticsBuildType = "modern";
+              } catch(e) {}
+              var head = document.head || document.getElementsByTagName("head")[0];
+              var body = document.body || document.getElementsByTagName("body")[0];
+              window.rudderAnalyticsAddScript = function(url, k, v) {
+                var s = document.createElement("script");
+                s.src = url; s.setAttribute("data-loader","RS_JS_SDK");
+                if (k && v) s.setAttribute(k, v);
+                if (scriptLoadingMode === "async") s.async = true;
+                else if (scriptLoadingMode === "defer") s.defer = true;
+                if (head) head.insertBefore(s, head.firstChild);
+                else body.insertBefore(s, body.firstChild);
+              };
+              window.rudderAnalyticsMount = function() {
+                (function() {
+                  if (typeof globalThis === "undefined") {
+                    var g = (typeof self !== "undefined") ? self : (typeof window !== "undefined" ? window : null);
+                    if (g) Object.defineProperty(g, "globalThis", { value: g, configurable: true });
+                  }
+                })();
+                window.rudderAnalyticsAddScript(
+                  sdkBaseUrl + "/" + sdkVersion + "/" + window.rudderAnalyticsBuildType + "/" + sdkFileName,
+                  "data-rsa-write-key", "3EBCLUxw1jMR5oRoLvOEBFka6XL"
+                );
+              };
+              if (typeof Promise === "undefined" || typeof globalThis === "undefined") {
+                window.rudderAnalyticsAddScript("https://polyfill-fastly.io/v3/polyfill.min.js?version=3.111.0&features=Symbol%2CPromise&callback=rudderAnalyticsMount");
+              } else {
+                window.rudderAnalyticsMount();
+              }
+              rudderanalytics.load("3EBCLUxw1jMR5oRoLvOEBFka6XL", "https://apricotteroypc.dataplane.rudderstack.com", {});
+            }
+          }
+        })();
+        </script>
+
         <!--CSS for noscript screen-->
         <style>
             noscript {

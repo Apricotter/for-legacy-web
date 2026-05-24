@@ -3,6 +3,7 @@ import { useEffect, useState } from "preact/hooks";
 import { Button, Preloader } from "@revoltchat/ui";
 import styles from "../Login.module.scss";
 import FormField from "../FormField";
+import { identify, track } from "../../../lib/analytics";
 
 const API = import.meta.env.VITE_API_URL as string;
 
@@ -46,6 +47,7 @@ export function FormCreate() {
     const onSubmit: SubmitHandler<FormInputs> = async (data) => {
         setLoading(true);
         setError(undefined);
+        track("signup_started", { hasInviteCode: !!(prefilledCode || data.entry_code) });
         try {
             const username = data.email
                 .split("@")[0]
@@ -59,6 +61,7 @@ export function FormCreate() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: data.email, password: data.password }),
             });
+            track("account_created", { username });
 
             // 2. Login
             let r = await fetch(`${API}/auth/session/login`, {
@@ -89,6 +92,8 @@ export function FormCreate() {
                 throw new Error(j.type ?? "Onboarding failed");
             }
 
+            identify(username, { email: data.email, entryCode: prefilledCode || data.entry_code });
+            track("onboarding_initialized", { username });
             setDone(true);
             // Small delay then redirect to login so the client picks up the new session
             setTimeout(() => {

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "preact/hooks";
 import { createPortal } from "preact/compat";
 import { EditAlt, Bulb, Refresh } from "@styled-icons/boxicons-regular";
 import styled from "styled-components/macro";
+import { track } from "../../lib/analytics";
 
 import { uploadFile } from "../../controllers/client/jsx/legacy/FileUploads";
 import { useClient } from "../../controllers/client/ClientController";
@@ -1765,6 +1766,10 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
             }
             const advanceUrl: string | undefined = data?.advance_url;
             if (advanceUrl) await fetch(advanceUrl, { method: "POST" });
+            track("onboarding_checkpoint_submitted", {
+                checkpointStep: step?.data?.step,
+                approvedCount:  chars.length,
+            });
             onDone();
         } finally {
             setConfirming(false);
@@ -1934,10 +1939,16 @@ export default function OnboardingWizard({
                     ? JSON.parse(bookProgress.checkpointData)
                     : bookProgress.checkpointData)
                 : {};
+            const chars = parsed?.characters ?? [];
             activateCheckpoint(bookProgress.checkpointStep ?? "", {
                 ...parsed,
                 step:        bookProgress.checkpointStep,
                 advance_url: `${OTTO_API}/onboarding/${serverId}/advance`,
+            });
+            track("onboarding_checkpoint_reached", {
+                serverId,
+                checkpointStep: bookProgress.checkpointStep,
+                characterCount: chars.length,
             });
         } catch { /* malformed checkpointData — activate with empty characters */ }
     }, [bookProgress?.status, bookProgress?.checkpointStep]);
@@ -1981,12 +1992,14 @@ export default function OnboardingWizard({
     useEffect(() => {
         if (bookProgress?.status !== "complete") return;
         if (stage === "done") return;
+        track("pipeline_completed", { serverId, bookSlug: bookProgress.slug });
         setStage("done");
     }, [bookProgress?.status]);
 
     // Notify backend that the author has finished onboarding
     useEffect(() => {
         if (stage !== "done" || !serverId) return;
+        track("onboarding_completed", { serverId, bookSlug: bookProgress?.slug });
         fetch(`${OTTO_API}/onboarding/${serverId}/complete`, { method: "POST" }).catch(() => {});
     }, [stage, serverId]);
 
@@ -2029,6 +2042,7 @@ export default function OnboardingWizard({
 
     const handleReset = useCallback(async () => {
         if (resetting) return;
+        track("wizard_reset", { serverId, stage });
         setResetting(true);
         profileEpoch.current += 1;
         clearSteps();
@@ -2093,6 +2107,7 @@ export default function OnboardingWizard({
                         onDone={(name: string) => {
                             patchStepData(greetingStep.id, { prefill_name: name });
                             markDone(greetingStep.id);
+                            track("onboarding_name_submitted", { serverId });
                             if (serverId) {
                                 fetch(`${OTTO_API}/onboarding/${serverId}/name`, {
                                     method: "POST",
@@ -2113,6 +2128,10 @@ export default function OnboardingWizard({
                         channelId={channelId}
                         onDone={() => {
                             markDone(uploadStep.id);
+                            track("onboarding_book_uploaded", {
+                                serverId,
+                                filename: profile?.bookFilename,
+                            });
                             setStage("upload_done");
                         }}
                     />
@@ -2215,6 +2234,7 @@ export default function OnboardingWizard({
                                         review:      reviewValues.review ?? "",
                                     }),
                                 }).catch(() => {});
+                                track("onboarding_review_submitted", { serverId, rating: reviewValues.rating ?? "" });
                             }
                             setLocalReviewCount(c => c + 1);
                             setReviewsDone(true);
@@ -2264,7 +2284,7 @@ export default function OnboardingWizard({
                             <ResetBtn $resetting={resetting} onClick={handleReset}>
                                 {resetting ? "Resetting…" : "Start over"}
                             </ResetBtn>
-                            <CloseBtn onClick={onClose}>×</CloseBtn>
+                            <CloseBtn onClick={() => { track("wizard_closed", { serverId, stage }); onClose(); }}>×</CloseBtn>
                         </div>
                     </Header>
 

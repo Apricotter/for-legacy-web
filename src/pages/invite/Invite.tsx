@@ -18,6 +18,7 @@ import {
     useClient,
     useSession,
 } from "../../controllers/client/ClientController";
+import { track } from "../../lib/analytics";
 import RequiresOnline from "../../controllers/client/jsx/RequiresOnline";
 import { takeError } from "../../controllers/client/jsx/error";
 
@@ -39,7 +40,15 @@ export default function Invite() {
         if (typeof invite === "undefined") {
             client
                 .fetchInvite(code)
-                .then((data) => setInvite(data))
+                .then((data) => {
+                    setInvite(data);
+                    if (data?.type === "Server") {
+                        track("invite_viewed", {
+                            inviteCode:  code,
+                            serverName:  (data as any).server_name,
+                        });
+                    }
+                })
                 .catch((err) => setError(takeError(err)));
         }
     }, [code, invite]);
@@ -159,6 +168,10 @@ export default function Invite() {
 
                                 try {
                                     await client.joinInvite(invite);
+                                    track("invite_accepted", {
+                                        inviteCode: code,
+                                        serverId:   (invite as any).server_id,
+                                    });
 
                                     history.push(
                                         `/server/${invite.server_id}/channel/${invite.channel_id}`,

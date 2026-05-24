@@ -1,5 +1,6 @@
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import styles from "./Landing.module.scss";
+import { page, track } from "../../lib/analytics";
 
 const API = import.meta.env.VITE_API_URL as string;
 
@@ -7,6 +8,8 @@ export default function Landing() {
     const [email, setEmail] = useState("");
     const [loading, setLoading] = useState(false);
     const [done, setDone] = useState(false);
+
+    useEffect(() => { page("landing"); }, []);
 
     const submit = async (e: Event) => {
         e.preventDefault();
@@ -17,6 +20,7 @@ export default function Landing() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email }),
             });
+            track("waitlist_submitted");
         } catch {}
         setDone(true);
         setLoading(false);
