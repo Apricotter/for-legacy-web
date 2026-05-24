@@ -607,11 +607,13 @@ function GreetingStep({ data, channelId, onDone, prefillName }: { data: any; cha
 function FormStep({
     step,
     channelId,
+    serverId,
     onDone,
     onSkip,
 }: {
     step: WizardStep;
     channelId: string;
+    serverId: string;
     onDone: (values?: Record<string, string>) => void;
     onSkip?: () => void;
 }) {
@@ -2127,6 +2129,7 @@ export default function OnboardingWizard({
                     <FormStep
                         step={uploadStep}
                         channelId={channelId}
+                        serverId={serverId}
                         onDone={() => {
                             markDone(uploadStep.id);
                             track("onboarding_book_uploaded", {
@@ -2220,6 +2223,7 @@ export default function OnboardingWizard({
                         key={reviewKey}
                         step={reviewStep}
                         channelId={channelId}
+                        serverId={serverId}
                         onSkip={() => setStage("done")}
                         onDone={(reviewValues) => {
                             markDone(reviewStep.id);
