@@ -42,7 +42,12 @@ export function FormCreate() {
         if (!prefilledCode) return;
         fetch(`${API}/admin/invitations/${prefilledCode}/check`)
             .then((r) => r.ok ? r.json() : null)
-            .then((data) => { if (data?.email) setValue("email", data.email); })
+            .then((data) => {
+                if (data?.email) {
+                    setValue("email", data.email);
+                    identify(data.email, { inviteCode: prefilledCode });
+                }
+            })
             .catch(() => undefined);
     }, [prefilledCode]);
 
