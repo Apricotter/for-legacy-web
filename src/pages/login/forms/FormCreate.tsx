@@ -3,7 +3,7 @@ import { useEffect, useState } from "preact/hooks";
 import { Button, Preloader } from "@revoltchat/ui";
 import styles from "../Login.module.scss";
 import FormField from "../FormField";
-import { identify, track } from "../../../lib/analytics";
+import { identify, track, page } from "../../../lib/analytics";
 
 const API = import.meta.env.VITE_API_URL as string;
 
@@ -26,6 +26,8 @@ export function FormCreate() {
 
     const prefilledCode = getParam("code");
     if (prefilledCode) sessionStorage.setItem("invite_code", prefilledCode);
+
+    useEffect(() => { page("signup", { hasInviteCode: !!prefilledCode }); }, []);
 
     const { handleSubmit, register, setValue } = useForm<FormInputs>({
         defaultValues: {
