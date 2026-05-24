@@ -687,15 +687,16 @@ function FormStep({
                                 e.preventDefault();
                                 setDragging(false);
                                 const f = e.dataTransfer?.files?.[0];
-                                if (f) setUploadFile(f);
+                                if (f) { setUploadFile(f); track("upload_book_selected", { serverId, filename: f.name, method: "drop" }); }
                             }}
                             onClick={() => {
+                                track("upload_book_clicked", { serverId });
                                 const inp = document.createElement("input");
                                 inp.type = "file";
                                 inp.accept = field.accept ?? ".pdf,.epub,.txt";
                                 inp.onchange = ev => {
                                     const f = (ev.target as HTMLInputElement).files?.[0];
-                                    if (f) setUploadFile(f);
+                                    if (f) { setUploadFile(f); track("upload_book_selected", { serverId, filename: f.name, method: "browse" }); }
                                 };
                                 inp.click();
                             }}
