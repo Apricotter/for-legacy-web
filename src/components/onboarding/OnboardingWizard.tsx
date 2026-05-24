@@ -862,8 +862,6 @@ function CheckpointStep({
 
 // ── Character review checkpoint ───────────────────────────────────────────────
 
-const QUILL_API = "https://quill.apricotter.com";
-
 const ReviewCounter = styled.div`
     font-size: 12px;
     color: rgba(255,255,255,0.4);
@@ -1360,7 +1358,7 @@ function CharacterEditorModal({
         setChat(h => [...h, { role: "user", text }]);
         try {
             const r = await fetch(
-                `${QUILL_API}/admin/jobs/${jobId}/characters/${encodeURIComponent(char.name)}/redescribe`,
+                `${OTTO_API}/jobs/${jobId}/characters/${encodeURIComponent(char.name)}/redescribe`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -1627,7 +1625,7 @@ function CharDescEditorModal({
         setChat(h => [...h, { role: "user", text }]);
         try {
             const r = await fetch(
-                `${QUILL_API}/admin/jobs/${jobId}/characters/${encodeURIComponent(localName)}/redescribe`,
+                `${OTTO_API}/jobs/${jobId}/characters/${encodeURIComponent(localName)}/redescribe`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -1748,7 +1746,7 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
         setConfirming(true);
         try {
             if (jobId) {
-                await fetch(`${QUILL_API}/admin/jobs/${jobId}/characters/approve`, {
+                await fetch(`${OTTO_API}/jobs/${jobId}/characters/approve`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ characters: chars }),
