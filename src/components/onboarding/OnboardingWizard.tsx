@@ -14,15 +14,15 @@ import { useOnboardingMessages, WizardStep } from "./useOnboardingMessages";
 
 const PIPELINE_STEPS = [
     "extract", "tokenize", "scene_builder", "chunk",
+    "embed", "summarize",
     "scene_enrich_labels", "scene_enrich_gliner",
-    "embed", "summarize", "gliner",
-    "character_roster",
-    "booknlp", "detect_narration",
-    "character_dialog",
+    "gliner", "character_roster",
+    "booknlp", "detect_narration", "character_dialog",
     "build_graph", "prune_graph", "drop_bg_characters",
-    "describe_characters", "character_portraits",
+    "character_appearance", "describe_characters",
+    "prune_using_descriptions", "roster_with_descriptions", "refine_roster",
     "character_review",
-    "scene_stills",
+    "character_portraits", "scene_stills",
 ] as const;
 
 type BookProgress = {
@@ -1949,12 +1949,20 @@ export default function OnboardingWizard({
         if (stage === "upload_done") fetchBookProgress();
     }, [stage]);
 
-    // Keep bookProgress fresh while pipeline is actively running
+    // Keep bookProgress fresh while pipeline is running or waiting at a checkpoint
     useEffect(() => {
-        if (bookProgress?.status !== "running") return;
+        if (bookProgress?.status !== "running" && bookProgress?.status !== "checkpoint") return;
         const id = setInterval(fetchBookProgress, 5000);
         return () => clearInterval(id);
     }, [bookProgress?.status, fetchBookProgress]);
+
+    // Safety net: push to checkpoint stage if backend is waiting and stage hasn't transitioned
+    useEffect(() => {
+        if (!bookProgress) return;
+        if (bookProgress.status !== "checkpoint") return;
+        if (stage === "checkpoint" || stage === "reviews" || stage === "done") return;
+        setStage("checkpoint");
+    }, [bookProgress?.status]);
 
     // Auto-advance stage if backend moved past checkpoint (e.g., manual advance via admin tool)
     useEffect(() => {
