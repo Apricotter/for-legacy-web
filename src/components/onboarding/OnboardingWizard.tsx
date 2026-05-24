@@ -1859,8 +1859,9 @@ export default function OnboardingWizard({
     const [bookProgress, setBookProgress] = useState<BookProgress | null>(null);
     const [invitationName, setInvitationName] = useState<string>("");
     const [localReviewCount, setLocalReviewCount] = useState(0);
-    const stageRestored = useRef(false);
-    const profileEpoch  = useRef(0);
+    const stageRestored   = useRef(false);
+    const profileEpoch    = useRef(0);
+    const lastProgressRef = useRef(0);
 
     // Fetch invitation metadata to prefill author name on greeting step
     useEffect(() => {
@@ -1915,6 +1916,7 @@ export default function OnboardingWizard({
     // When profile shows a checkpoint, hydrate the checkpoint step so it shows on refresh
     useEffect(() => {
         if (!bookProgress || bookProgress.status !== "checkpoint") return;
+        if (!bookProgress.checkpointStep) return;
         try {
             const parsed = bookProgress.checkpointData
                 ? (typeof bookProgress.checkpointData === "string"
@@ -1962,6 +1964,13 @@ export default function OnboardingWizard({
         if (bookProgress.status !== "checkpoint") return;
         if (stage === "checkpoint" || stage === "reviews" || stage === "done") return;
         setStage("checkpoint");
+    }, [bookProgress?.status]);
+
+    // Auto-advance to done when pipeline completes while wizard is open
+    useEffect(() => {
+        if (bookProgress?.status !== "complete") return;
+        if (stage === "done") return;
+        setStage("done");
     }, [bookProgress?.status]);
 
     // Auto-advance stage if backend moved past checkpoint (e.g., manual advance via admin tool)
@@ -2105,7 +2114,23 @@ export default function OnboardingWizard({
                 );
 
             case "checkpoint": {
-                if (!activeCheckpoint) return <EmptyState>Waiting for review…</EmptyState>;
+                if (!activeCheckpoint) {
+                    if (bookProgress?.status === "checkpoint" && bookProgress?.checkpointStep) {
+                        try {
+                            const parsed = bookProgress.checkpointData
+                                ? (typeof bookProgress.checkpointData === "string"
+                                    ? JSON.parse(bookProgress.checkpointData)
+                                    : bookProgress.checkpointData)
+                                : {};
+                            activateCheckpoint(bookProgress.checkpointStep, {
+                                ...parsed,
+                                step:        bookProgress.checkpointStep,
+                                advance_url: `${OTTO_API}/onboarding/${serverId}/advance`,
+                            });
+                        } catch { }
+                    }
+                    return <EmptyState>Waiting for review…</EmptyState>;
+                }
                 const onCheckpointDone = () => {
                     markDone(activeCheckpoint.id);
                     const nextCheckpoint = steps.find(
@@ -2225,11 +2250,17 @@ export default function OnboardingWizard({
                         const stepIdx = bookProgress?.currentStep
                             ? PIPELINE_STEPS.indexOf(bookProgress.currentStep as any)
                             : -1;
-                        const progressFraction = bookProgress?.status === "complete"
-                            ? 0.99
-                            : stepIdx >= 0
-                                ? (stepIdx + 1) / PIPELINE_STEPS.length
-                                : 0;
+                        let progressFraction: number;
+                        if (bookProgress?.status === "complete") {
+                            progressFraction = 0.99;
+                        } else if (stepIdx >= 0) {
+                            progressFraction = (stepIdx + 1) / PIPELINE_STEPS.length;
+                            lastProgressRef.current = progressFraction;
+                        } else if (!bookProgress || bookProgress.currentStep === "starting") {
+                            progressFraction = 0;
+                        } else {
+                            progressFraction = lastProgressRef.current;
+                        }
                         return (
                             <PipelineBar
                                 $active={!!bookProgress && bookProgress.status !== "error" || steps.some(s => s.type === "processing")}
