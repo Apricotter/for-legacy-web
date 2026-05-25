@@ -2018,15 +2018,17 @@ export default function OnboardingWizard({
     // Keep PostHog person profile in sync with the full onboarding state
     useEffect(() => {
         if (!bookProgress || !serverId) return;
-        identify(serverId, {
-            bookSlug:        bookProgress.slug,
-            bookStatus:      bookProgress.status,
-            currentStep:     bookProgress.currentStep,
-            checkpointStep:  bookProgress.checkpointStep ?? null,
-            jobId:           bookProgress.jobId,
-            portraitsUrl:    bookProgress.portraitsUrl ?? null,
-            sceneStillsUrl:  bookProgress.sceneStillsUrl ?? null,
-        });
+        try {
+            identify(serverId, {
+                bookSlug:        bookProgress.slug,
+                bookStatus:      bookProgress.status,
+                currentStep:     bookProgress.currentStep,
+                checkpointStep:  bookProgress.checkpointStep ?? null,
+                jobId:           bookProgress.jobId,
+                portraitsUrl:    bookProgress.portraitsUrl ?? null,
+                sceneStillsUrl:  bookProgress.sceneStillsUrl ?? null,
+            });
+        } catch(e) { console.error("[OW] identify threw:", e); }
     }, [bookProgress]);
 
     // Notify backend that the author has finished onboarding
