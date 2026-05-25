@@ -2002,13 +2002,13 @@ export default function OnboardingWizard({
         return () => clearInterval(id);
     }, [bookProgress?.status, fetchBookProgress]);
 
-    // Safety net: push to checkpoint stage if backend is waiting and stage hasn't transitioned
+    // Drive stage from Mongo: if backend is at a checkpoint, always show it (except when already done)
     useEffect(() => {
         if (!bookProgress) return;
         if (bookProgress.status !== "checkpoint") return;
-        if (stage === "checkpoint" || stage === "reviews" || stage === "done") return;
+        if (stage === "checkpoint" || stage === "done") return;
         setStage("checkpoint");
-    }, [bookProgress?.status]);
+    }, [bookProgress?.status, bookProgress?.checkpointStep]);
 
     // Auto-advance to done when pipeline completes while wizard is open
     useEffect(() => {
