@@ -559,6 +559,7 @@ const MiniSpinner = styled.div`
     border-top-color: #F4B978;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
+    @keyframes spin { to { transform: rotate(360deg); } }
     flex-shrink: 0;
 `;
 
@@ -2269,8 +2270,14 @@ export default function OnboardingWizard({
         if (!bookProgress) return;
         if (bookProgress.status !== "checkpoint") return;
         if (stage === "checkpoint" || stage === "done") return;
-        // Don't re-enter checkpoint if the author already confirmed it this session
         const targetId = bookProgress.checkpointStep ? `checkpoint_${bookProgress.checkpointStep}` : null;
+        // Unknown checkpoint (e.g. character_roster which no longer pauses) — auto-advance and wait
+        if (targetId && !steps.some(s => s.id === targetId)) {
+            confirmedCheckpoints.current.add(targetId);
+            fetch(`${OTTO_API}/onboarding/${serverId}/advance`, { method: "POST" }).catch(() => {});
+            return;
+        }
+        // Don't re-enter checkpoint if the author already confirmed it this session
         if (targetId && steps.find(s => s.id === targetId)?.done) return;
         setStage("checkpoint");
     }, [bookProgress?.status, bookProgress?.checkpointStep, steps]);
