@@ -2292,6 +2292,10 @@ export default function OnboardingWizard({
         }
     }
 
+    try {
+    console.debug("[OW] render", { stage, stepCount: steps.length, activeCheckpoint: activeCheckpoint?.id, bookStatus: bookProgress?.status, checkpointStep: bookProgress?.checkpointStep });
+    } catch(e) { console.error("[OW] debug log threw", e); }
+
     return (
         <Overlay>
             <ModalWrapper>
@@ -2320,7 +2324,7 @@ export default function OnboardingWizard({
                     )}
 
                     <Content>
-                        {renderContent()}
+                        {(() => { try { return renderContent(); } catch(e) { console.error("[OW] renderContent threw", e); throw e; } })()}
                     </Content>
                     {(() => {
                         const stepIdx = bookProgress?.currentStep
