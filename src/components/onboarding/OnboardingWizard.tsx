@@ -2294,7 +2294,7 @@ export default function OnboardingWizard({
 
     // Auto-transition to checkpoint when one becomes active (from any non-terminal stage)
     useEffect(() => {
-        if (activeCheckpoint && stage !== "checkpoint" && stage !== "reviews" && stage !== "done")
+        if (activeCheckpoint && stage !== "checkpoint" && stage !== "done")
             setStage("checkpoint");
     }, [activeCheckpoint?.id]);
 
