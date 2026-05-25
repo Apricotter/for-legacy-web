@@ -184,7 +184,7 @@ export function useOnboardingMessages(channelId: string | undefined) {
         const targetId = `checkpoint_${stepName}`;
         setFixed(prev => {
             if (!prev.some(s => s.id === targetId)) return prev;
-            return prev.map(s => s.id === targetId ? { ...s, data, needsAction: true } : s);
+            return prev.map(s => s.id === targetId ? { ...s, data, needsAction: true, done: false } : s);
         });
     };
 

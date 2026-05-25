@@ -1961,9 +1961,12 @@ export default function OnboardingWizard({
     }, [profile]);
 
     // When profile shows a checkpoint, hydrate the checkpoint step so it shows on refresh
+    // Guard: skip if already locally confirmed (done=true) — profile is stale
     useEffect(() => {
         if (!bookProgress || bookProgress.status !== "checkpoint") return;
         if (!bookProgress.checkpointStep) return;
+        const targetId = `checkpoint_${bookProgress.checkpointStep}`;
+        if (steps.find(s => s.id === targetId)?.done) return;
         try {
             const parsed = bookProgress.checkpointData
                 ? (typeof bookProgress.checkpointData === "string"
@@ -1982,7 +1985,7 @@ export default function OnboardingWizard({
                 characterCount: chars.length,
             });
         } catch { /* malformed checkpointData — activate with empty characters */ }
-    }, [bookProgress?.status, bookProgress?.checkpointStep]);
+    }, [bookProgress?.status, bookProgress?.checkpointStep, steps]);
 
     // Fetch profile to sync bookProgress whenever processing activity changes or stage reaches upload_done
     const processingStepCount = steps.filter(s => s.type === "processing").length;
@@ -2011,13 +2014,16 @@ export default function OnboardingWizard({
         return () => clearInterval(id);
     }, [bookProgress?.status, fetchBookProgress]);
 
-    // Drive stage from Mongo: if backend is at a checkpoint, always show it (except when already done)
+    // Drive stage from Mongo: if backend is at a checkpoint and the local step hasn't been confirmed yet
     useEffect(() => {
         if (!bookProgress) return;
         if (bookProgress.status !== "checkpoint") return;
         if (stage === "checkpoint" || stage === "done") return;
+        // Don't re-enter checkpoint if the author already confirmed it this session
+        const targetId = bookProgress.checkpointStep ? `checkpoint_${bookProgress.checkpointStep}` : null;
+        if (targetId && steps.find(s => s.id === targetId)?.done) return;
         setStage("checkpoint");
-    }, [bookProgress?.status, bookProgress?.checkpointStep]);
+    }, [bookProgress?.status, bookProgress?.checkpointStep, steps]);
 
     // Auto-advance to done when pipeline completes while wizard is open
     useEffect(() => {

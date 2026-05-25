@@ -151,7 +151,7 @@ export default function SubwayMap({ steps, activeIndex, onSelectStep, bookFilena
                     .filter(({ step, globalIndex }) =>
                         step.line === line.id &&
                         step.type !== "processing" &&
-                        (step.done || step.needsAction || globalIndex === activeIndex));
+                        (step.type === "milestone" || step.done || step.needsAction || globalIndex === activeIndex));
 
                 if (lineSteps.length === 0) return null;
 
