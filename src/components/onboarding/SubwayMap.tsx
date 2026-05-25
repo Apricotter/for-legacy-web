@@ -148,10 +148,9 @@ export default function SubwayMap({ steps, activeIndex, onSelectStep, bookFilena
             {LINES.map(line => {
                 const lineSteps = steps
                     .map((s, i) => ({ step: s, globalIndex: i }))
-                    .filter(({ step, globalIndex }) =>
+                    .filter(({ step }) =>
                         step.line === line.id &&
-                        step.type !== "processing" &&
-                        (step.type === "milestone" || step.done || step.needsAction || globalIndex === activeIndex));
+                        step.type !== "processing");
 
                 if (lineSteps.length === 0) return null;
 
@@ -170,7 +169,7 @@ export default function SubwayMap({ steps, activeIndex, onSelectStep, bookFilena
                                     <>
                                         {pos > 0 && (
                                             <Connector
-                                                $done={lineSteps[pos - 1].step.done}
+                                                $done={lineSteps[pos - 1].step.done && step.done}
                                                 $color={line.color}
                                             />
                                         )}

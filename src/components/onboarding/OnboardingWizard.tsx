@@ -2050,13 +2050,28 @@ export default function OnboardingWizard({
 
     // Mark Portraits milestone done when portraitsUrl lands
     useEffect(() => {
-        if (bookProgress?.portraitsUrl) markDone("milestone_portraits");
+        if (!bookProgress?.portraitsUrl) return;
+        patchStepData("milestone_portraits", { url: bookProgress.portraitsUrl });
+        markDone("milestone_portraits");
     }, [bookProgress?.portraitsUrl]);
 
     // Mark Scenes milestone done when sceneStillsUrl lands
     useEffect(() => {
-        if (bookProgress?.sceneStillsUrl) markDone("milestone_scenes");
+        if (!bookProgress?.sceneStillsUrl) return;
+        patchStepData("milestone_scenes", { url: bookProgress.sceneStillsUrl });
+        markDone("milestone_scenes");
     }, [bookProgress?.sceneStillsUrl]);
+
+    // Mark past checkpoints done based on where the pipeline actually is (self-healing on refresh)
+    useEffect(() => {
+        if (!bookProgress) return;
+        const idx = bookProgress.status === "complete"
+            ? PIPELINE_STEPS.length
+            : PIPELINE_STEPS.indexOf(bookProgress.currentStep as any);
+        if (idx < 0) return;
+        if (idx > PIPELINE_STEPS.indexOf("character_roster")) markDone("checkpoint_character_roster");
+        if (idx > PIPELINE_STEPS.indexOf("character_review"))  markDone("checkpoint_character_review");
+    }, [bookProgress?.currentStep, bookProgress?.status]);
 
     // Update PostHog person profile only when meaningful state changes (not every poll)
     useEffect(() => {
@@ -2152,10 +2167,14 @@ export default function OnboardingWizard({
     function onSelectStep(index: number) {
         const s = steps[index];
         if (!s) return;
-        if (s.id === "greeting")   setStage("greeting");
-        else if (s.id === "form_book")   setStage(uploadStep?.done ? "upload_done" : "upload");
+        if (s.type === "milestone" && s.data?.url) {
+            window.open(s.data.url, "_blank", "noopener,noreferrer");
+            return;
+        }
+        if (s.id === "greeting")          setStage("greeting");
+        else if (s.id === "form_book")    setStage(uploadStep?.done ? "upload_done" : "upload");
         else if (s.type === "checkpoint") setStage("checkpoint");
-        else if (s.id === "form_author") setStage("reviews");
+        else if (s.id === "form_author")  setStage("reviews");
     }
 
     // Dome nav
