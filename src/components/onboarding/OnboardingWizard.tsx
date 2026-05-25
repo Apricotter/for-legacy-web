@@ -2091,6 +2091,15 @@ export default function OnboardingWizard({
             });
     }, []);
 
+    const persistWizardStep = useCallback((stepId: string) => {
+        if (!serverId) return;
+        fetch(`${OTTO_API}/onboarding/${serverId}/wizard-step`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ stepId }),
+        }).catch(() => {});
+    }, [serverId]);
+
     // Load profile from Mongo on mount — drives stage restoration and field prefill
     useEffect(() => {
         if (!serverId) return;
@@ -2104,15 +2113,29 @@ export default function OnboardingWizard({
                 setProfile(p);
                 if (p.reviews?.length > 0) setLocalReviewCount(p.reviews.length);
                 stageRestored.current = true;
-                const lastBook = p.books?.[p.books.length - 1];
-                if (lastBook?.status === "checkpoint") {
+                // Use saved wizardStep as source of truth; fall back to pipeline inference
+                const ws = p.wizardStep as string | undefined;
+                if (ws?.startsWith("checkpoint_")) {
+                    setFocusedCheckpointId(ws);
                     setStage("checkpoint");
-                } else if (p.reviews?.length > 0) {
-                    setStage("done");
-                } else if (p.bookFilename) {
+                } else if (ws?.startsWith("milestone_")) {
+                    setFocusedMilestoneId(ws);
+                    setStage("milestone");
+                } else if (ws === "form_author") {
+                    setStage("reviews");
+                } else if (ws === "form_book") {
                     setStage("upload_done");
-                } else if (p.authorName) {
-                    setStage("upload");
+                } else {
+                    const lastBook = p.books?.[p.books.length - 1];
+                    if (lastBook?.status === "checkpoint") {
+                        setStage("checkpoint");
+                    } else if (p.reviews?.length > 0) {
+                        setStage("done");
+                    } else if (p.bookFilename) {
+                        setStage("upload_done");
+                    } else if (p.authorName) {
+                        setStage("upload");
+                    }
                 }
             });
     }, [serverId]);
@@ -2294,8 +2317,10 @@ export default function OnboardingWizard({
 
     // Auto-transition to checkpoint when one becomes active (from any non-terminal stage)
     useEffect(() => {
-        if (activeCheckpoint && stage !== "checkpoint" && stage !== "done")
+        if (activeCheckpoint && stage !== "checkpoint" && stage !== "done") {
             setStage("checkpoint");
+            persistWizardStep(activeCheckpoint.id);
+        }
     }, [activeCheckpoint?.id]);
 
     const handleReset = useCallback(async () => {
@@ -2305,6 +2330,7 @@ export default function OnboardingWizard({
         profileEpoch.current += 1;
         clearSteps();
         setStage("greeting");
+        persistWizardStep("");
         setFocusedCheckpointId(null);
         setFocusedMilestoneId(null);
         setProfile(null);
@@ -2338,13 +2364,13 @@ export default function OnboardingWizard({
         if (!s) return;
         track("subway_stop_clicked", { serverId, stepId: s.id, stepType: s.type, stepLabel: s.label, done: s.done });
         if (s.type === "milestone") {
-            if (s.data?.url) { setFocusedMilestoneId(s.id); setStage("milestone"); }
+            if (s.data?.url) { setFocusedMilestoneId(s.id); setStage("milestone"); persistWizardStep(s.id); }
             return;
         }
         if (s.id === "greeting")          setStage("greeting");
-        else if (s.id === "form_book")    setStage(uploadStep?.done ? "upload_done" : "upload");
-        else if (s.type === "checkpoint") { setFocusedCheckpointId(s.id); setStage("checkpoint"); }
-        else if (s.id === "form_author")  setStage("reviews");
+        else if (s.id === "form_book")  { setStage(uploadStep?.done ? "upload_done" : "upload"); persistWizardStep("form_book"); }
+        else if (s.type === "checkpoint") { setFocusedCheckpointId(s.id); setStage("checkpoint"); persistWizardStep(s.id); }
+        else if (s.id === "form_author")  { setStage("reviews"); persistWizardStep("form_author"); }
     }
 
     // Dome nav
