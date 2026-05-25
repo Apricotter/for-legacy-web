@@ -2319,7 +2319,6 @@ export default function OnboardingWizard({
             ? PIPELINE_STEPS.length
             : PIPELINE_STEPS.indexOf(bookProgress.currentStep as any);
         if (idx < 0) return;
-        if (idx > PIPELINE_STEPS.indexOf("character_roster")) markDone("checkpoint_character_roster");
         if (idx > PIPELINE_STEPS.indexOf("character_review"))  markDone("checkpoint_character_review");
     }, [bookProgress?.currentStep, bookProgress?.status]);
 

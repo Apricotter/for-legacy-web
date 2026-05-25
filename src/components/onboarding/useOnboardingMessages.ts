@@ -19,7 +19,6 @@ export interface WizardStep {
 const FIXED_STEP_DEFS: Omit<WizardStep, "data" | "done" | "needsAction">[] = [
     { id: "greeting",                    type: "greeting",   line: "author", label: "Welcome"    },
     { id: "form_book",                   type: "form",       line: "book",   label: "Upload"     },
-    { id: "checkpoint_character_roster", type: "checkpoint", line: "book",   label: "Cast"       },
     { id: "checkpoint_character_review", type: "checkpoint", line: "book",   label: "Characters" },
     { id: "milestone_portraits",         type: "milestone",  line: "book",   label: "Portraits"  },
     { id: "milestone_scenes",            type: "milestone",  line: "book",   label: "Scenes"     },
