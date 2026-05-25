@@ -2224,14 +2224,6 @@ export default function OnboardingWizard({
         setStage("done");
     }, [bookProgress?.status]);
 
-    // Fire checkpoint_viewed once per checkpoint (not on every render)
-    useEffect(() => {
-        if (stage !== "checkpoint" || !displayCheckpoint?.id) return;
-        if (displayCheckpoint.id === lastViewedCheckpoint.current) return;
-        lastViewedCheckpoint.current = displayCheckpoint.id;
-        track("checkpoint_viewed", { serverId, checkpointStep: displayCheckpoint.id, done: displayCheckpoint.done });
-    }, [stage, displayCheckpoint?.id]);
-
     // Fire pipeline_step_completed whenever currentStep advances
     useEffect(() => {
         if (!bookProgress?.currentStep) return;
@@ -2316,6 +2308,15 @@ export default function OnboardingWizard({
     const displayCheckpoint = (focusedCheckpointId
         ? steps.find(s => s.id === focusedCheckpointId)
         : null) ?? activeCheckpoint;
+
+    // Fire checkpoint_viewed once per checkpoint (not on every render)
+    useEffect(() => {
+        if (stage !== "checkpoint" || !displayCheckpoint?.id) return;
+        if (displayCheckpoint.id === lastViewedCheckpoint.current) return;
+        lastViewedCheckpoint.current = displayCheckpoint.id;
+        track("checkpoint_viewed", { serverId, checkpointStep: displayCheckpoint.id, done: displayCheckpoint.done });
+    }, [stage, displayCheckpoint?.id]);
+
 
     // Restore stage from history on first load
     useEffect(() => {
