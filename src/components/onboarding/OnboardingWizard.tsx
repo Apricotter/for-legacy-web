@@ -783,10 +783,12 @@ function FormStep({
 function CheckpointStep({
     step,
     channelId,
+    serverId,
     onDone,
 }: {
     step: WizardStep;
     channelId: string;
+    serverId: string;
     onDone: () => void;
 }) {
     const client = useClient();
@@ -806,6 +808,12 @@ function CheckpointStep({
                 const ch = (client as any)?.channels?.get(channelId);
                 await ch?.sendMessage({ content: "confirmed" });
             }
+            const approvedCount = Object.values(checked).filter(Boolean).length;
+            track("onboarding_checkpoint_submitted", {
+                serverId,
+                checkpointStep: data?.step ?? step.id,
+                approvedCount,
+            });
             setConfirmed(true);
             onDone();
         } catch {
@@ -2207,6 +2215,7 @@ export default function OnboardingWizard({
                     <CheckpointStep
                         step={activeCheckpoint}
                         channelId={channelId}
+                        serverId={serverId}
                         onDone={onCheckpointDone}
                     />
                 );
