@@ -803,7 +803,11 @@ function CheckpointStep({
         setConfirming(true);
         try {
             if (advanceUrl) {
-                await fetch(advanceUrl, { method: "POST" });
+                await fetch(advanceUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ characters: chars }),
+                });
             } else {
                 const ch = (client as any)?.channels?.get(channelId);
                 await ch?.sendMessage({ content: "confirmed" });
