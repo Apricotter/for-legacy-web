@@ -2185,20 +2185,6 @@ export default function OnboardingWizard({
 
             case "checkpoint": {
                 if (!activeCheckpoint) {
-                    if (bookProgress?.status === "checkpoint" && bookProgress?.checkpointStep) {
-                        try {
-                            const parsed = bookProgress.checkpointData
-                                ? (typeof bookProgress.checkpointData === "string"
-                                    ? JSON.parse(bookProgress.checkpointData)
-                                    : bookProgress.checkpointData)
-                                : {};
-                            activateCheckpoint(bookProgress.checkpointStep, {
-                                ...parsed,
-                                step:        bookProgress.checkpointStep,
-                                advance_url: `${OTTO_API}/onboarding/${serverId}/advance`,
-                            });
-                        } catch { }
-                    }
                     return <EmptyState>Waiting for review…</EmptyState>;
                 }
                 const onCheckpointDone = () => {
