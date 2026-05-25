@@ -1898,6 +1898,7 @@ export default function OnboardingWizard({
     const client = useClient();
     const { steps, markDone, patchStepData, clearSteps, activateCheckpoint } = useOnboardingMessages(channelId);
     const [stage, setStage] = useState<Stage>("greeting");
+    const [focusedCheckpointId, setFocusedCheckpointId] = useState<string | null>(null);
     const [resetting, setResetting] = useState(false);
     const [reviewsDone, setReviewsDone] = useState(false);
     const [reviewKey, setReviewKey] = useState(0);
@@ -2113,6 +2114,10 @@ export default function OnboardingWizard({
     const uploadStep        = steps.find(s => s.id === "form_book");
     const reviewStep        = steps.find(s => s.id === "form_author");
     const activeCheckpoint  = steps.find(s => s.type === "checkpoint" && s.needsAction && !s.done);
+    // When user clicks a specific checkpoint stop, show that one; fallback to whichever is active
+    const displayCheckpoint = (focusedCheckpointId
+        ? steps.find(s => s.id === focusedCheckpointId)
+        : null) ?? activeCheckpoint;
 
     // Restore stage from history on first load
     useEffect(() => {
@@ -2138,6 +2143,7 @@ export default function OnboardingWizard({
         profileEpoch.current += 1;
         clearSteps();
         setStage("greeting");
+        setFocusedCheckpointId(null);
         setProfile(null);
         setBookProgress(null);
         setLocalReviewCount(0);
@@ -2173,7 +2179,7 @@ export default function OnboardingWizard({
         }
         if (s.id === "greeting")          setStage("greeting");
         else if (s.id === "form_book")    setStage(uploadStep?.done ? "upload_done" : "upload");
-        else if (s.type === "checkpoint") setStage("checkpoint");
+        else if (s.type === "checkpoint") { setFocusedCheckpointId(s.id); setStage("checkpoint"); }
         else if (s.id === "form_author")  setStage("reviews");
     }
 
@@ -2246,20 +2252,21 @@ export default function OnboardingWizard({
                 );
 
             case "checkpoint": {
-                if (!activeCheckpoint) {
+                if (!displayCheckpoint || !displayCheckpoint.data) {
                     return <EmptyState>Waiting for review…</EmptyState>;
                 }
                 const onCheckpointDone = () => {
-                    markDone(activeCheckpoint.id);
+                    markDone(displayCheckpoint.id);
+                    setFocusedCheckpointId(null);
                     const nextCheckpoint = steps.find(
-                        s => s.type === "checkpoint" && s.needsAction && !s.done && s.id !== activeCheckpoint.id
+                        s => s.type === "checkpoint" && s.needsAction && !s.done && s.id !== displayCheckpoint.id
                     );
                     setStage(nextCheckpoint ? "checkpoint" : "reviews");
                 };
-                if (activeCheckpoint.id === "checkpoint_character_review") {
+                if (displayCheckpoint.id === "checkpoint_character_review") {
                     return (
                         <CharacterReviewCheckpoint
-                            step={activeCheckpoint}
+                            step={displayCheckpoint}
                             jobId={bookProgress?.jobId ?? ""}
                             serverId={serverId}
                             onDone={onCheckpointDone}
@@ -2268,7 +2275,7 @@ export default function OnboardingWizard({
                 }
                 return (
                     <CheckpointStep
-                        step={activeCheckpoint}
+                        step={displayCheckpoint}
                         channelId={channelId}
                         serverId={serverId}
                         onDone={onCheckpointDone}
