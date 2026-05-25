@@ -2068,10 +2068,12 @@ export default function OnboardingWizard({
     const [bookProgress, setBookProgress] = useState<BookProgress | null>(null);
     const [invitationName, setInvitationName] = useState<string>("");
     const [localReviewCount, setLocalReviewCount] = useState(0);
-    const stageRestored   = useRef(false);
-    const profileEpoch    = useRef(0);
-    const lastProgressRef = useRef(0);
-    const lastStepRef     = useRef<string | null>(null);
+    const stageRestored          = useRef(false);
+    const profileEpoch           = useRef(0);
+    const lastProgressRef        = useRef(0);
+    const lastStepRef            = useRef<string | null>(null);
+    const lastAnnouncedCheckpoint = useRef<string | null>(null);
+    const lastViewedCheckpoint   = useRef<string | null>(null);
 
     // Fetch invitation metadata to prefill author name on greeting step
     useEffect(() => {
@@ -2165,11 +2167,14 @@ export default function OnboardingWizard({
                 step:        bookProgress.checkpointStep,
                 advance_url: `${OTTO_API}/onboarding/${serverId}/advance`,
             });
-            track("onboarding_checkpoint_reached", {
-                serverId,
-                checkpointStep: bookProgress.checkpointStep,
-                characterCount: chars.length,
-            });
+            if (bookProgress.checkpointStep !== lastAnnouncedCheckpoint.current) {
+                lastAnnouncedCheckpoint.current = bookProgress.checkpointStep ?? null;
+                track("onboarding_checkpoint_reached", {
+                    serverId,
+                    checkpointStep: bookProgress.checkpointStep,
+                    characterCount: chars.length,
+                });
+            }
         } catch { /* malformed checkpointData — activate with empty characters */ }
     }, [bookProgress?.status, bookProgress?.checkpointStep, steps]);
 
@@ -2218,6 +2223,14 @@ export default function OnboardingWizard({
         track("pipeline_completed", { serverId, bookSlug: bookProgress.slug });
         setStage("done");
     }, [bookProgress?.status]);
+
+    // Fire checkpoint_viewed once per checkpoint (not on every render)
+    useEffect(() => {
+        if (stage !== "checkpoint" || !displayCheckpoint?.id) return;
+        if (displayCheckpoint.id === lastViewedCheckpoint.current) return;
+        lastViewedCheckpoint.current = displayCheckpoint.id;
+        track("checkpoint_viewed", { serverId, checkpointStep: displayCheckpoint.id, done: displayCheckpoint.done });
+    }, [stage, displayCheckpoint?.id]);
 
     // Fire pipeline_step_completed whenever currentStep advances
     useEffect(() => {
@@ -2445,7 +2458,6 @@ export default function OnboardingWizard({
                 if (!displayCheckpoint || !displayCheckpoint.data) {
                     return <EmptyState>Waiting for review…</EmptyState>;
                 }
-                track("checkpoint_viewed", { serverId, checkpointStep: displayCheckpoint.id, done: displayCheckpoint.done });
                 const onCheckpointDone = () => {
                     markDone(displayCheckpoint.id);
                     setFocusedCheckpointId(null);
