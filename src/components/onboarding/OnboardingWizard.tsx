@@ -26,6 +26,33 @@ const PIPELINE_STEPS = [
     "character_portraits", "scene_stills",
 ] as const;
 
+const STEP_LABELS: Partial<Record<typeof PIPELINE_STEPS[number], string>> = {
+    extract:                  "Extracting text",
+    tokenize:                 "Tokenizing",
+    scene_builder:            "Building scenes",
+    chunk:                    "Chunking",
+    embed:                    "Embedding",
+    summarize:                "Summarizing scenes",
+    scene_enrich_labels:      "Labeling scenes",
+    scene_enrich_gliner:      "Enriching scenes",
+    gliner:                   "Finding entities",
+    character_roster:         "Building character roster",
+    booknlp:                  "Running BookNLP",
+    detect_narration:         "Detecting narration",
+    character_dialog:         "Analyzing dialog",
+    build_graph:              "Building character graph",
+    prune_graph:              "Pruning graph",
+    drop_bg_characters:       "Dropping background characters",
+    character_appearance:     "Analyzing appearance",
+    describe_characters:      "Describing characters",
+    prune_using_descriptions: "Refining with descriptions",
+    roster_with_descriptions: "Building final roster",
+    refine_roster:            "Refining roster",
+    character_review:         "Preparing cast review",
+    character_portraits:      "Generating portraits",
+    scene_stills:             "Generating scene stills",
+};
+
 type BookProgress = {
     jobId: string;
     slug: string;
@@ -513,6 +540,26 @@ const EmptyState = styled.div`
     font-size: 14px;
     text-align: center;
     padding: 32px 0;
+`;
+
+const StepTicker = styled.div`
+    padding: 5px 26px 7px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    flex-shrink: 0;
+`;
+
+const MiniSpinner = styled.div`
+    width: 10px;
+    height: 10px;
+    border: 1.5px solid rgba(255,255,255,0.1);
+    border-top-color: #F4B978;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
 `;
 
 const PipelineBar = styled.div<{ $active: boolean; $progress: number }>`
@@ -1799,6 +1846,16 @@ function CharacterReviewCheckpoint({ step, jobId, serverId, onDone }: {
         }
     }
 
+    if (step.done) {
+        return (
+            <ConfirmCard>
+                <ConfirmIcon>✓</ConfirmIcon>
+                <ConfirmHeading>Confirmed</ConfirmHeading>
+                <ConfirmBody>Pipeline continuing to the next stage.</ConfirmBody>
+            </ConfirmCard>
+        );
+    }
+
     return (
         <>
             <CheckpointTitle>Your Cast</CheckpointTitle>
@@ -2074,6 +2131,7 @@ export default function OnboardingWizard({
     const lastStepRef            = useRef<string | null>(null);
     const lastAnnouncedCheckpoint = useRef<string | null>(null);
     const lastViewedCheckpoint   = useRef<string | null>(null);
+    const confirmedCheckpoints   = useRef<Set<string>>(new Set());
 
     // Fetch invitation metadata to prefill author name on greeting step
     useEffect(() => {
@@ -2149,12 +2207,13 @@ export default function OnboardingWizard({
     }, [profile]);
 
     // When profile shows a checkpoint, hydrate the checkpoint step so it shows on refresh
-    // Guard: skip if already locally confirmed (done=true) — profile is stale
+    // NOTE: `steps` intentionally omitted from deps — activateCheckpoint mutates steps and
+    // would cause an infinite loop. Use confirmedCheckpoints ref to guard re-activation.
     useEffect(() => {
         if (!bookProgress || bookProgress.status !== "checkpoint") return;
         if (!bookProgress.checkpointStep) return;
         const targetId = `checkpoint_${bookProgress.checkpointStep}`;
-        if (steps.find(s => s.id === targetId)?.done) return;
+        if (confirmedCheckpoints.current.has(targetId)) return;
         try {
             const parsed = bookProgress.checkpointData
                 ? (typeof bookProgress.checkpointData === "string"
@@ -2176,7 +2235,7 @@ export default function OnboardingWizard({
                 });
             }
         } catch { /* malformed checkpointData — activate with empty characters */ }
-    }, [bookProgress?.status, bookProgress?.checkpointStep, steps]);
+    }, [bookProgress?.status, bookProgress?.checkpointStep]);
 
     // Fetch profile to sync bookProgress whenever processing activity changes or stage reaches upload_done
     const processingStepCount = steps.filter(s => s.type === "processing").length;
@@ -2383,7 +2442,7 @@ export default function OnboardingWizard({
         }
         if (s.id === "greeting")          setStage("greeting");
         else if (s.id === "form_book")  { setStage(uploadStep?.done ? "upload_done" : "upload"); persistWizardStep("form_book"); }
-        else if (s.type === "checkpoint") { setFocusedCheckpointId(s.id); setStage("checkpoint"); persistWizardStep(s.id); }
+        else if (s.type === "checkpoint") { setFocusedCheckpointId(s.id); setStage("checkpoint"); if (!s.done) persistWizardStep(s.id); }
         else if (s.id === "form_author")  { setStage("reviews"); persistWizardStep("form_author"); }
     }
 
@@ -2460,6 +2519,7 @@ export default function OnboardingWizard({
                     return <EmptyState>Waiting for review…</EmptyState>;
                 }
                 const onCheckpointDone = () => {
+                    confirmedCheckpoints.current.add(displayCheckpoint.id);
                     markDone(displayCheckpoint.id);
                     setFocusedCheckpointId(null);
                     const nextCheckpoint = steps.find(
@@ -2607,6 +2667,12 @@ export default function OnboardingWizard({
                     <Content>
                         {renderContent()}
                     </Content>
+                    {bookProgress?.status === "running" && bookProgress.currentStep && (
+                        <StepTicker>
+                            <MiniSpinner />
+                            <span>{STEP_LABELS[bookProgress.currentStep as typeof PIPELINE_STEPS[number]] ?? bookProgress.currentStep}</span>
+                        </StepTicker>
+                    )}
                     {(() => {
                         const stepIdx = bookProgress?.currentStep
                             ? PIPELINE_STEPS.indexOf(bookProgress.currentStep as any)
