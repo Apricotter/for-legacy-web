@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "preact/hooks";
 import { createPortal } from "preact/compat";
 import { EditAlt, Bulb, Refresh } from "@styled-icons/boxicons-regular";
 import styled from "styled-components/macro";
-import { track } from "../../lib/analytics";
+import { track, identify } from "../../lib/analytics";
 
 import { uploadFile } from "../../controllers/client/jsx/legacy/FileUploads";
 import { useClient } from "../../controllers/client/ClientController";
@@ -2018,17 +2018,15 @@ export default function OnboardingWizard({
     // Keep PostHog person profile in sync with the full onboarding state
     useEffect(() => {
         if (!bookProgress || !serverId) return;
-        try {
-            identify(serverId, {
-                bookSlug:        bookProgress.slug,
-                bookStatus:      bookProgress.status,
-                currentStep:     bookProgress.currentStep,
-                checkpointStep:  bookProgress.checkpointStep ?? null,
-                jobId:           bookProgress.jobId,
-                portraitsUrl:    bookProgress.portraitsUrl ?? null,
-                sceneStillsUrl:  bookProgress.sceneStillsUrl ?? null,
-            });
-        } catch(e) { console.error("[OW] identify threw:", e); }
+        identify(serverId, {
+            bookSlug:        bookProgress.slug,
+            bookStatus:      bookProgress.status,
+            currentStep:     bookProgress.currentStep,
+            checkpointStep:  bookProgress.checkpointStep ?? null,
+            jobId:           bookProgress.jobId,
+            portraitsUrl:    bookProgress.portraitsUrl ?? null,
+            sceneStillsUrl:  bookProgress.sceneStillsUrl ?? null,
+        });
     }, [bookProgress]);
 
     // Notify backend that the author has finished onboarding
@@ -2294,10 +2292,6 @@ export default function OnboardingWizard({
         }
     }
 
-    try {
-    console.debug("[OW] render", { stage, stepCount: steps.length, activeCheckpoint: activeCheckpoint?.id, bookStatus: bookProgress?.status, checkpointStep: bookProgress?.checkpointStep });
-    } catch(e) { console.error("[OW] debug log threw", e); }
-
     return (
         <Overlay>
             <ModalWrapper>
@@ -2326,7 +2320,7 @@ export default function OnboardingWizard({
                     )}
 
                     <Content>
-                        {(() => { try { return renderContent(); } catch(e) { console.error("[OW] renderContent threw", e); throw e; } })()}
+                        {renderContent()}
                     </Content>
                     {(() => {
                         const stepIdx = bookProgress?.currentStep
