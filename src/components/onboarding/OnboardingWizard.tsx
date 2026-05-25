@@ -1881,6 +1881,7 @@ export default function OnboardingWizard({
     const stageRestored   = useRef(false);
     const profileEpoch    = useRef(0);
     const lastProgressRef = useRef(0);
+    const lastStepRef     = useRef<string | null>(null);
 
     // Fetch invitation metadata to prefill author name on greeting step
     useEffect(() => {
@@ -1998,6 +1999,35 @@ export default function OnboardingWizard({
         track("pipeline_completed", { serverId, bookSlug: bookProgress.slug });
         setStage("done");
     }, [bookProgress?.status]);
+
+    // Fire pipeline_step_completed whenever currentStep advances
+    useEffect(() => {
+        if (!bookProgress?.currentStep) return;
+        if (bookProgress.currentStep === lastStepRef.current) return;
+        lastStepRef.current = bookProgress.currentStep;
+        const stepIndex = PIPELINE_STEPS.indexOf(bookProgress.currentStep as any);
+        track("pipeline_step_completed", {
+            serverId,
+            step:      bookProgress.currentStep,
+            stepIndex,
+            jobId:     bookProgress.jobId,
+            bookSlug:  bookProgress.slug,
+        });
+    }, [bookProgress?.currentStep]);
+
+    // Keep PostHog person profile in sync with the full onboarding state
+    useEffect(() => {
+        if (!bookProgress || !serverId) return;
+        identify(serverId, {
+            bookSlug:        bookProgress.slug,
+            bookStatus:      bookProgress.status,
+            currentStep:     bookProgress.currentStep,
+            checkpointStep:  bookProgress.checkpointStep ?? null,
+            jobId:           bookProgress.jobId,
+            portraitsUrl:    bookProgress.portraitsUrl ?? null,
+            sceneStillsUrl:  bookProgress.sceneStillsUrl ?? null,
+        });
+    }, [bookProgress]);
 
     // Notify backend that the author has finished onboarding
     useEffect(() => {
