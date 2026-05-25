@@ -1746,9 +1746,10 @@ function CharDescEditorModal({
     );
 }
 
-function CharacterReviewCheckpoint({ step, jobId, onDone }: {
+function CharacterReviewCheckpoint({ step, jobId, serverId, onDone }: {
     step: WizardStep;
     jobId: string;
+    serverId: string;
     onDone: () => void;
 }) {
     type CharAppearanceEntry = { introduction?: string; imagePrompt?: string };
@@ -1788,7 +1789,8 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
             const advanceUrl: string | undefined = data?.advance_url;
             if (advanceUrl) await fetch(advanceUrl, { method: "POST" });
             track("onboarding_checkpoint_submitted", {
-                checkpointStep: step?.data?.step,
+                serverId,
+                checkpointStep: step?.data?.step ?? "character_review",
                 approvedCount:  chars.length,
             });
             onDone();
@@ -1816,7 +1818,10 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
                                 <EditAlt size={13} />
                             </RosterRowBtn>
                             <RosterRowBtn
-                                onClick={() => setChars(prev => prev.filter((_, j) => j !== i))}
+                                onClick={() => {
+                                    track("cast_character_removed", { serverId, name: c.name, jobId });
+                                    setChars(prev => prev.filter((_, j) => j !== i));
+                                }}
                                 style={{ color: "rgba(255,80,80,0.7)" }}
                                 title="Remove"
                             >
@@ -1842,9 +1847,10 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
                     role={chars[editIdx].role}
                     description={chars[editIdx].description}
                     jobId={jobId}
-                    onSave={(name, role, description) =>
-                        setChars(prev => prev.map((c, i) => i === editIdx ? { name, role, description } : c))
-                    }
+                    onSave={(name, role, description) => {
+                        track("cast_character_edited", { serverId, name, jobId });
+                        setChars(prev => prev.map((c, i) => i === editIdx ? { ...c, name, role, description } : c));
+                    }}
                     onClose={() => setEditIdx(null)}
                 />
             )}
@@ -1857,7 +1863,10 @@ function CharacterReviewCheckpoint({ step, jobId, onDone }: {
                     jobId={jobId}
                     isNew
                     onSave={(name, role, description) => {
-                        if (name) setChars(prev => [...prev, { name, role, description }]);
+                        if (name) {
+                            track("cast_character_added", { serverId, name, jobId });
+                            setChars(prev => [...prev, { name, role, description }]);
+                        }
                     }}
                     onClose={() => setAddOpen(false)}
                 />
@@ -2217,6 +2226,7 @@ export default function OnboardingWizard({
                         <CharacterReviewCheckpoint
                             step={activeCheckpoint}
                             jobId={bookProgress?.jobId ?? ""}
+                            serverId={serverId}
                             onDone={onCheckpointDone}
                         />
                     );
