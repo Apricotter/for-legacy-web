@@ -1884,9 +1884,170 @@ function ProcessingStep({ data }: { data: any }) {
     );
 }
 
+// ── Portrait gallery ──────────────────────────────────────────────────────────
+
+const GalleryGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+    margin-top: 4px;
+`;
+const GalleryCard = styled.div`
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.02);
+    display: flex;
+    flex-direction: column;
+`;
+const GalleryImg = styled.img`
+    width: 100%;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
+    background: rgba(255,255,255,0.04);
+`;
+const GalleryImgPlaceholder = styled.div`
+    width: 100%;
+    aspect-ratio: 2/3;
+    background: rgba(255,255,255,0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    color: rgba(255,255,255,0.15);
+`;
+const GalleryName = styled.div`
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.85);
+    padding: 6px 8px 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+`;
+const GalleryRole = styled.div`
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: rgba(255,255,255,0.3);
+    padding: 0 8px 7px;
+`;
+const SceneGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    margin-top: 4px;
+`;
+const SceneCard = styled.div`
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.02);
+`;
+const SceneImg = styled.img`
+    width: 100%;
+    aspect-ratio: 16/9;
+    object-fit: cover;
+    display: block;
+    background: rgba(255,255,255,0.04);
+`;
+const SceneLabel = styled.div`
+    font-size: 10px;
+    color: rgba(255,255,255,0.45);
+    padding: 5px 8px 7px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+`;
+const GalleryTitle = styled.div`
+    font-size: 17px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.95);
+    margin-bottom: 14px;
+    letter-spacing: -0.01em;
+`;
+
+function PortraitGallery({ url, serverId }: { url: string; serverId: string }) {
+    const [chars, setChars] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        track("milestone_viewed", { serverId, milestone: "portraits" });
+        fetch(url)
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+            .then(data => {
+                const list = data?.characters ?? (Array.isArray(data) ? data : []);
+                setChars(list);
+                setLoading(false);
+            });
+    }, [url]);
+
+    if (loading) return <ProcessWrap><Spinner /><span>Loading portraits…</span></ProcessWrap>;
+    if (!chars.length) return <EmptyState>No portraits found.</EmptyState>;
+
+    return (
+        <div>
+            <GalleryTitle>Character Portraits</GalleryTitle>
+            <GalleryGrid>
+                {chars.map((c: any, i: number) => (
+                    <GalleryCard key={i}>
+                        {c.portraitUrl
+                            ? <GalleryImg src={c.portraitUrl} alt={c.name} loading="lazy" />
+                            : <GalleryImgPlaceholder>👤</GalleryImgPlaceholder>}
+                        <GalleryName title={c.name}>{c.name}</GalleryName>
+                        <GalleryRole>{c.role}</GalleryRole>
+                    </GalleryCard>
+                ))}
+            </GalleryGrid>
+        </div>
+    );
+}
+
+function SceneStillsGallery({ url, serverId }: { url: string; serverId: string }) {
+    const [scenes, setScenes] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        track("milestone_viewed", { serverId, milestone: "scenes" });
+        fetch(url)
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+            .then(data => {
+                const list = data?.scenes ?? data?.stills ?? (Array.isArray(data) ? data : []);
+                setScenes(list);
+                setLoading(false);
+            });
+    }, [url]);
+
+    if (loading) return <ProcessWrap><Spinner /><span>Loading scene stills…</span></ProcessWrap>;
+    if (!scenes.length) return <EmptyState>No scene stills found.</EmptyState>;
+
+    return (
+        <div>
+            <GalleryTitle>Scene Stills</GalleryTitle>
+            <SceneGrid>
+                {scenes.map((s: any, i: number) => (
+                    <SceneCard key={i}>
+                        {s.imageUrl || s.url || s.still_url
+                            ? <SceneImg src={s.imageUrl ?? s.url ?? s.still_url} alt={s.title ?? `Scene ${i+1}`} loading="lazy" />
+                            : <GalleryImgPlaceholder style={{ aspectRatio: "16/9" }}>🎬</GalleryImgPlaceholder>}
+                        {(s.title || s.description) && (
+                            <SceneLabel title={s.title ?? s.description}>{s.title ?? s.description}</SceneLabel>
+                        )}
+                    </SceneCard>
+                ))}
+            </SceneGrid>
+        </div>
+    );
+}
+
 // ── state machine ─────────────────────────────────────────────────────────────
 
-type Stage = "greeting" | "upload" | "upload_done" | "checkpoint" | "reviews" | "done";
+type Stage = "greeting" | "upload" | "upload_done" | "checkpoint" | "milestone" | "reviews" | "done";
 
 const OTTO_API = "https://otto.apricotter.com";
 
@@ -1899,6 +2060,7 @@ export default function OnboardingWizard({
     const { steps, markDone, patchStepData, clearSteps, activateCheckpoint } = useOnboardingMessages(channelId);
     const [stage, setStage] = useState<Stage>("greeting");
     const [focusedCheckpointId, setFocusedCheckpointId] = useState<string | null>(null);
+    const [focusedMilestoneId, setFocusedMilestoneId] = useState<string | null>(null);
     const [resetting, setResetting] = useState(false);
     const [reviewsDone, setReviewsDone] = useState(false);
     const [reviewKey, setReviewKey] = useState(0);
@@ -2144,6 +2306,7 @@ export default function OnboardingWizard({
         clearSteps();
         setStage("greeting");
         setFocusedCheckpointId(null);
+        setFocusedMilestoneId(null);
         setProfile(null);
         setBookProgress(null);
         setLocalReviewCount(0);
@@ -2173,8 +2336,9 @@ export default function OnboardingWizard({
     function onSelectStep(index: number) {
         const s = steps[index];
         if (!s) return;
-        if (s.type === "milestone" && s.data?.url) {
-            window.open(s.data.url, "_blank", "noopener,noreferrer");
+        track("subway_stop_clicked", { serverId, stepId: s.id, stepType: s.type, stepLabel: s.label, done: s.done });
+        if (s.type === "milestone") {
+            if (s.data?.url) { setFocusedMilestoneId(s.id); setStage("milestone"); }
             return;
         }
         if (s.id === "greeting")          setStage("greeting");
@@ -2255,6 +2419,7 @@ export default function OnboardingWizard({
                 if (!displayCheckpoint || !displayCheckpoint.data) {
                     return <EmptyState>Waiting for review…</EmptyState>;
                 }
+                track("checkpoint_viewed", { serverId, checkpointStep: displayCheckpoint.id, done: displayCheckpoint.done });
                 const onCheckpointDone = () => {
                     markDone(displayCheckpoint.id);
                     setFocusedCheckpointId(null);
@@ -2281,6 +2446,16 @@ export default function OnboardingWizard({
                         onDone={onCheckpointDone}
                     />
                 );
+            }
+
+            case "milestone": {
+                const ms = focusedMilestoneId ? steps.find(s => s.id === focusedMilestoneId) : null;
+                if (!ms?.data?.url) return <EmptyState>Loading…</EmptyState>;
+                if (ms.id === "milestone_portraits")
+                    return <PortraitGallery url={ms.data.url} serverId={serverId} />;
+                if (ms.id === "milestone_scenes")
+                    return <SceneStillsGallery url={ms.data.url} serverId={serverId} />;
+                return <EmptyState>Nothing to show.</EmptyState>;
             }
 
             case "reviews":
