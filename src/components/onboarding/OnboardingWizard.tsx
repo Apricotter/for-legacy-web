@@ -663,7 +663,7 @@ function FormStep({
                 attachments: attachmentIds.length > 0 ? attachmentIds : undefined,
             });
             setSubmitted(true);
-            onDone(values);
+            onDone({ ...values, _filename: uploadFile_?.name ?? "" });
         } finally {
             setSending(false);
         }
@@ -2130,11 +2130,11 @@ export default function OnboardingWizard({
                         step={uploadStep}
                         channelId={channelId}
                         serverId={serverId}
-                        onDone={() => {
+                        onDone={(values) => {
                             markDone(uploadStep.id);
                             track("onboarding_book_uploaded", {
                                 serverId,
-                                filename: profile?.bookFilename,
+                                filename: values?._filename ?? profile?.bookFilename,
                             });
                             setStage("upload_done");
                         }}
