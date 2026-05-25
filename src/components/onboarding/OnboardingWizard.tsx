@@ -2033,7 +2033,7 @@ export default function OnboardingWizard({
         });
     }, [bookProgress?.currentStep]);
 
-    // Keep PostHog person profile in sync with the full onboarding state
+    // Update PostHog person profile only when meaningful state changes (not every poll)
     useEffect(() => {
         if (!bookProgress || !serverId) return;
         identify(serverId, {
@@ -2045,7 +2045,7 @@ export default function OnboardingWizard({
             portraitsUrl:    bookProgress.portraitsUrl ?? null,
             sceneStillsUrl:  bookProgress.sceneStillsUrl ?? null,
         });
-    }, [bookProgress]);
+    }, [bookProgress?.slug, bookProgress?.status, bookProgress?.currentStep, bookProgress?.checkpointStep, bookProgress?.jobId, bookProgress?.portraitsUrl, bookProgress?.sceneStillsUrl]);
 
     // Notify backend that the author has finished onboarding
     useEffect(() => {
