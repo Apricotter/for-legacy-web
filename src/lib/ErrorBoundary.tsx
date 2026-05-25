@@ -69,6 +69,7 @@ export default function ErrorBoundary({ children, section }: Props) {
 
     useEffect(() => {
         if (error) {
+            console.error("[ErrorBoundary] caught:", error.message, error);
             reportError(error, section);
         }
     }, [error]);
