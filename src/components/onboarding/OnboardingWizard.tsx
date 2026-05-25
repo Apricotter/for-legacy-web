@@ -2042,6 +2042,16 @@ export default function OnboardingWizard({
         });
     }, [bookProgress?.currentStep]);
 
+    // Mark Portraits milestone done when portraitsUrl lands
+    useEffect(() => {
+        if (bookProgress?.portraitsUrl) markDone("milestone_portraits");
+    }, [bookProgress?.portraitsUrl]);
+
+    // Mark Scenes milestone done when sceneStillsUrl lands
+    useEffect(() => {
+        if (bookProgress?.sceneStillsUrl) markDone("milestone_scenes");
+    }, [bookProgress?.sceneStillsUrl]);
+
     // Update PostHog person profile only when meaningful state changes (not every poll)
     useEffect(() => {
         if (!bookProgress || !serverId) return;

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { useClient } from "../../controllers/client/ClientController";
 
-export type WizardStepType = "greeting" | "form" | "checkpoint" | "processing";
+export type WizardStepType = "greeting" | "form" | "checkpoint" | "processing" | "milestone";
 
 export interface WizardStep {
     id: string;
@@ -21,6 +21,8 @@ const FIXED_STEP_DEFS: Omit<WizardStep, "data" | "done" | "needsAction">[] = [
     { id: "form_book",                   type: "form",       line: "book",   label: "Upload"     },
     { id: "checkpoint_character_roster", type: "checkpoint", line: "book",   label: "Cast"       },
     { id: "checkpoint_character_review", type: "checkpoint", line: "book",   label: "Characters" },
+    { id: "milestone_portraits",         type: "milestone",  line: "book",   label: "Portraits"  },
+    { id: "milestone_scenes",            type: "milestone",  line: "book",   label: "Scenes"     },
     { id: "form_author",                 type: "form",       line: "author", label: "Reviews"    },
 ];
 
