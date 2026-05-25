@@ -93,7 +93,9 @@ const Routes = styled.div.attrs({ "data-component": "routes" })<{
         `}
 `;
 
-// Watches MobX server state reactively and fires the wizard exactly once per session
+// Opens the wizard if the author's onboarding is not yet complete.
+// Uses the Otto profile as source of truth — no sessionStorage guard.
+const OTTO_API = "https://otto.apricotter.com";
 const WizardLauncher = observer(() => {
     const client = useClient();
     const state = useApplicationState();
@@ -101,7 +103,6 @@ const WizardLauncher = observer(() => {
 
     useEffect(() => {
         if (!client || launched.current) return;
-        if (sessionStorage.getItem("wizardLaunched")) { launched.current = true; return; }
         const studioServer =
             state.ordering.orderedServers.find((s: any) => s.name?.toLowerCase().includes("studio"))
             ?? state.ordering.orderedServers[0];
@@ -111,16 +112,23 @@ const WizardLauncher = observer(() => {
             .filter(Boolean) ?? [];
         const startHere = channels.find((c: any) => c?.name === "start-here");
         if (!startHere) return;
-        launched.current = true;
-        sessionStorage.setItem("wizardLaunched", "1");
+
         const serverId  = (studioServer as any)._id;
         const channelId = (startHere as any)._id;
-        track("wizard_opened", { serverId, channelId });
-        modalController.push({
-            type: "author_onboarding",
-            serverId,
-            channelId,
-        });
+
+        launched.current = true;
+        fetch(`${OTTO_API}/onboarding/${serverId}/profile`)
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+            .then((profile: any) => {
+                const isDone = profile && (
+                    (profile.reviews?.length ?? 0) > 0 ||
+                    profile.books?.some((b: any) => b.status === "complete")
+                );
+                if (isDone) return;
+                track("wizard_opened", { serverId, channelId });
+                modalController.push({ type: "author_onboarding", serverId, channelId });
+            });
     });
 
     return null;
