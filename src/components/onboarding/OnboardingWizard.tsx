@@ -808,11 +808,10 @@ function CheckpointStep({
                 const ch = (client as any)?.channels?.get(channelId);
                 await ch?.sendMessage({ content: "confirmed" });
             }
-            const approvedCount = Object.values(checked).filter(Boolean).length;
             track("onboarding_checkpoint_submitted", {
                 serverId,
                 checkpointStep: data?.step ?? step.id,
-                approvedCount,
+                approvedCount: chars.length,
             });
             setConfirmed(true);
             onDone();
@@ -834,33 +833,40 @@ function CheckpointStep({
     }
 
     type CharEntry = { name: string; role: "Main" | "Supporting" | "Minor" };
-    const allChars: CharEntry[] = (data?.characters ?? [])
-        .filter((c: any) => c.role !== "Background")
-        .map((c: any) => ({ name: c.name as string, role: c.role as "Main" | "Supporting" | "Minor" }));
+    const [chars, setChars] = useState<CharEntry[]>(() =>
+        (data?.characters ?? [])
+            .filter((c: any) => c.role !== "Background")
+            .map((c: any) => ({ name: c.name as string, role: c.role as "Main" | "Supporting" | "Minor" }))
+    );
 
     const [checked, setChecked] = useState<Record<string, boolean>>(() =>
-        Object.fromEntries(allChars.map(c => [c.name, true]))
+        Object.fromEntries(chars.map(c => [c.name, true]))
     );
     const toggle = (name: string) => setChecked(prev => ({ ...prev, [name]: !prev[name] }));
+    const remove = (name: string, e: Event) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setChars(prev => prev.filter(c => c.name !== name));
+        track("roster_character_removed", { serverId, name });
+    };
 
     return (
         <div>
             <CheckpointTitle>Please confirm your Cast</CheckpointTitle>
             <CheckpointSub>
-                {allChars.length} characters identified. Uncheck anyone who shouldn't be included.
+                {chars.length} characters identified. Remove anyone who shouldn't be included.
             </CheckpointSub>
 
             <CharScrollList>
-                {allChars.map(({ name, role }) => (
+                {chars.map(({ name, role }) => (
                     <CharRow key={name}>
-                        <input
-                            type="checkbox"
-                            checked={checked[name] ?? true}
-                            onChange={() => toggle(name)}
-                            style={{ accentColor: "#F5A623", cursor: "pointer", flexShrink: 0 }}
-                        />
                         <CharRowName>{name}</CharRowName>
                         <CharRoleTag $role={role}>{role}</CharRoleTag>
+                        <button
+                            onClick={(e: any) => remove(name, e)}
+                            style={{ background: "transparent", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer", fontSize: 14, padding: "0 2px", lineHeight: 1, marginLeft: "auto" }}
+                            title="Remove"
+                        >✕</button>
                     </CharRow>
                 ))}
             </CharScrollList>
