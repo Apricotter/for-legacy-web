@@ -2305,11 +2305,15 @@ export default function OnboardingWizard({
         });
     }, [bookProgress?.currentStep]);
 
-    // Mark Portraits milestone done when portraitsUrl lands
+    // Mark Portraits milestone done when portraitsUrl lands; auto-advance from processing state
     useEffect(() => {
         if (!bookProgress?.portraitsUrl) return;
         patchStepData("milestone_portraits", { url: bookProgress.portraitsUrl });
         markDone("milestone_portraits");
+        if (stage === "upload_done") {
+            setFocusedMilestoneId("milestone_portraits");
+            setStage("milestone");
+        }
     }, [bookProgress?.portraitsUrl]);
 
     // Mark Scenes milestone done when sceneStillsUrl lands
