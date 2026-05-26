@@ -1849,11 +1849,23 @@ function CharacterReviewCheckpoint({ step, jobId, serverId, onDone }: {
 
     if (step.done) {
         return (
-            <ConfirmCard>
-                <ConfirmIcon>✓</ConfirmIcon>
-                <ConfirmHeading>Confirmed</ConfirmHeading>
-                <ConfirmBody>Pipeline continuing to the next stage.</ConfirmBody>
-            </ConfirmCard>
+            <>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                    <CheckpointTitle style={{ marginBottom: 0 }}>Your Cast</CheckpointTitle>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#65e572", background: "rgba(101,229,114,0.1)", border: "1px solid rgba(101,229,114,0.28)", borderRadius: 20, padding: "2px 9px" }}>✓ Confirmed</span>
+                </div>
+                <RosterList>
+                    {chars.map((c, i) => (
+                        <RosterRow key={i}>
+                            <RosterRowHeader>
+                                <RosterRowName>{c.name}</RosterRowName>
+                                <CharRoleTag $role={c.role}>{c.role}</CharRoleTag>
+                            </RosterRowHeader>
+                            {c.description && <RosterRowDesc>{c.description}</RosterRowDesc>}
+                        </RosterRow>
+                    ))}
+                </RosterList>
+            </>
         );
     }
 
