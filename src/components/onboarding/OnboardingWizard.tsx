@@ -15,7 +15,7 @@ import { useOnboardingMessages, WizardStep } from "./useOnboardingMessages";
 
 const PIPELINE_STEPS = [
     "extract", "tokenize", "scene_builder", "chunk",
-    "embed", "summarize",
+    "embed", "embed_paragraphs", "summarize",
     "scene_enrich_labels", "scene_enrich_gliner",
     "gliner", "character_roster",
     "booknlp", "detect_narration", "character_dialog",
@@ -32,6 +32,7 @@ const STEP_LABELS: Partial<Record<typeof PIPELINE_STEPS[number], string>> = {
     scene_builder:            "Building scenes",
     chunk:                    "Chunking",
     embed:                    "Embedding",
+    embed_paragraphs:         "Indexing paragraphs",
     summarize:                "Summarizing scenes",
     scene_enrich_labels:      "Labeling scenes",
     scene_enrich_gliner:      "Enriching scenes",
