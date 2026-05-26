@@ -2213,6 +2213,8 @@ export default function OnboardingWizard({
                     const lastBook = p.books?.[p.books.length - 1];
                     if (lastBook?.status === "checkpoint") {
                         setStage("checkpoint");
+                    } else if (lastBook?.status === "running") {
+                        setStage("upload_done");
                     } else if (p.reviews?.length > 0) {
                         setStage("done");
                     } else if (p.bookFilename) {
