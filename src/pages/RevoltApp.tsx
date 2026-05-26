@@ -121,9 +121,8 @@ const WizardLauncher = observer(() => {
             .then(r => r.ok ? r.json() : null)
             .catch(() => null)
             .then((profile: any) => {
-                const isDone = profile && (
-                    (profile.reviews?.length ?? 0) > 0 ||
-                    profile.books?.some((b: any) => b.status === "complete")
+                const isDone = profile?.books?.some(
+                    (b: any) => b.status === "complete" || b.portraitsUrl
                 );
                 if (isDone) return;
                 track("wizard_opened", { serverId, channelId });
