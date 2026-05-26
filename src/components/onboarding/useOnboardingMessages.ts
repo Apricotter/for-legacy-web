@@ -90,11 +90,13 @@ export function useOnboardingMessages(channelId: string | undefined) {
                 setFixed(prev => {
                     let next = [...prev.map(s => ({ ...s }))];
 
-                    // Apply all non-processing codeblocks to activate steps
+                    // Apply all non-processing codeblocks to activate steps.
+                    // Checkpoint messages are included so their data (character list) survives
+                    // a page refresh — markDone corrects the done/needsAction state afterward.
                     for (const msg of msgs) {
                         if (!msg?.content) continue;
                         const parsed = parseCodeblock(msg.content);
-                        if (!parsed || parsed.type === "processing" || parsed.type === "checkpoint") continue;
+                        if (!parsed || parsed.type === "processing") continue;
                         next = activateStep(next, parsed.type, parsed.data, msg._id ?? msg.id);
                     }
 
