@@ -2028,7 +2028,7 @@ const GalleryTitle = styled.div`
     letter-spacing: -0.01em;
 `;
 
-function PortraitGallery({ url, serverId }: { url: string; serverId: string }) {
+function PortraitGallery({ url, serverId, onContinue }: { url: string; serverId: string; onContinue?: () => void }) {
     const [chars, setChars] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -2061,11 +2061,16 @@ function PortraitGallery({ url, serverId }: { url: string; serverId: string }) {
                     </GalleryCard>
                 ))}
             </GalleryGrid>
+            {onContinue && (
+                <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
+                    <SubmitBtn onClick={onContinue}>Continue →</SubmitBtn>
+                </div>
+            )}
         </div>
     );
 }
 
-function SceneStillsGallery({ url, serverId }: { url: string; serverId: string }) {
+function SceneStillsGallery({ url, serverId, onContinue }: { url: string; serverId: string; onContinue?: () => void }) {
     const [scenes, setScenes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -2099,6 +2104,11 @@ function SceneStillsGallery({ url, serverId }: { url: string; serverId: string }
                     </SceneCard>
                 ))}
             </SceneGrid>
+            {onContinue && (
+                <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
+                    <SubmitBtn onClick={onContinue}>Continue →</SubmitBtn>
+                </div>
+            )}
         </div>
     );
 }
@@ -2560,10 +2570,19 @@ export default function OnboardingWizard({
             case "milestone": {
                 const ms = focusedMilestoneId ? steps.find(s => s.id === focusedMilestoneId) : null;
                 if (!ms?.data?.url) return <EmptyState>Loading…</EmptyState>;
-                if (ms.id === "milestone_portraits")
-                    return <PortraitGallery url={ms.data.url} serverId={serverId} />;
+                if (ms.id === "milestone_portraits") {
+                    const scenesStep = steps.find(s => s.id === "milestone_scenes");
+                    const onContinue = () => {
+                        if (scenesStep?.data?.url) {
+                            setFocusedMilestoneId("milestone_scenes");
+                        } else {
+                            setStage("reviews");
+                        }
+                    };
+                    return <PortraitGallery url={ms.data.url} serverId={serverId} onContinue={onContinue} />;
+                }
                 if (ms.id === "milestone_scenes")
-                    return <SceneStillsGallery url={ms.data.url} serverId={serverId} />;
+                    return <SceneStillsGallery url={ms.data.url} serverId={serverId} onContinue={() => setStage("reviews")} />;
                 return <EmptyState>Nothing to show.</EmptyState>;
             }
 
