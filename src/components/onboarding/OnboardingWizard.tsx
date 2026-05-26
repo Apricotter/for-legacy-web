@@ -2361,7 +2361,7 @@ export default function OnboardingWizard({
         const nextCheckpoint = steps.find(
             s => s.type === "checkpoint" && s.needsAction && !s.done && s.id !== active.id
         );
-        setStage(nextCheckpoint ? "checkpoint" : "reviews");
+        setStage(nextCheckpoint ? "checkpoint" : "upload_done");
     }, [bookProgress?.status, stage]);
 
     // Step selectors — fixed steps always exist; data === null means not yet activated
@@ -2531,7 +2531,7 @@ export default function OnboardingWizard({
                     const nextCheckpoint = steps.find(
                         s => s.type === "checkpoint" && s.needsAction && !s.done && s.id !== displayCheckpoint.id
                     );
-                    setStage(nextCheckpoint ? "checkpoint" : "reviews");
+                    setStage(nextCheckpoint ? "checkpoint" : "upload_done");
                 };
                 if (displayCheckpoint.id === "checkpoint_character_review") {
                     return (
