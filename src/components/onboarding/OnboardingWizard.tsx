@@ -2677,7 +2677,7 @@ export default function OnboardingWizard({
                     <Content>
                         {renderContent()}
                     </Content>
-                    {bookProgress?.status === "running" && bookProgress.currentStep && (
+                    {(bookProgress?.status === "running" || stage === "upload_done") && bookProgress?.currentStep && (
                         <StepTicker>
                             <MiniSpinner />
                             <span>{STEP_LABELS[bookProgress.currentStep as typeof PIPELINE_STEPS[number]] ?? bookProgress.currentStep}</span>
