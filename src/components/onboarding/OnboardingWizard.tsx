@@ -606,7 +606,6 @@ const DebugChip = styled.div`
     background: rgba(0,0,0,0.35);
     border-radius: 4px;
     padding: 2px 8px;
-    pointer-events: none;
     z-index: 9999;
     white-space: nowrap;
 `;
@@ -3075,7 +3074,14 @@ export default function OnboardingWizard({
         ? bookProgress?.currentStep
         : PIPELINE_STEPS[highestStepIdxRef.current];
 
+    const debugChip = (
+        <DebugChip>
+            {[serverId, channelId, bookProgress?.jobId].filter(Boolean).join(" · ")}
+        </DebugChip>
+    );
+
     return (
+        <>
         <Overlay>
             <ModalWrapper>
                 {canPrev && (
@@ -3117,9 +3123,8 @@ export default function OnboardingWizard({
                     />
                 </Shell>
             </ModalWrapper>
-            <DebugChip>
-                {[serverId, channelId, bookProgress?.jobId].filter(Boolean).join(" · ")}
-            </DebugChip>
         </Overlay>
+        {createPortal(debugChip, document.body)}
+        </>
     );
 }
