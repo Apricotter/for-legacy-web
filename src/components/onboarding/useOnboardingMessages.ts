@@ -22,6 +22,7 @@ const FIXED_STEP_DEFS: Omit<WizardStep, "data" | "done" | "needsAction">[] = [
     { id: "milestone_portraits",         type: "milestone",  line: "book",   label: "Portraits"  },
     { id: "milestone_scenes",            type: "milestone",  line: "book",   label: "Scenes"     },
     { id: "form_author",                 type: "form",       line: "author", label: "Reviews"    },
+    { id: "form_voice",                  type: "form",       line: "author", label: "Voice"      },
 ];
 
 export function makeFixedSteps(): WizardStep[] {

@@ -2124,9 +2124,175 @@ function SceneStillsGallery({ url, serverId, onContinue }: { url: string; server
     );
 }
 
+// ── voice form ────────────────────────────────────────────────────────────────
+
+const VoiceWrap = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 4px 2px 16px;
+    max-height: 420px;
+    overflow-y: auto;
+`;
+
+const VoiceSection = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+`;
+
+const VoiceSectionHead = styled.div`
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--secondary-foreground);
+    padding-bottom: 2px;
+    border-bottom: 1px solid var(--secondary-header-secondary);
+`;
+
+const VoiceLabel = styled.label`
+    font-size: 13px;
+    color: var(--foreground);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+`;
+
+const VoiceTextarea = styled.textarea`
+    background: var(--secondary-background);
+    border: 1px solid var(--secondary-header-secondary);
+    border-radius: 6px;
+    color: var(--foreground);
+    font-size: 13px;
+    padding: 8px 10px;
+    resize: vertical;
+    min-height: 60px;
+    font-family: inherit;
+    &:focus { outline: none; border-color: var(--accent); }
+`;
+
+const VoiceBtnRow = styled.div`
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 4px;
+`;
+
+interface VoiceValues {
+    voice_description:   string;
+    reader_feeling:      string;
+    communication_style: string;
+    instinctive_phrases: string;
+    avoided_phrases:     string;
+    stylistic_habits:    string;
+    book_elevator_pitch: string;
+    preferred_themes:    string;
+    credential_style:    string;
+    content_restrictions: string;
+    voice_to_avoid:      string;
+}
+
+function VoiceFormStep({ serverId, onDone, onSkip }: {
+    serverId: string | undefined;
+    onDone: (values: VoiceValues) => void;
+    onSkip: () => void;
+}) {
+    const [v, setV] = useState<VoiceValues>({
+        voice_description: "", reader_feeling: "", communication_style: "",
+        instinctive_phrases: "", avoided_phrases: "", stylistic_habits: "",
+        book_elevator_pitch: "", preferred_themes: "", credential_style: "",
+        content_restrictions: "", voice_to_avoid: "",
+    });
+    const set = (k: keyof VoiceValues) => (e: any) => setV(prev => ({ ...prev, [k]: e.target.value }));
+    const hasAny = Object.values(v).some(s => s.trim().length > 0);
+
+    return (
+        <VoiceWrap>
+            <VoiceSection>
+                <VoiceSectionHead>Tone &amp; Personality</VoiceSectionHead>
+                <VoiceLabel>
+                    How would you describe your voice as a writer?
+                    <VoiceTextarea value={v.voice_description} onInput={set("voice_description")}
+                        placeholder="Spare, atmospheric, witty, intense…" />
+                </VoiceLabel>
+                <VoiceLabel>
+                    What do you want readers to feel when they encounter you online?
+                    <VoiceTextarea value={v.reader_feeling} onInput={set("reader_feeling")}
+                        placeholder="Curious, unsettled, entertained…" />
+                </VoiceLabel>
+                <VoiceLabel>
+                    How do you naturally communicate — direct and brief, or expansive?
+                    <VoiceTextarea value={v.communication_style} onInput={set("communication_style")}
+                        placeholder="Brief and punchy / layered and detailed / uses a lot of humor…" />
+                </VoiceLabel>
+            </VoiceSection>
+
+            <VoiceSection>
+                <VoiceSectionHead>Vocabulary &amp; Phrasing</VoiceSectionHead>
+                <VoiceLabel>
+                    Words or phrases you use instinctively?
+                    <VoiceTextarea value={v.instinctive_phrases} onInput={set("instinctive_phrases")}
+                        placeholder="Sentence starters, favorite words, regional phrasing…" />
+                </VoiceLabel>
+                <VoiceLabel>
+                    Words or phrases you would never use?
+                    <VoiceTextarea value={v.avoided_phrases} onInput={set("avoided_phrases")}
+                        placeholder="Marketing clichés, slang that feels off-brand…" />
+                </VoiceLabel>
+                <VoiceLabel>
+                    Any intentional stylistic habits? (contractions, fragments, etc.)
+                    <VoiceTextarea value={v.stylistic_habits} onInput={set("stylistic_habits")}
+                        placeholder="Always use contractions / never use em-dashes…" />
+                </VoiceLabel>
+            </VoiceSection>
+
+            <VoiceSection>
+                <VoiceSectionHead>How You Talk About Your Work</VoiceSectionHead>
+                <VoiceLabel>
+                    How do you describe your books to a friend (not a press kit)?
+                    <VoiceTextarea value={v.book_elevator_pitch} onInput={set("book_elevator_pitch")}
+                        placeholder="What you'd say at a party when someone asks…" />
+                </VoiceLabel>
+                <VoiceLabel>
+                    Which themes in your work do you most enjoy discussing publicly?
+                    <VoiceTextarea value={v.preferred_themes} onInput={set("preferred_themes")}
+                        placeholder="Identity, power, memory…" />
+                </VoiceLabel>
+                <VoiceLabel>
+                    How do you talk about your credentials or authority?
+                    <VoiceTextarea value={v.credential_style} onInput={set("credential_style")}
+                        placeholder="Lead with expertise / let the work speak…" />
+                </VoiceLabel>
+            </VoiceSection>
+
+            <VoiceSection>
+                <VoiceSectionHead>Guardrails</VoiceSectionHead>
+                <VoiceLabel>
+                    Any topics or content you never want associated with your public presence?
+                    <VoiceTextarea value={v.content_restrictions} onInput={set("content_restrictions")}
+                        placeholder="Political topics, personal subjects, anything off-limits…" />
+                </VoiceLabel>
+                <VoiceLabel>
+                    What version of your author voice are you trying to avoid?
+                    <VoiceTextarea value={v.voice_to_avoid} onInput={set("voice_to_avoid")}
+                        placeholder="Overly promotional / too academic / too casual…" />
+                </VoiceLabel>
+            </VoiceSection>
+
+            <VoiceBtnRow>
+                <SecondaryBtn onClick={onSkip}>Skip for now</SecondaryBtn>
+                <SubmitBtn onClick={() => onDone(v)} $disabled={!hasAny} disabled={!hasAny}>
+                    Save &amp; Continue
+                </SubmitBtn>
+            </VoiceBtnRow>
+        </VoiceWrap>
+    );
+}
+
 // ── state machine ─────────────────────────────────────────────────────────────
 
-type Stage = "greeting" | "upload" | "waiting" | "checkpoint" | "portraits" | "scenes" | "done";
+type Stage = "greeting" | "upload" | "waiting" | "checkpoint" | "portraits" | "scenes" | "voice" | "done";
 
 const OTTO_API = "https://otto.apricotter.com";
 
@@ -2144,6 +2310,7 @@ type WizardState = {
     reviewsDone:          boolean;
     reviewKey:            number;
     localReviewCount:     number;
+    voiceDone:            boolean;
 };
 
 type WizardAction =
@@ -2160,6 +2327,7 @@ type WizardAction =
     | { type: "CHECKPOINT_CONFIRMED";  checkpointId: string }
     | { type: "PORTRAITS_CONTINUE" }
     | { type: "SCENES_CONTINUE" }
+    | { type: "VOICE_SUBMITTED" }
     | { type: "NAVIGATE_TO";           stage: Stage; checkpointId?: string }
     | { type: "RESET" };
 
@@ -2168,7 +2336,7 @@ function patchStep(steps: WizardStep[], id: string, patch: Partial<WizardStep>):
 }
 
 function stageOrder(s: Stage): number {
-    return (["greeting", "upload", "waiting", "checkpoint", "portraits", "scenes", "done"] as Stage[]).indexOf(s);
+    return (["greeting", "upload", "waiting", "checkpoint", "portraits", "scenes", "voice", "done"] as Stage[]).indexOf(s);
 }
 
 function parseRawCheckpointData(raw: any): any {
@@ -2189,6 +2357,7 @@ const initialState: WizardState = {
     reviewsDone:          false,
     reviewKey:            0,
     localReviewCount:     0,
+    voiceDone:            false,
 };
 
 function wizardReducer(state: WizardState, action: WizardAction): WizardState {
@@ -2198,8 +2367,10 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
             const p = action.profile;
             const lastBook: BookProgress | undefined = p.books?.[p.books.length - 1];
             let steps = state.steps;
+            const voiceDone = !!p.voice;
             if (p.authorName)               steps = patchStep(steps, "greeting",  { done: true });
             if (p.bookFilename || lastBook)  steps = patchStep(steps, "form_book", { done: true });
+            if (voiceDone)                   steps = patchStep(steps, "form_voice", { done: true });
 
             let stage: Stage     = "greeting";
             let checkpointId     = state.checkpointId;
@@ -2229,7 +2400,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                     stage = "waiting";
                 }
             } else if (lastBook?.status === "complete" || lastBook?.status === "cancelled" || lastBook?.status === "error") {
-                stage = "done";
+                stage = voiceDone ? "done" : "voice";
             } else if (lastBook) {
                 stage = "waiting";
             } else if (p.authorName) {
@@ -2245,6 +2416,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                 checkpointId,
                 reviewsDone:      (p.reviews?.length ?? 0) > 0,
                 localReviewCount: p.reviews?.length ?? 0,
+                voiceDone,
             };
         }
 
@@ -2288,17 +2460,17 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                     stage = "checkpoint";
                 }
             } else if (isTerminal && prog.sceneStillsUrl) {
-                stage = "scenes";
+                stage = stageOrder(stage) >= stageOrder("scenes") ? stage : "scenes";
             } else if (isTerminal && prog.portraitsUrl) {
-                stage = "portraits";
+                stage = stageOrder(stage) >= stageOrder("portraits") ? stage : "portraits";
             } else if (isTerminal) {
-                stage = "done";
+                stage = state.voiceDone ? "done" : "voice";
             } else if (prog.sceneStillsUrl && stageOrder(stage) < stageOrder("scenes")) {
                 stage = "scenes";
             } else if (prog.portraitsUrl && stageOrder(stage) < stageOrder("portraits")) {
                 stage = "portraits";
             } else if (prog.status === "running" && !prog.sceneStillsUrl && !prog.portraitsUrl
-                       && (stage === "portraits" || stage === "scenes" || stage === "done")) {
+                       && (stage === "portraits" || stage === "scenes" || stage === "voice" || stage === "done")) {
                 stage = "waiting";  // restart snap-back (only when URLs are cleared)
             } else if (prog.status === "running" && stageOrder(stage) < stageOrder("waiting")) {
                 stage = "waiting";
@@ -2361,10 +2533,18 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         }
 
         case "PORTRAITS_CONTINUE":
-            return { ...state, stage: state.bookProgress?.sceneStillsUrl ? "scenes" : "done" };
+            return { ...state, stage: state.bookProgress?.sceneStillsUrl ? "scenes" : "voice" };
 
         case "SCENES_CONTINUE":
-            return { ...state, stage: "done" };
+            return { ...state, stage: "voice" };
+
+        case "VOICE_SUBMITTED":
+            return {
+                ...state,
+                voiceDone: true,
+                stage:     "done",
+                steps:     patchStep(state.steps, "form_voice", { done: true }),
+            };
 
         case "NAVIGATE_TO":
             return {
@@ -2392,7 +2572,7 @@ export default function OnboardingWizard({
 
     const {
         stage, steps, processingSteps, bookProgress, profile,
-        invitationName, reviewsDone, reviewKey, localReviewCount, checkpointId,
+        invitationName, reviewsDone, reviewKey, localReviewCount, checkpointId, voiceDone,
     } = state;
 
     const lastStepRef             = useRef<string | null>(null);
@@ -2541,6 +2721,7 @@ export default function OnboardingWizard({
     const greetingStep      = steps.find(s => s.id === "greeting");
     const uploadStep        = steps.find(s => s.id === "form_book");
     const reviewStep        = steps.find(s => s.id === "form_author");
+    const voiceStep         = steps.find(s => s.id === "form_voice");
     const displayCheckpoint = checkpointId ? steps.find(s => s.id === checkpointId) : null;
 
     const subwayActiveIndex = (() => {
@@ -2553,6 +2734,8 @@ export default function OnboardingWizard({
         if (stage === "checkpoint" && checkpointId) return steps.findIndex(s => s.id === checkpointId);
         if (stage === "portraits") return steps.findIndex(s => s.id === "milestone_portraits");
         if (stage === "scenes")    return steps.findIndex(s => s.id === "milestone_scenes");
+        if (stage === "voice")     return steps.findIndex(s => s.id === "form_voice");
+        if (stage === "done")      return steps.findIndex(s => s.id === "form_voice");
         return -1;
     })();
 
@@ -2575,6 +2758,8 @@ export default function OnboardingWizard({
             dispatch({ type: "NAVIGATE_TO", stage: "checkpoint", checkpointId: s.id });
         else if (s.id === "form_author")
             dispatch({ type: "NAVIGATE_TO", stage: "waiting" });
+        else if (s.id === "form_voice")
+            dispatch({ type: "NAVIGATE_TO", stage: "voice" });
     }
 
     const canPrev = stage !== "greeting";
@@ -2729,6 +2914,25 @@ export default function OnboardingWizard({
                     />
                 );
             }
+
+            case "voice":
+                return (
+                    <VoiceFormStep
+                        serverId={serverId}
+                        onDone={(values) => {
+                            if (serverId) {
+                                fetch(`${OTTO_API}/onboarding/${serverId}/voice`, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify(values),
+                                }).catch(() => {});
+                                track("onboarding_voice_submitted", { serverId });
+                            }
+                            dispatch({ type: "VOICE_SUBMITTED" });
+                        }}
+                        onSkip={() => dispatch({ type: "VOICE_SUBMITTED" })}
+                    />
+                );
 
             case "done":
                 return (
