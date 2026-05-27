@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "preact/hooks";
+import { useState, useCallback, useEffect, useRef, useReducer } from "preact/hooks";
 import { createPortal } from "preact/compat";
 import { EditAlt, Bulb, Refresh } from "@styled-icons/boxicons-regular";
 import styled from "styled-components/macro";
@@ -9,7 +9,7 @@ import { useClient } from "../../controllers/client/ClientController";
 import { ModalProps } from "../../controllers/modals/types";
 
 import SubwayMap from "./SubwayMap";
-import { useOnboardingMessages, WizardStep } from "./useOnboardingMessages";
+import { useMessageParser, makeFixedSteps, WizardStep } from "./useOnboardingMessages";
 
 // ── pipeline step registry ────────────────────────────────────────────────────
 
@@ -2128,9 +2128,240 @@ function SceneStillsGallery({ url, serverId, onContinue }: { url: string; server
 
 // ── state machine ─────────────────────────────────────────────────────────────
 
-type Stage = "greeting" | "upload" | "upload_done" | "checkpoint" | "milestone" | "reviews" | "done";
+type Stage = "greeting" | "upload" | "waiting" | "checkpoint" | "portraits" | "scenes" | "done";
 
 const OTTO_API = "https://otto.apricotter.com";
+
+// ── reducer ───────────────────────────────────────────────────────────────────
+
+type WizardState = {
+    profile:              any | null;
+    bookProgress:         BookProgress | null;
+    stage:                Stage;
+    checkpointId:         string | null;
+    confirmedCheckpoints: Set<string>;
+    steps:                WizardStep[];
+    processingSteps:      WizardStep[];
+    invitationName:       string;
+    reviewsDone:          boolean;
+    reviewKey:            number;
+    localReviewCount:     number;
+};
+
+type WizardAction =
+    | { type: "PROFILE_LOADED";        profile: any; serverId: string }
+    | { type: "BOOK_PROGRESS_UPDATED"; progress: BookProgress; serverId: string }
+    | { type: "INVITATION_LOADED";     name: string }
+    | { type: "STEP_ACTIVATED";        stepId: string; data: any; messageId?: string }
+    | { type: "STEP_DONE";             stepId: string }
+    | { type: "PROCESSING_STEP";       step: WizardStep }
+    | { type: "NAME_SUBMITTED" }
+    | { type: "BOOK_UPLOADED" }
+    | { type: "REVIEW_ADDED" }
+    | { type: "ADD_ANOTHER_REVIEW" }
+    | { type: "CHECKPOINT_CONFIRMED";  checkpointId: string }
+    | { type: "PORTRAITS_CONTINUE" }
+    | { type: "SCENES_CONTINUE" }
+    | { type: "NAVIGATE_TO";           stage: Stage; checkpointId?: string }
+    | { type: "RESET" };
+
+function patchStep(steps: WizardStep[], id: string, patch: Partial<WizardStep>): WizardStep[] {
+    return steps.map(s => s.id === id ? { ...s, ...patch } : s);
+}
+
+function stageOrder(s: Stage): number {
+    return (["greeting", "upload", "waiting", "checkpoint", "portraits", "scenes", "done"] as Stage[]).indexOf(s);
+}
+
+function parseRawCheckpointData(raw: any): any {
+    if (!raw) return {};
+    if (typeof raw === "string") { try { return JSON.parse(raw); } catch { return {}; } }
+    return raw;
+}
+
+const initialState: WizardState = {
+    profile:              null,
+    bookProgress:         null,
+    stage:                "greeting",
+    checkpointId:         null,
+    confirmedCheckpoints: new Set(),
+    steps:                makeFixedSteps(),
+    processingSteps:      [],
+    invitationName:       "",
+    reviewsDone:          false,
+    reviewKey:            0,
+    localReviewCount:     0,
+};
+
+function wizardReducer(state: WizardState, action: WizardAction): WizardState {
+    switch (action.type) {
+
+        case "PROFILE_LOADED": {
+            const p = action.profile;
+            const lastBook: BookProgress | undefined = p.books?.[p.books.length - 1];
+            let steps = state.steps;
+            if (p.authorName)               steps = patchStep(steps, "greeting",  { done: true });
+            if (p.bookFilename || lastBook)  steps = patchStep(steps, "form_book", { done: true });
+
+            let stage: Stage     = "greeting";
+            let checkpointId     = state.checkpointId;
+
+            if (lastBook?.sceneStillsUrl) {
+                steps = patchStep(steps, "milestone_portraits", { done: true, data: { url: lastBook.portraitsUrl ?? "" } });
+                steps = patchStep(steps, "milestone_scenes",    { done: true, data: { url: lastBook.sceneStillsUrl } });
+                stage = "scenes";
+            } else if (lastBook?.portraitsUrl) {
+                steps = patchStep(steps, "milestone_portraits", { done: true, data: { url: lastBook.portraitsUrl } });
+                stage = "portraits";
+            } else if (lastBook?.status === "checkpoint" && lastBook.checkpointStep) {
+                const targetId = `checkpoint_${lastBook.checkpointStep}`;
+                if (!state.confirmedCheckpoints.has(targetId)) {
+                    const parsed = parseRawCheckpointData(lastBook.checkpointData);
+                    steps = patchStep(steps, targetId, {
+                        data: { ...parsed, step: lastBook.checkpointStep, advance_url: `${OTTO_API}/onboarding/${action.serverId}/advance` },
+                        needsAction: true,
+                    });
+                    checkpointId = targetId;
+                    stage = "checkpoint";
+                } else {
+                    stage = "waiting";
+                }
+            } else if (lastBook) {
+                stage = "waiting";
+            } else if (p.authorName) {
+                stage = "upload";
+            }
+
+            return {
+                ...state,
+                profile:          p,
+                bookProgress:     lastBook ?? state.bookProgress,
+                steps,
+                stage,
+                checkpointId,
+                reviewsDone:      (p.reviews?.length ?? 0) > 0,
+                localReviewCount: p.reviews?.length ?? 0,
+            };
+        }
+
+        case "BOOK_PROGRESS_UPDATED": {
+            const prog = action.progress;
+            let steps        = state.steps;
+            let stage        = state.stage;
+            let checkpointId = state.checkpointId;
+
+            if (prog.portraitsUrl)
+                steps = patchStep(steps, "milestone_portraits", { done: true, data: { url: prog.portraitsUrl } });
+            if (prog.sceneStillsUrl)
+                steps = patchStep(steps, "milestone_scenes", { done: true, data: { url: prog.sceneStillsUrl } });
+
+            // Self-heal: mark character_review done if pipeline moved past it
+            const curIdx = prog.status === "complete"
+                ? PIPELINE_STEPS.length
+                : PIPELINE_STEPS.indexOf(prog.currentStep as any);
+            if (curIdx > PIPELINE_STEPS.indexOf("character_review"))
+                steps = patchStep(steps, "checkpoint_character_review", { done: true, needsAction: false });
+
+            // Server always drives forward; checkpoint is a hard interrupt
+            if (prog.status === "checkpoint" && prog.checkpointStep) {
+                const targetId = `checkpoint_${prog.checkpointStep}`;
+                if (!state.confirmedCheckpoints.has(targetId)) {
+                    const parsed = parseRawCheckpointData(prog.checkpointData);
+                    steps = patchStep(steps, targetId, {
+                        data: { ...parsed, step: prog.checkpointStep, advance_url: `${OTTO_API}/onboarding/${action.serverId}/advance` },
+                        needsAction: true,
+                    });
+                    checkpointId = targetId;
+                    stage = "checkpoint";
+                }
+            } else if (prog.status === "complete") {
+                stage = "done";
+            } else if (prog.sceneStillsUrl && stageOrder(stage) < stageOrder("scenes")) {
+                stage = "scenes";
+            } else if (prog.portraitsUrl && stageOrder(stage) < stageOrder("portraits")) {
+                stage = "portraits";
+            } else if (prog.status === "running" && (stage === "portraits" || stage === "scenes" || stage === "done")) {
+                stage = "waiting";  // restart snap-back
+            } else if (prog.status === "running" && stageOrder(stage) < stageOrder("waiting")) {
+                stage = "waiting";
+            }
+
+            return { ...state, bookProgress: prog, steps, stage, checkpointId };
+        }
+
+        case "INVITATION_LOADED":
+            return { ...state, invitationName: action.name };
+
+        case "STEP_ACTIVATED": {
+            const steps = state.steps.map(s =>
+                s.id === action.stepId
+                    ? { ...s, data: action.data, needsAction: s.type === "checkpoint", ...(action.messageId ? { messageId: action.messageId } : {}) }
+                    : s
+            );
+            return { ...state, steps };
+        }
+
+        case "STEP_DONE":
+            return { ...state, steps: patchStep(state.steps, action.stepId, { done: true, needsAction: false }) };
+
+        case "PROCESSING_STEP": {
+            const idx = state.processingSteps.findIndex(s => s.id === action.step.id);
+            const processingSteps = idx >= 0
+                ? state.processingSteps.map((s, i) => i === idx ? action.step : s)
+                : [...state.processingSteps, action.step];
+            return { ...state, processingSteps };
+        }
+
+        case "NAME_SUBMITTED":
+            return { ...state, stage: "upload", steps: patchStep(state.steps, "greeting", { done: true }) };
+
+        case "BOOK_UPLOADED":
+            return { ...state, stage: "waiting", steps: patchStep(state.steps, "form_book", { done: true }) };
+
+        case "REVIEW_ADDED":
+            return {
+                ...state,
+                reviewsDone:      true,
+                reviewKey:        state.reviewKey + 1,
+                localReviewCount: state.localReviewCount + 1,
+                steps: patchStep(state.steps, "form_author", { done: true }),
+            };
+
+        case "ADD_ANOTHER_REVIEW":
+            return { ...state, reviewsDone: false, reviewKey: state.reviewKey + 1 };
+
+        case "CHECKPOINT_CONFIRMED": {
+            const confirmed = new Set(state.confirmedCheckpoints);
+            confirmed.add(action.checkpointId);
+            return {
+                ...state,
+                confirmedCheckpoints: confirmed,
+                checkpointId:         null,
+                stage:                "waiting",
+                steps: patchStep(state.steps, action.checkpointId, { done: true, needsAction: false }),
+            };
+        }
+
+        case "PORTRAITS_CONTINUE":
+            return { ...state, stage: state.bookProgress?.sceneStillsUrl ? "scenes" : "done" };
+
+        case "SCENES_CONTINUE":
+            return { ...state, stage: "done" };
+
+        case "NAVIGATE_TO":
+            return {
+                ...state,
+                stage: action.stage,
+                ...(action.checkpointId !== undefined ? { checkpointId: action.checkpointId } : {}),
+            };
+
+        case "RESET":
+            return { ...initialState, invitationName: state.invitationName };
+
+        default:
+            return state;
+    }
+}
 
 export default function OnboardingWizard({
     channelId,
@@ -2138,43 +2369,66 @@ export default function OnboardingWizard({
     onClose,
 }: ModalProps<"author_onboarding">) {
     const client = useClient();
-    const { steps, markDone, patchStepData, clearSteps, activateCheckpoint } = useOnboardingMessages(channelId);
-    const [stage, setStage] = useState<Stage>("greeting");
-    const [focusedCheckpointId, setFocusedCheckpointId] = useState<string | null>(null);
-    const [focusedMilestoneId, setFocusedMilestoneId] = useState<string | null>(null);
+    const [state, dispatch] = useReducer(wizardReducer, initialState);
     const [resetting, setResetting] = useState(false);
-    const [reviewsDone, setReviewsDone] = useState(false);
-    const [reviewKey, setReviewKey] = useState(0);
-    const [profile, setProfile] = useState<any>(null);
-    const [bookProgress, setBookProgress] = useState<BookProgress | null>(null);
-    const [invitationName, setInvitationName] = useState<string>("");
-    const [localReviewCount, setLocalReviewCount] = useState(0);
-    const stageRestored          = useRef(false);
-    const profileEpoch           = useRef(0);
-    const lastProgressRef        = useRef(0);
-    const lastStepRef            = useRef<string | null>(null);
-    const lastAnnouncedCheckpoint = useRef<string | null>(null);
-    const lastViewedCheckpoint   = useRef<string | null>(null);
-    const confirmedCheckpoints   = useRef<Set<string>>(new Set());
 
-    // Fetch invitation metadata to prefill author name on greeting step
+    const {
+        stage, steps, processingSteps, bookProgress, profile,
+        invitationName, reviewsDone, reviewKey, localReviewCount, checkpointId,
+    } = state;
+
+    const lastStepRef             = useRef<string | null>(null);
+    const lastAnnouncedCheckpoint = useRef<string | null>(null);
+    const lastViewedCheckpoint    = useRef<string | null>(null);
+    const lastProgressRef         = useRef(0);
+
+    useMessageParser(channelId, dispatch);
+
+    // Effect 1: load profile on mount
+    useEffect(() => {
+        if (!serverId) return;
+        fetch(`${OTTO_API}/onboarding/${serverId}/profile`)
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+            .then(p => { if (p) dispatch({ type: "PROFILE_LOADED", profile: p, serverId: serverId! }); });
+    }, [serverId]);
+
+    // Effect 2: fetch invitation name
     useEffect(() => {
         const apiUrl = (import.meta.env.VITE_API_URL as string ?? "").replace(/\/$/, "");
         const token = (client as any)?.session?.token;
         if (!token) return;
-        fetch(`${apiUrl}/users/@me/invitation`, {
-            headers: { "x-session-token": token },
-        })
+        fetch(`${apiUrl}/users/@me/invitation`, { headers: { "x-session-token": token } })
             .then(r => r.ok ? r.json() : null)
             .catch(() => null)
             .then(inv => {
                 if (!inv?.metadata) return;
                 const raw = inv.metadata.name ?? inv.metadata.ownerName ?? "";
                 const name = raw.replace(/[-_]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()).trim();
-                if (name) setInvitationName(name);
+                if (name) dispatch({ type: "INVITATION_LOADED", name });
             });
     }, []);
 
+    // Effect 3: poll book progress
+    const fetchBookProgress = useCallback(() => {
+        if (!serverId) return;
+        fetch(`${OTTO_API}/onboarding/${serverId}/profile`)
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+            .then(p => {
+                const prog: BookProgress | undefined = p?.books?.[p.books.length - 1];
+                if (prog) dispatch({ type: "BOOK_PROGRESS_UPDATED", progress: prog, serverId: serverId! });
+            });
+    }, [serverId]);
+
+    useEffect(() => {
+        if (!bookProgress) return;
+        const active = bookProgress.status === "running" || bookProgress.status === "checkpoint";
+        const id = setInterval(fetchBookProgress, active ? 5000 : 15000);
+        return () => clearInterval(id);
+    }, [bookProgress?.status, fetchBookProgress]);
+
+    // Effect 4: stage side effects — analytics, persist, complete
     const persistWizardStep = useCallback((stepId: string) => {
         if (!serverId) return;
         fetch(`${OTTO_API}/onboarding/${serverId}/wizard-step`, {
@@ -2184,289 +2438,68 @@ export default function OnboardingWizard({
         }).catch(() => {});
     }, [serverId]);
 
-    // Load profile from Mongo on mount — drives stage restoration and field prefill
     useEffect(() => {
-        if (!serverId) return;
-        const epoch = profileEpoch.current;
-        fetch(`${OTTO_API}/onboarding/${serverId}/profile`)
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null)
-            .then(p => {
-                if (profileEpoch.current !== epoch) return; // stale — reset happened while fetching
-                if (!p) return;
-                setProfile(p);
-                if (p.reviews?.length > 0) setLocalReviewCount(p.reviews.length);
-                stageRestored.current = true;
-                const ws = p.wizardStep as string | undefined;
-                const lastBook = p.books?.[p.books.length - 1];
-                console.log("[Wizard] init restore", { wizardStep: ws, lastBookStatus: lastBook?.status, lastBookStep: lastBook?.currentStep });
-                // Use profile data (Mongo) as source of truth for early steps — don't rely on
-                // message history which may have scrolled past the 100-message fetch window.
-                if (p.authorName) markDone("greeting");
-                if (p.bookFilename || lastBook)  markDone("form_book");
-                // Live job state always takes priority over saved wizardStep
-                if (lastBook?.status === "running") {
-                    console.log("[Wizard] -> upload_done (running job)");
-                    setStage("upload_done");
-                } else if (lastBook?.status === "checkpoint" && lastBook?.checkpointStep) {
-                    const targetId = `checkpoint_${lastBook.checkpointStep}`;
-                    console.log("[Wizard] -> checkpoint", targetId);
-                    setFocusedCheckpointId(targetId);
-                    setStage("checkpoint");
-                } else if (ws?.startsWith("checkpoint_")) {
-                    setFocusedCheckpointId(ws);
-                    setStage("checkpoint");
-                } else if (ws?.startsWith("milestone_")) {
-                    setFocusedMilestoneId(ws);
-                    setStage("milestone");
-                } else if (ws === "form_author") {
-                    setStage("reviews");
-                } else if (ws === "form_book") {
-                    setStage("upload_done");
-                } else {
-                    if (lastBook?.status === "checkpoint") {
-                        setStage("checkpoint");
-                    } else if (p.reviews?.length > 0) {
-                        setStage("done");
-                    } else if (p.bookFilename) {
-                        setStage("upload_done");
-                    } else if (p.authorName) {
-                        setStage("upload");
-                    }
-                }
-            });
-    }, [serverId]);
-
-    // Hydrate bookProgress from profile on initial load / page refresh
-    useEffect(() => {
-        if (!profile?.books?.length) return;
-        setBookProgress(profile.books[profile.books.length - 1]);
-    }, [profile]);
-
-    // When profile shows a checkpoint, hydrate the checkpoint step so it shows on refresh
-    // NOTE: `steps` intentionally omitted from deps — activateCheckpoint mutates steps and
-    // would cause an infinite loop. Use confirmedCheckpoints ref to guard re-activation.
-    useEffect(() => {
-        if (!bookProgress || bookProgress.status !== "checkpoint") return;
-        if (!bookProgress.checkpointStep) return;
-        const targetId = `checkpoint_${bookProgress.checkpointStep}`;
-        if (confirmedCheckpoints.current.has(targetId)) return;
-        try {
-            const parsed = bookProgress.checkpointData
-                ? (typeof bookProgress.checkpointData === "string"
-                    ? JSON.parse(bookProgress.checkpointData)
-                    : bookProgress.checkpointData)
-                : {};
-            const chars = parsed?.characters ?? [];
-            activateCheckpoint(bookProgress.checkpointStep ?? "", {
-                ...parsed,
-                step:        bookProgress.checkpointStep,
-                advance_url: `${OTTO_API}/onboarding/${serverId}/advance`,
-            });
-            if (bookProgress.checkpointStep !== lastAnnouncedCheckpoint.current) {
-                lastAnnouncedCheckpoint.current = bookProgress.checkpointStep ?? null;
-                track("onboarding_checkpoint_reached", {
-                    serverId,
-                    checkpointStep: bookProgress.checkpointStep,
-                    characterCount: chars.length,
-                });
-            }
-        } catch { /* malformed checkpointData — activate with empty characters */ }
-    }, [bookProgress?.status, bookProgress?.checkpointStep]);
-
-    // Fetch profile to sync bookProgress whenever processing activity changes or stage reaches upload_done
-    const processingStepCount = steps.filter(s => s.type === "processing").length;
-    const fetchBookProgress = useCallback(() => {
-        if (!serverId) return;
-        fetch(`${OTTO_API}/onboarding/${serverId}/profile`)
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null)
-            .then(p => {
-                const prog: BookProgress | undefined = p?.books?.[p.books.length - 1];
-                if (prog) setBookProgress(prog);
-            });
-    }, [serverId]);
-    useEffect(() => {
-        if (!processingStepCount || !serverId) return;
-        fetchBookProgress();
-    }, [processingStepCount]);
-    useEffect(() => {
-        if (stage === "upload_done") fetchBookProgress();
+        if (stage === "done" && serverId) {
+            track("onboarding_completed", { serverId, bookSlug: bookProgress?.slug });
+            fetch(`${OTTO_API}/onboarding/${serverId}/complete`, { method: "POST" }).catch(() => {});
+        }
+        if (stage !== "greeting") persistWizardStep(stage);
     }, [stage]);
 
-    // Keep bookProgress fresh while pipeline is active; poll slowly when done to detect restarts
-    useEffect(() => {
-        if (!bookProgress) return;
-        const active = bookProgress.status === "running" || bookProgress.status === "checkpoint";
-        console.log("[Wizard] poll start", { status: bookProgress.status, interval: active ? 5000 : 15000 });
-        const id = setInterval(fetchBookProgress, active ? 5000 : 15000);
-        return () => clearInterval(id);
-    }, [bookProgress?.status, fetchBookProgress]);
-
-    // If the job is restarted externally while the wizard shows a post-processing state, snap back
-    useEffect(() => {
-        console.log("[Wizard] snap-back check", { bookStatus: bookProgress?.status, stage });
-        if (bookProgress?.status !== "running") return;
-        if (stage !== "done" && stage !== "milestone") return;
-        console.log("[Wizard] snap-back -> upload_done");
-        setStage("upload_done");
-    }, [bookProgress?.status, stage]);
-
-    // Drive stage from Mongo: if backend is at a checkpoint and the local step hasn't been confirmed yet
-    useEffect(() => {
-        if (!bookProgress) return;
-        if (bookProgress.status !== "checkpoint") return;
-        if (stage === "checkpoint" || stage === "done") return;
-        const targetId = bookProgress.checkpointStep ? `checkpoint_${bookProgress.checkpointStep}` : null;
-        // Unknown checkpoint (e.g. character_roster which no longer pauses) — auto-advance and wait
-        if (targetId && !steps.some(s => s.id === targetId)) {
-            confirmedCheckpoints.current.add(targetId);
-            fetch(`${OTTO_API}/onboarding/${serverId}/advance`, { method: "POST" }).catch(() => {});
-            return;
-        }
-        // Don't re-enter checkpoint if the author already confirmed it this session
-        if (targetId && confirmedCheckpoints.current.has(targetId)) return;
-        setStage("checkpoint");
-    }, [bookProgress?.status, bookProgress?.checkpointStep, steps]);
-
-    // Auto-advance to done when pipeline completes while wizard is open
-    useEffect(() => {
-        if (bookProgress?.status !== "complete") return;
-        if (stage === "done") return;
-        track("pipeline_completed", { serverId, bookSlug: bookProgress.slug });
-        setStage("done");
-    }, [bookProgress?.status]);
-
-    // Fire pipeline_step_completed whenever currentStep advances
+    // Analytics
     useEffect(() => {
         if (!bookProgress?.currentStep) return;
         if (bookProgress.currentStep === lastStepRef.current) return;
         lastStepRef.current = bookProgress.currentStep;
-        const stepIndex = PIPELINE_STEPS.indexOf(bookProgress.currentStep as any);
         track("pipeline_step_completed", {
             serverId,
             step:      bookProgress.currentStep,
-            stepIndex,
+            stepIndex: PIPELINE_STEPS.indexOf(bookProgress.currentStep as any),
             jobId:     bookProgress.jobId,
             bookSlug:  bookProgress.slug,
         });
     }, [bookProgress?.currentStep]);
 
-    // Mark Portraits milestone done when portraitsUrl lands; auto-advance from processing state
     useEffect(() => {
-        if (!bookProgress?.portraitsUrl) return;
-        patchStepData("milestone_portraits", { url: bookProgress.portraitsUrl });
-        markDone("milestone_portraits");
-        if (stage === "upload_done") {
-            setFocusedMilestoneId("milestone_portraits");
-            setStage("milestone");
-        }
-    }, [bookProgress?.portraitsUrl]);
+        if (stage !== "checkpoint" || !checkpointId) return;
+        if (checkpointId === lastViewedCheckpoint.current) return;
+        lastViewedCheckpoint.current = checkpointId;
+        track("checkpoint_viewed", { serverId, checkpointStep: checkpointId });
+    }, [stage, checkpointId]);
 
-    // Mark Scenes milestone done when sceneStillsUrl lands
     useEffect(() => {
-        if (!bookProgress?.sceneStillsUrl) return;
-        patchStepData("milestone_scenes", { url: bookProgress.sceneStillsUrl });
-        markDone("milestone_scenes");
-    }, [bookProgress?.sceneStillsUrl]);
+        if (!bookProgress?.checkpointStep) return;
+        if (bookProgress.checkpointStep === lastAnnouncedCheckpoint.current) return;
+        lastAnnouncedCheckpoint.current = bookProgress.checkpointStep;
+        const parsed = parseRawCheckpointData(bookProgress.checkpointData);
+        track("onboarding_checkpoint_reached", {
+            serverId,
+            checkpointStep: bookProgress.checkpointStep,
+            characterCount: parsed?.characters?.length ?? 0,
+        });
+    }, [bookProgress?.checkpointStep]);
 
-    // Mark past checkpoints done based on where the pipeline actually is (self-healing on refresh)
-    useEffect(() => {
-        if (!bookProgress) return;
-        const idx = bookProgress.status === "complete"
-            ? PIPELINE_STEPS.length
-            : PIPELINE_STEPS.indexOf(bookProgress.currentStep as any);
-        if (idx < 0) return;
-        if (idx > PIPELINE_STEPS.indexOf("character_review"))  markDone("checkpoint_character_review");
-    }, [bookProgress?.currentStep, bookProgress?.status]);
-
-    // Update PostHog person profile only when meaningful state changes (not every poll)
     useEffect(() => {
         if (!bookProgress || !serverId) return;
         identify(serverId, {
-            bookSlug:        bookProgress.slug,
-            bookStatus:      bookProgress.status,
-            currentStep:     bookProgress.currentStep,
-            checkpointStep:  bookProgress.checkpointStep ?? null,
-            jobId:           bookProgress.jobId,
-            portraitsUrl:    bookProgress.portraitsUrl ?? null,
-            sceneStillsUrl:  bookProgress.sceneStillsUrl ?? null,
+            bookSlug:       bookProgress.slug,
+            bookStatus:     bookProgress.status,
+            currentStep:    bookProgress.currentStep,
+            checkpointStep: bookProgress.checkpointStep ?? null,
+            jobId:          bookProgress.jobId,
+            portraitsUrl:   bookProgress.portraitsUrl ?? null,
+            sceneStillsUrl: bookProgress.sceneStillsUrl ?? null,
         });
-    }, [bookProgress?.slug, bookProgress?.status, bookProgress?.currentStep, bookProgress?.checkpointStep, bookProgress?.jobId, bookProgress?.portraitsUrl, bookProgress?.sceneStillsUrl]);
-
-    // Notify backend that the author has finished onboarding
-    useEffect(() => {
-        if (stage !== "done" || !serverId) return;
-        track("onboarding_completed", { serverId, bookSlug: bookProgress?.slug });
-        fetch(`${OTTO_API}/onboarding/${serverId}/complete`, { method: "POST" }).catch(() => {});
-    }, [stage, serverId]);
-
-    // Auto-advance stage if backend moved past checkpoint (e.g., manual advance via admin tool)
-    useEffect(() => {
-        if (stage !== "checkpoint") return;
-        if (!bookProgress) return;
-        if (bookProgress.status === "checkpoint") return;
-        const active = steps.find(s => s.type === "checkpoint" && s.needsAction && !s.done);
-        if (!active) return;
-        markDone(active.id);
-        const nextCheckpoint = steps.find(
-            s => s.type === "checkpoint" && s.needsAction && !s.done && s.id !== active.id
-        );
-        setStage(nextCheckpoint ? "checkpoint" : "upload_done");
-    }, [bookProgress?.status, stage]);
-
-    // Step selectors — fixed steps always exist; data === null means not yet activated
-    const greetingStep      = steps.find(s => s.id === "greeting");
-    const uploadStep        = steps.find(s => s.id === "form_book");
-    const reviewStep        = steps.find(s => s.id === "form_author");
-    const activeCheckpoint  = steps.find(s => s.type === "checkpoint" && s.needsAction && !s.done);
-    // When user clicks a specific checkpoint stop, show that one; fallback to whichever is active
-    const displayCheckpoint = (focusedCheckpointId
-        ? steps.find(s => s.id === focusedCheckpointId)
-        : null) ?? activeCheckpoint;
-
-    // Fire checkpoint_viewed once per checkpoint (not on every render)
-    useEffect(() => {
-        if (stage !== "checkpoint" || !displayCheckpoint?.id) return;
-        if (displayCheckpoint.id === lastViewedCheckpoint.current) return;
-        lastViewedCheckpoint.current = displayCheckpoint.id;
-        track("checkpoint_viewed", { serverId, checkpointStep: displayCheckpoint.id, done: displayCheckpoint.done });
-    }, [stage, displayCheckpoint?.id]);
-
-
-    // Restore stage from history on first load
-    useEffect(() => {
-        if (steps.length === 0 || stageRestored.current) return;
-        stageRestored.current = true;
-        if (uploadStep?.done) {
-            setStage(reviewStep?.done ? "done" : "reviews");
-        } else if (greetingStep?.done) {
-            setStage("upload");
-        }
-    }, [steps.length]);
-
-    // Auto-transition to checkpoint when one becomes active (from any non-terminal stage)
-    useEffect(() => {
-        if (activeCheckpoint && stage !== "checkpoint" && stage !== "done") {
-            setStage("checkpoint");
-            persistWizardStep(activeCheckpoint.id);
-        }
-    }, [activeCheckpoint?.id]);
+    }, [bookProgress?.slug, bookProgress?.status, bookProgress?.currentStep,
+        bookProgress?.checkpointStep, bookProgress?.jobId,
+        bookProgress?.portraitsUrl, bookProgress?.sceneStillsUrl]);
 
     const handleReset = useCallback(async () => {
         if (resetting) return;
         track("wizard_reset", { serverId, stage });
         setResetting(true);
-        profileEpoch.current += 1;
-        clearSteps();
-        setStage("greeting");
+        dispatch({ type: "RESET" });
         persistWizardStep("");
-        setFocusedCheckpointId(null);
-        setFocusedMilestoneId(null);
-        setProfile(null);
-        setBookProgress(null);
-        setLocalReviewCount(0);
-        stageRestored.current = false;
         try {
             await fetch(`${OTTO_API}/onboarding/reset`, {
                 method: "POST",
@@ -2476,44 +2509,54 @@ export default function OnboardingWizard({
         } catch { /* ignore */ } finally {
             setResetting(false);
         }
-    }, [channelId, serverId, resetting]);
+    }, [channelId, serverId, resetting, stage]);
 
-    // Subway map active index — derived from stage
+    // Derived values
+    const greetingStep      = steps.find(s => s.id === "greeting");
+    const uploadStep        = steps.find(s => s.id === "form_book");
+    const reviewStep        = steps.find(s => s.id === "form_author");
+    const displayCheckpoint = checkpointId ? steps.find(s => s.id === checkpointId) : null;
+
     const subwayActiveIndex = (() => {
-        if (stage === "greeting")    return steps.findIndex(s => s.id === "greeting");
-        if (stage === "upload" || stage === "upload_done")
-                                     return steps.findIndex(s => s.id === "form_book");
-        if (stage === "checkpoint")  return activeCheckpoint ? steps.findIndex(s => s.id === activeCheckpoint.id) : -1;
-        if (stage === "reviews")     return steps.findIndex(s => s.id === "form_author");
+        if (stage === "greeting")  return steps.findIndex(s => s.id === "greeting");
+        if (stage === "upload")    return steps.findIndex(s => s.id === "form_book");
+        if (stage === "waiting") {
+            if (!reviewsDone && reviewStep?.data) return steps.findIndex(s => s.id === "form_author");
+            return steps.findIndex(s => s.id === "form_book");
+        }
+        if (stage === "checkpoint" && checkpointId) return steps.findIndex(s => s.id === checkpointId);
+        if (stage === "portraits") return steps.findIndex(s => s.id === "milestone_portraits");
+        if (stage === "scenes")    return steps.findIndex(s => s.id === "milestone_scenes");
         return -1;
     })();
 
-    // Subway map click → stage
     function onSelectStep(index: number) {
         const s = steps[index];
         if (!s) return;
         track("subway_stop_clicked", { serverId, stepId: s.id, stepType: s.type, stepLabel: s.label, done: s.done });
         if (s.type === "milestone") {
-            if (s.data?.url) { setFocusedMilestoneId(s.id); setStage("milestone"); persistWizardStep(s.id); }
+            if (s.id === "milestone_portraits" && s.data?.url)
+                dispatch({ type: "NAVIGATE_TO", stage: "portraits" });
+            else if (s.id === "milestone_scenes" && s.data?.url)
+                dispatch({ type: "NAVIGATE_TO", stage: "scenes" });
             return;
         }
-        if (s.id === "greeting")          setStage("greeting");
-        else if (s.id === "form_book")  { setStage(uploadStep?.done ? "upload_done" : "upload"); persistWizardStep("form_book"); }
-        else if (s.type === "checkpoint") { setFocusedCheckpointId(s.id); setStage("checkpoint"); if (!s.done) persistWizardStep(s.id); }
-        else if (s.id === "form_author")  { setStage("reviews"); persistWizardStep("form_author"); }
+        if (s.id === "greeting")
+            dispatch({ type: "NAVIGATE_TO", stage: "greeting" });
+        else if (s.id === "form_book")
+            dispatch({ type: "NAVIGATE_TO", stage: uploadStep?.done ? "waiting" : "upload" });
+        else if (s.type === "checkpoint")
+            dispatch({ type: "NAVIGATE_TO", stage: "checkpoint", checkpointId: s.id });
+        else if (s.id === "form_author")
+            dispatch({ type: "NAVIGATE_TO", stage: "waiting" });
     }
 
-    // Dome nav
     const canPrev = stage !== "greeting";
-    const canNext = stage === "upload_done";
     function prev() {
-        if (stage === "upload")        setStage("greeting");
-        else if (stage === "upload_done") setStage("upload");
-        else if (stage === "reviews")  setStage("upload_done");
+        if (stage === "upload")       dispatch({ type: "NAVIGATE_TO", stage: "greeting" });
+        else if (stage === "waiting") dispatch({ type: "NAVIGATE_TO", stage: "upload" });
     }
-    function goToReviews() { setStage("reviews"); }
 
-    // Content per stage
     function renderContent() {
         if (steps.length === 0) return <EmptyState>Waiting for Otto…</EmptyState>;
 
@@ -2526,8 +2569,7 @@ export default function OnboardingWizard({
                         channelId={channelId}
                         prefillName={profile?.authorName || invitationName}
                         onDone={(name: string) => {
-                            patchStepData(greetingStep.id, { prefill_name: name });
-                            markDone(greetingStep.id);
+                            dispatch({ type: "NAME_SUBMITTED" });
                             track("onboarding_name_submitted", { serverId });
                             if (serverId) {
                                 fetch(`${OTTO_API}/onboarding/${serverId}/name`, {
@@ -2536,7 +2578,6 @@ export default function OnboardingWizard({
                                     body: JSON.stringify({ name }),
                                 }).catch(() => {});
                             }
-                            setStage("upload");
                         }}
                     />
                 );
@@ -2549,27 +2590,65 @@ export default function OnboardingWizard({
                         channelId={channelId}
                         serverId={serverId}
                         onDone={(values) => {
-                            markDone(uploadStep.id);
                             track("onboarding_book_uploaded", {
                                 serverId,
                                 filename: values?._filename ?? profile?.bookFilename,
                             });
-                            setStage("upload_done");
+                            dispatch({ type: "BOOK_UPLOADED" });
+                            fetchBookProgress();
                         }}
                     />
                 );
 
-            case "upload_done":
+            case "waiting": {
+                if (!reviewsDone && reviewStep?.data) {
+                    return (
+                        <FormStep
+                            key={reviewKey}
+                            step={reviewStep}
+                            channelId={channelId}
+                            serverId={serverId}
+                            onSkip={() => dispatch({ type: "REVIEW_ADDED" })}
+                            onDone={(reviewValues) => {
+                                if (serverId && reviewValues) {
+                                    fetch(`${OTTO_API}/onboarding/${serverId}/review`, {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({
+                                            rating:      reviewValues.rating ?? "",
+                                            reviewer:    reviewValues.reviewer ?? "",
+                                            review_date: reviewValues.review_date ?? "",
+                                            source:      reviewValues.source ?? "",
+                                            review:      reviewValues.review ?? "",
+                                        }),
+                                    }).catch(() => {});
+                                    track("onboarding_review_submitted", { serverId, rating: reviewValues.rating ?? "" });
+                                }
+                                dispatch({ type: "REVIEW_ADDED" });
+                            }}
+                        />
+                    );
+                }
+                if (reviewsDone) {
+                    return (
+                        <ConfirmCard>
+                            <ConfirmIcon>★</ConfirmIcon>
+                            <ConfirmHeading>Review added</ConfirmHeading>
+                            <ConfirmBody>Add another review or wait for processing to complete.</ConfirmBody>
+                            <SecondaryBtn onClick={() => dispatch({ type: "ADD_ANOTHER_REVIEW" })}>
+                                Add another
+                            </SecondaryBtn>
+                        </ConfirmCard>
+                    );
+                }
                 return (
                     <ConfirmCard>
                         <ConfirmIcon>📖</ConfirmIcon>
                         <ConfirmHeading>Your book is on its way</ConfirmHeading>
-                        <ConfirmBody>
-                            Quill is processing it in the background. While that runs, let's add your reader reviews.
-                        </ConfirmBody>
-                        <SubmitBtn onClick={goToReviews}>Add Reviews →</SubmitBtn>
+                        <ConfirmBody>Quill is processing it in the background.</ConfirmBody>
                     </ConfirmCard>
                 );
+            }
 
             case "checkpoint": {
                 if (!displayCheckpoint || (!displayCheckpoint.data && !displayCheckpoint.done)) {
@@ -2578,13 +2657,8 @@ export default function OnboardingWizard({
                         : <EmptyState>Waiting for review…</EmptyState>;
                 }
                 const onCheckpointDone = () => {
-                    confirmedCheckpoints.current.add(displayCheckpoint.id);
-                    markDone(displayCheckpoint.id);
-                    setFocusedCheckpointId(null);
-                    const nextCheckpoint = steps.find(
-                        s => s.type === "checkpoint" && s.needsAction && !s.done && s.id !== displayCheckpoint.id
-                    );
-                    setStage(nextCheckpoint ? "checkpoint" : "upload_done");
+                    dispatch({ type: "CHECKPOINT_CONFIRMED", checkpointId: displayCheckpoint.id });
+                    fetchBookProgress();
                 };
                 if (displayCheckpoint.id === "checkpoint_character_review") {
                     return (
@@ -2606,75 +2680,29 @@ export default function OnboardingWizard({
                 );
             }
 
-            case "milestone": {
-                const ms = focusedMilestoneId ? steps.find(s => s.id === focusedMilestoneId) : null;
-                if (!ms?.data?.url) return <EmptyState>Loading…</EmptyState>;
-                if (ms.id === "milestone_portraits") {
-                    const scenesStep = steps.find(s => s.id === "milestone_scenes");
-                    const onContinue = () => {
-                        if (scenesStep?.data?.url) {
-                            setFocusedMilestoneId("milestone_scenes");
-                        } else {
-                            setStage("reviews");
-                        }
-                    };
-                    return <PortraitGallery url={ms.data.url} serverId={serverId} onContinue={onContinue} />;
-                }
-                if (ms.id === "milestone_scenes")
-                    return <SceneStillsGallery url={ms.data.url} serverId={serverId} onContinue={() => setStage("reviews")} />;
-                return <EmptyState>Nothing to show.</EmptyState>;
-            }
-
-            case "reviews":
-                if (!reviewStep) return (
-                    <ProcessWrap>
-                        <Spinner />
-                        <span>Loading review form…</span>
-                    </ProcessWrap>
-                );
-                if (reviewsDone) return (
-                    <ConfirmCard>
-                        <ConfirmIcon>★</ConfirmIcon>
-                        <ConfirmHeading>Review added</ConfirmHeading>
-                        <ConfirmBody>Add another review or continue to the next step.</ConfirmBody>
-                        <div style={{ display: "flex", gap: 10 }}>
-                            <SecondaryBtn onClick={() => { setReviewsDone(false); setReviewKey(k => k + 1); }}>
-                                Add another
-                            </SecondaryBtn>
-                            <SubmitBtn style={{ flex: 1 }} onClick={() => setStage("done")}>
-                                Continue →
-                            </SubmitBtn>
-                        </div>
-                    </ConfirmCard>
-                );
+            case "portraits": {
+                const ms = steps.find(s => s.id === "milestone_portraits");
+                if (!ms?.data?.url) return <EmptyState>Loading portraits…</EmptyState>;
                 return (
-                    <FormStep
-                        key={reviewKey}
-                        step={reviewStep}
-                        channelId={channelId}
+                    <PortraitGallery
+                        url={ms.data.url}
                         serverId={serverId}
-                        onSkip={() => setStage("done")}
-                        onDone={(reviewValues) => {
-                            markDone(reviewStep.id);
-                            if (serverId && reviewValues) {
-                                fetch(`${OTTO_API}/onboarding/${serverId}/review`, {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({
-                                        rating:      reviewValues.rating ?? "",
-                                        reviewer:    reviewValues.reviewer ?? "",
-                                        review_date: reviewValues.review_date ?? "",
-                                        source:      reviewValues.source ?? "",
-                                        review:      reviewValues.review ?? "",
-                                    }),
-                                }).catch(() => {});
-                                track("onboarding_review_submitted", { serverId, rating: reviewValues.rating ?? "" });
-                            }
-                            setLocalReviewCount(c => c + 1);
-                            setReviewsDone(true);
-                        }}
+                        onContinue={() => dispatch({ type: "PORTRAITS_CONTINUE" })}
                     />
                 );
+            }
+
+            case "scenes": {
+                const ms = steps.find(s => s.id === "milestone_scenes");
+                if (!ms?.data?.url) return <EmptyState>Loading scenes…</EmptyState>;
+                return (
+                    <SceneStillsGallery
+                        url={ms.data.url}
+                        serverId={serverId}
+                        onContinue={() => dispatch({ type: "SCENES_CONTINUE" })}
+                    />
+                );
+            }
 
             case "done":
                 return (
@@ -2703,6 +2731,22 @@ export default function OnboardingWizard({
                     </ConfirmCard>
                 );
         }
+    }
+
+    const pipelineActive = !!bookProgress && bookProgress.status !== "error";
+    const stepIdx = bookProgress?.currentStep
+        ? PIPELINE_STEPS.indexOf(bookProgress.currentStep as any)
+        : -1;
+    let progressFraction: number;
+    if (bookProgress?.status === "complete") {
+        progressFraction = 0.99;
+    } else if (stepIdx >= 0) {
+        progressFraction = (stepIdx + 1) / PIPELINE_STEPS.length;
+        lastProgressRef.current = progressFraction;
+    } else if (!bookProgress || bookProgress.currentStep === "starting") {
+        progressFraction = 0;
+    } else {
+        progressFraction = lastProgressRef.current;
     }
 
     return (
@@ -2735,38 +2779,17 @@ export default function OnboardingWizard({
                     <Content>
                         {renderContent()}
                     </Content>
-                    {(bookProgress?.status === "running" || stage === "upload_done") && bookProgress?.currentStep && (
+                    {(bookProgress?.status === "running" || stage === "waiting") && bookProgress?.currentStep && (
                         <StepTicker>
                             <MiniSpinner />
                             <span>{STEP_LABELS[bookProgress.currentStep as typeof PIPELINE_STEPS[number]] ?? bookProgress.currentStep}</span>
                         </StepTicker>
                     )}
-                    {(() => {
-                        const stepIdx = bookProgress?.currentStep
-                            ? PIPELINE_STEPS.indexOf(bookProgress.currentStep as any)
-                            : -1;
-                        let progressFraction: number;
-                        if (bookProgress?.status === "complete") {
-                            progressFraction = 0.99;
-                        } else if (stepIdx >= 0) {
-                            progressFraction = (stepIdx + 1) / PIPELINE_STEPS.length;
-                            lastProgressRef.current = progressFraction;
-                        } else if (!bookProgress || bookProgress.currentStep === "starting") {
-                            progressFraction = 0;
-                        } else {
-                            progressFraction = lastProgressRef.current;
-                        }
-                        return (
-                            <PipelineBar
-                                $active={!!bookProgress && bookProgress.status !== "error" || steps.some(s => s.type === "processing")}
-                                $progress={progressFraction}
-                            />
-                        );
-                    })()}
+                    <PipelineBar
+                        $active={pipelineActive || processingSteps.some(s => !s.done)}
+                        $progress={progressFraction}
+                    />
                 </Shell>
-                {canNext && (
-                    <DomeBtn $side="right" onClick={goToReviews} title="Add Reviews">›</DomeBtn>
-                )}
             </ModalWrapper>
         </Overlay>
     );
