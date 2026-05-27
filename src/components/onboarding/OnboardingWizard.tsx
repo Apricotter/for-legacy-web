@@ -2283,12 +2283,20 @@ export default function OnboardingWizard({
         if (stage === "upload_done") fetchBookProgress();
     }, [stage]);
 
-    // Keep bookProgress fresh while pipeline is running or waiting at a checkpoint
+    // Keep bookProgress fresh while pipeline is active; poll slowly when done to detect restarts
     useEffect(() => {
-        if (bookProgress?.status !== "running" && bookProgress?.status !== "checkpoint") return;
-        const id = setInterval(fetchBookProgress, 5000);
+        if (!bookProgress) return;
+        const active = bookProgress.status === "running" || bookProgress.status === "checkpoint";
+        const id = setInterval(fetchBookProgress, active ? 5000 : 15000);
         return () => clearInterval(id);
     }, [bookProgress?.status, fetchBookProgress]);
+
+    // If the job is restarted externally while the wizard shows "done", snap back to processing view
+    useEffect(() => {
+        if (bookProgress?.status !== "running") return;
+        if (stage !== "done") return;
+        setStage("upload_done");
+    }, [bookProgress?.status, stage]);
 
     // Drive stage from Mongo: if backend is at a checkpoint and the local step hasn't been confirmed yet
     useEffect(() => {
