@@ -25,8 +25,23 @@ const FIXED_STEP_DEFS: Omit<WizardStep, "data" | "done" | "needsAction">[] = [
     { id: "form_voice",                  type: "form",       line: "author", label: "Voice"      },
 ];
 
+const BOOK_UPLOAD_FORM_DATA = {
+    fields: [{
+        type: "upload",
+        key: "book_file",
+        field: "Your Book",
+        description: "Drag and drop your book file here, or click to browse. We accept EPUB, PDF, MOBI, and DOCX.",
+        accept: ".epub,.pdf,.mobi,.docx",
+    }],
+};
+
 export function makeFixedSteps(): WizardStep[] {
-    return FIXED_STEP_DEFS.map(def => ({ ...def, data: null, done: false, needsAction: false }));
+    return FIXED_STEP_DEFS.map(def => ({
+        ...def,
+        data: def.id === "form_book" ? BOOK_UPLOAD_FORM_DATA : null,
+        done: false,
+        needsAction: false,
+    }));
 }
 
 function parseCodeblock(content: string): { type: string; data: any } | null {
