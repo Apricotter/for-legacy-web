@@ -2226,6 +2226,8 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                 } else {
                     stage = "waiting";
                 }
+            } else if (lastBook?.status === "complete" || lastBook?.status === "cancelled" || lastBook?.status === "error") {
+                stage = "done";
             } else if (lastBook) {
                 stage = "waiting";
             } else if (p.authorName) {
@@ -2255,8 +2257,10 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
             if (prog.sceneStillsUrl)
                 steps = patchStep(steps, "milestone_scenes", { done: true, data: { url: prog.sceneStillsUrl } });
 
+            const isTerminal = prog.status === "complete" || prog.status === "cancelled" || prog.status === "error";
+
             // Self-heal: mark character_review done if pipeline moved past it
-            const curIdx = prog.status === "complete"
+            const curIdx = isTerminal
                 ? PIPELINE_STEPS.length
                 : PIPELINE_STEPS.indexOf(prog.currentStep as any);
             if (curIdx > PIPELINE_STEPS.indexOf("character_review"))
@@ -2274,7 +2278,11 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                     checkpointId = targetId;
                     stage = "checkpoint";
                 }
-            } else if (prog.status === "complete") {
+            } else if (isTerminal && prog.sceneStillsUrl) {
+                stage = "scenes";
+            } else if (isTerminal && prog.portraitsUrl) {
+                stage = "portraits";
+            } else if (isTerminal) {
                 stage = "done";
             } else if (prog.sceneStillsUrl && stageOrder(stage) < stageOrder("scenes")) {
                 stage = "scenes";
@@ -2779,7 +2787,7 @@ export default function OnboardingWizard({
                     <Content>
                         {renderContent()}
                     </Content>
-                    {(bookProgress?.status === "running" || stage === "waiting") && bookProgress?.currentStep && (
+                    {bookProgress?.status === "running" && bookProgress?.currentStep && (
                         <StepTicker>
                             <MiniSpinner />
                             <span>{STEP_LABELS[bookProgress.currentStep as typeof PIPELINE_STEPS[number]] ?? bookProgress.currentStep}</span>
