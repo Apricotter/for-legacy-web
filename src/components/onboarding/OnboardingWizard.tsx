@@ -3070,7 +3070,7 @@ export default function OnboardingWizard({
                     <Content>
                         {renderContent()}
                     </Content>
-                    {bookProgress?.status === "running" && tickerStep && (
+                    {bookProgress?.status === "running" && tickerStep && !bookProgress.sceneStillsUrl && (
                         <StepTicker>
                             <MiniSpinner />
                             <span>{STEP_LABELS[tickerStep as typeof PIPELINE_STEPS[number]] ?? tickerStep}</span>
