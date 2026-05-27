@@ -555,6 +555,31 @@ const EmptyState = styled.div`
     padding: 32px 0;
 `;
 
+const TypingDots = styled.div`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 40px 0;
+    span {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.25);
+        animation: dotpulse 1.2s ease-in-out infinite;
+        &:nth-child(2) { animation-delay: 0.2s; }
+        &:nth-child(3) { animation-delay: 0.4s; }
+    }
+    @keyframes dotpulse {
+        0%, 80%, 100% { opacity: 0.25; transform: scale(1); }
+        40%            { opacity: 0.7;  transform: scale(1.3); }
+    }
+`;
+
+function WaitingDots() {
+    return <TypingDots><span/><span/><span/></TypingDots>;
+}
+
 const StepTicker = styled.div`
     padding: 5px 26px 7px;
     display: flex;
@@ -2861,11 +2886,11 @@ export default function OnboardingWizard({
     }
 
     function renderContent() {
-        if (steps.length === 0) return <EmptyState>Waiting for Otto…</EmptyState>;
+        if (steps.length === 0) return <WaitingDots />;
 
         switch (stage) {
             case "greeting":
-                if (!greetingStep?.data) return <EmptyState>Waiting for Otto…</EmptyState>;
+                if (!greetingStep?.data) return <WaitingDots />;
                 return (
                     <GreetingStep
                         data={greetingStep.data}
@@ -2886,7 +2911,7 @@ export default function OnboardingWizard({
                 );
 
             case "upload":
-                if (!uploadStep?.data) return <EmptyState>Waiting for upload form…</EmptyState>;
+                if (!uploadStep?.data) return <WaitingDots />;
                 return (
                     <FormStep
                         step={uploadStep}
@@ -2957,7 +2982,7 @@ export default function OnboardingWizard({
                 if (!displayCheckpoint || (!displayCheckpoint.data && !displayCheckpoint.done)) {
                     return bookProgress?.status === "running"
                         ? <ProcessWrap><Spinner /><span>Characters are being finalized…</span></ProcessWrap>
-                        : <EmptyState>Waiting for review…</EmptyState>;
+                        : <WaitingDots />;
                 }
                 const onCheckpointDone = () => {
                     dispatch({ type: "CHECKPOINT_CONFIRMED", checkpointId: displayCheckpoint.id });
