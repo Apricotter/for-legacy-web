@@ -2316,14 +2316,6 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                     ? { ...s, data: action.data, needsAction: s.type === "checkpoint", ...(action.messageId ? { messageId: action.messageId } : {}) }
                     : s
             );
-            // When a checkpoint step is activated from channel history, also transition stage
-            // so the view doesn't wait for the next 5s poll to flip to "checkpoint".
-            const activatedStep = state.steps.find(s => s.id === action.stepId);
-            const isCheckpointStep = activatedStep?.type === "checkpoint";
-            const alreadyConfirmed = state.confirmedCheckpoints.has(action.stepId);
-            if (isCheckpointStep && !alreadyConfirmed && stageOrder(state.stage) <= stageOrder("waiting")) {
-                return { ...state, steps, stage: "checkpoint", checkpointId: action.stepId };
-            }
             return { ...state, steps };
         }
 
