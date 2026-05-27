@@ -2200,10 +2200,15 @@ export default function OnboardingWizard({
                 const ws = p.wizardStep as string | undefined;
                 const lastBook = p.books?.[p.books.length - 1];
                 console.log("[Wizard] init restore", { wizardStep: ws, lastBookStatus: lastBook?.status, lastBookStep: lastBook?.currentStep });
-                // Active pipeline run always takes priority over saved wizard state
+                // Live job state always takes priority over saved wizardStep
                 if (lastBook?.status === "running") {
                     console.log("[Wizard] -> upload_done (running job)");
                     setStage("upload_done");
+                } else if (lastBook?.status === "checkpoint" && lastBook?.checkpointStep) {
+                    const targetId = `checkpoint_${lastBook.checkpointStep}`;
+                    console.log("[Wizard] -> checkpoint", targetId);
+                    setFocusedCheckpointId(targetId);
+                    setStage("checkpoint");
                 } else if (ws?.startsWith("checkpoint_")) {
                     setFocusedCheckpointId(ws);
                     setStage("checkpoint");
