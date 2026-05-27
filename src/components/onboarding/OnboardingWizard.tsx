@@ -2572,8 +2572,10 @@ export default function OnboardingWizard({
                 );
 
             case "checkpoint": {
-                if (!displayCheckpoint || !displayCheckpoint.data) {
-                    return <EmptyState>Waiting for review…</EmptyState>;
+                if (!displayCheckpoint || (!displayCheckpoint.data && !displayCheckpoint.done)) {
+                    return bookProgress?.status === "running"
+                        ? <ProcessWrap><Spinner /><span>Characters are being finalized…</span></ProcessWrap>
+                        : <EmptyState>Waiting for review…</EmptyState>;
                 }
                 const onCheckpointDone = () => {
                     confirmedCheckpoints.current.add(displayCheckpoint.id);
