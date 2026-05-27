@@ -2325,7 +2325,7 @@ export default function OnboardingWizard({
             return;
         }
         // Don't re-enter checkpoint if the author already confirmed it this session
-        if (targetId && steps.find(s => s.id === targetId)?.done) return;
+        if (targetId && confirmedCheckpoints.current.has(targetId)) return;
         setStage("checkpoint");
     }, [bookProgress?.status, bookProgress?.checkpointStep, steps]);
 
