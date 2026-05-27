@@ -2200,6 +2200,10 @@ export default function OnboardingWizard({
                 const ws = p.wizardStep as string | undefined;
                 const lastBook = p.books?.[p.books.length - 1];
                 console.log("[Wizard] init restore", { wizardStep: ws, lastBookStatus: lastBook?.status, lastBookStep: lastBook?.currentStep });
+                // Use profile data (Mongo) as source of truth for early steps — don't rely on
+                // message history which may have scrolled past the 100-message fetch window.
+                if (p.authorName) markDone("greeting");
+                if (p.bookFilename || lastBook)  markDone("form_book");
                 // Live job state always takes priority over saved wizardStep
                 if (lastBook?.status === "running") {
                     console.log("[Wizard] -> upload_done (running job)");
