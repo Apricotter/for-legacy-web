@@ -2650,6 +2650,7 @@ export default function OnboardingWizard({
             .then(p => {
                 if (!p) return;
                 if (p.resetNeeded) {
+                    track("onboarding_reset_detected", { serverId });
                     dispatch({ type: "BOOKS_CLEARED" });
                     fetch(`${OTTO_API}/onboarding/${serverId}/ack-reset`, { method: "POST" }).catch(() => {});
                     return;
@@ -2745,6 +2746,15 @@ export default function OnboardingWizard({
     }, [bookProgress?.slug, bookProgress?.status, bookProgress?.currentStep,
         bookProgress?.checkpointStep, bookProgress?.jobId,
         bookProgress?.portraitsUrl, bookProgress?.sceneStillsUrl]);
+
+    const hasUploadFormData = !!steps.find(s => s.id === "form_book")?.data;
+    const uploadFormTracked = useRef(false);
+    useEffect(() => {
+        if (stage !== "upload") { uploadFormTracked.current = false; return; }
+        if (!hasUploadFormData || uploadFormTracked.current) return;
+        uploadFormTracked.current = true;
+        track("onboarding_upload_form_visible", { serverId, stage });
+    }, [stage, hasUploadFormData]);
 
     const handleReset = useCallback(async () => {
         if (resetting) return;
