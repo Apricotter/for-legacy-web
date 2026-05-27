@@ -2199,8 +2199,10 @@ export default function OnboardingWizard({
                 stageRestored.current = true;
                 const ws = p.wizardStep as string | undefined;
                 const lastBook = p.books?.[p.books.length - 1];
+                console.log("[Wizard] init restore", { wizardStep: ws, lastBookStatus: lastBook?.status, lastBookStep: lastBook?.currentStep });
                 // Active pipeline run always takes priority over saved wizard state
                 if (lastBook?.status === "running") {
+                    console.log("[Wizard] -> upload_done (running job)");
                     setStage("upload_done");
                 } else if (ws?.startsWith("checkpoint_")) {
                     setFocusedCheckpointId(ws);
@@ -2287,14 +2289,17 @@ export default function OnboardingWizard({
     useEffect(() => {
         if (!bookProgress) return;
         const active = bookProgress.status === "running" || bookProgress.status === "checkpoint";
+        console.log("[Wizard] poll start", { status: bookProgress.status, interval: active ? 5000 : 15000 });
         const id = setInterval(fetchBookProgress, active ? 5000 : 15000);
         return () => clearInterval(id);
     }, [bookProgress?.status, fetchBookProgress]);
 
     // If the job is restarted externally while the wizard shows a post-processing state, snap back
     useEffect(() => {
+        console.log("[Wizard] snap-back check", { bookStatus: bookProgress?.status, stage });
         if (bookProgress?.status !== "running") return;
         if (stage !== "done" && stage !== "milestone") return;
+        console.log("[Wizard] snap-back -> upload_done");
         setStage("upload_done");
     }, [bookProgress?.status, stage]);
 
