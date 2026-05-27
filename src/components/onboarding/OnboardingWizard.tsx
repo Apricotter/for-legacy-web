@@ -2613,6 +2613,7 @@ export default function OnboardingWizard({
     const lastViewedCheckpoint    = useRef<string | null>(null);
     const lastViewedMilestone     = useRef<string | null>(null);
     const lastProgressRef         = useRef(0);
+    const highestStepIdxRef       = useRef(-1);
 
     useMessageParser(channelId, dispatch);
 
@@ -3027,13 +3028,17 @@ export default function OnboardingWizard({
     if (bookProgress?.status === "complete") {
         progressFraction = 0.99;
     } else if (stepIdx >= 0) {
-        progressFraction = (stepIdx + 1) / PIPELINE_STEPS.length;
+        if (stepIdx > highestStepIdxRef.current) highestStepIdxRef.current = stepIdx;
+        progressFraction = Math.max((stepIdx + 1) / PIPELINE_STEPS.length, lastProgressRef.current);
         lastProgressRef.current = progressFraction;
     } else if (!bookProgress || bookProgress.currentStep === "starting") {
         progressFraction = 0;
     } else {
         progressFraction = lastProgressRef.current;
     }
+    const tickerStep = stepIdx >= highestStepIdxRef.current
+        ? bookProgress?.currentStep
+        : PIPELINE_STEPS[highestStepIdxRef.current];
 
     return (
         <Overlay>
@@ -3065,10 +3070,10 @@ export default function OnboardingWizard({
                     <Content>
                         {renderContent()}
                     </Content>
-                    {bookProgress?.status === "running" && bookProgress?.currentStep && (
+                    {bookProgress?.status === "running" && tickerStep && (
                         <StepTicker>
                             <MiniSpinner />
-                            <span>{STEP_LABELS[bookProgress.currentStep as typeof PIPELINE_STEPS[number]] ?? bookProgress.currentStep}</span>
+                            <span>{STEP_LABELS[tickerStep as typeof PIPELINE_STEPS[number]] ?? tickerStep}</span>
                         </StepTicker>
                     )}
                     <PipelineBar
