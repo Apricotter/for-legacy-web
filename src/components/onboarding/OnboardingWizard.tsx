@@ -1816,10 +1816,11 @@ function CharDescEditorModal({
     );
 }
 
-function CharacterReviewCheckpoint({ step, jobId, serverId, onDone }: {
+function CharacterReviewCheckpoint({ step, jobId, serverId, portraitsUrl, onDone }: {
     step: WizardStep;
     jobId: string;
     serverId: string;
+    portraitsUrl?: string;
     onDone: () => void;
 }) {
     type CharAppearanceEntry = { introduction?: string; imagePrompt?: string };
@@ -1849,6 +1850,25 @@ function CharacterReviewCheckpoint({ step, jobId, serverId, onDone }: {
     const [editIdx,    setEditIdx]    = useState<number | null>(null);
     const [addOpen,    setAddOpen]    = useState(false);
     const [confirming, setConfirming] = useState(false);
+
+    useEffect(() => {
+        if (!step.done || chars.length > 0 || !portraitsUrl) return;
+        fetch(portraitsUrl)
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null)
+            .then(data => {
+                const list: any[] = data?.characters ?? (Array.isArray(data) ? data : []);
+                if (list.length > 0)
+                    setChars(list.map(c => ({
+                        name:        c.name ?? "",
+                        role:        c.role ?? "Supporting",
+                        description: c.description ?? "",
+                        entityType:  c.entityType,
+                        portraitUrl: c.portraitUrl,
+                        appearance:  c.appearance,
+                    })));
+            });
+    }, [step.done, portraitsUrl]);
 
     async function handleConfirm() {
         if (confirming) return;
@@ -2935,7 +2955,6 @@ export default function OnboardingWizard({
                 }
                 const onCheckpointDone = () => {
                     dispatch({ type: "CHECKPOINT_CONFIRMED", checkpointId: displayCheckpoint.id });
-                    fetchBookProgress();
                 };
                 if (displayCheckpoint.id === "checkpoint_character_review") {
                     return (
@@ -2943,6 +2962,7 @@ export default function OnboardingWizard({
                             step={displayCheckpoint}
                             jobId={bookProgress?.jobId ?? ""}
                             serverId={serverId}
+                            portraitsUrl={bookProgress?.portraitsUrl}
                             onDone={onCheckpointDone}
                         />
                     );
