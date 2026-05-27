@@ -121,7 +121,10 @@ const WizardLauncher = observer(() => {
             .then(r => r.ok ? r.json() : null)
             .catch(() => null)
             .then((profile: any) => {
-                const isDone = profile?.books?.some(
+                const isActive = profile?.books?.some(
+                    (b: any) => b.status === "running" || b.status === "checkpoint"
+                );
+                const isDone = !isActive && profile?.books?.some(
                     (b: any) => b.status === "complete" || b.portraitsUrl
                 );
                 if (isDone) return;
