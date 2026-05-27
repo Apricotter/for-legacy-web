@@ -2216,9 +2216,13 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
             } else if (lastBook?.status === "checkpoint" && lastBook.checkpointStep) {
                 const targetId = `checkpoint_${lastBook.checkpointStep}`;
                 if (!state.confirmedCheckpoints.has(targetId)) {
-                    const parsed = parseRawCheckpointData(lastBook.checkpointData);
+                    const parsed   = parseRawCheckpointData(lastBook.checkpointData);
+                    const existing = steps.find(s => s.id === targetId);
+                    const merged   = parsed?.characters?.length
+                        ? { ...parsed }
+                        : { ...(existing?.data ?? {}), ...parsed };
                     steps = patchStep(steps, targetId, {
-                        data: { ...parsed, step: lastBook.checkpointStep, advance_url: `${OTTO_API}/onboarding/${action.serverId}/advance` },
+                        data: { ...merged, step: lastBook.checkpointStep, advance_url: `${OTTO_API}/onboarding/${action.serverId}/advance` },
                         needsAction: true,
                     });
                     checkpointId = targetId;
@@ -2270,9 +2274,16 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
             if (prog.status === "checkpoint" && prog.checkpointStep) {
                 const targetId = `checkpoint_${prog.checkpointStep}`;
                 if (!state.confirmedCheckpoints.has(targetId)) {
-                    const parsed = parseRawCheckpointData(prog.checkpointData);
+                    const parsed   = parseRawCheckpointData(prog.checkpointData);
+                    const existing = steps.find(s => s.id === targetId);
+                    // Preserve existing character data from STEP_ACTIVATED (channel message) if the
+                    // API poll returns empty checkpointData — polls fire every 5s and would otherwise
+                    // wipe the character list the message parser already set.
+                    const merged = parsed?.characters?.length
+                        ? { ...parsed }
+                        : { ...(existing?.data ?? {}), ...parsed };
                     steps = patchStep(steps, targetId, {
-                        data: { ...parsed, step: prog.checkpointStep, advance_url: `${OTTO_API}/onboarding/${action.serverId}/advance` },
+                        data: { ...merged, step: prog.checkpointStep, advance_url: `${OTTO_API}/onboarding/${action.serverId}/advance` },
                         needsAction: true,
                     });
                     checkpointId = targetId;
@@ -2307,6 +2318,14 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                     ? { ...s, data: action.data, needsAction: s.type === "checkpoint", ...(action.messageId ? { messageId: action.messageId } : {}) }
                     : s
             );
+            // When a checkpoint step is activated from channel history, also transition stage
+            // so the view doesn't wait for the next 5s poll to flip to "checkpoint".
+            const activatedStep = state.steps.find(s => s.id === action.stepId);
+            const isCheckpointStep = activatedStep?.type === "checkpoint";
+            const alreadyConfirmed = state.confirmedCheckpoints.has(action.stepId);
+            if (isCheckpointStep && !alreadyConfirmed && stageOrder(state.stage) <= stageOrder("waiting")) {
+                return { ...state, steps, stage: "checkpoint", checkpointId: action.stepId };
+            }
             return { ...state, steps };
         }
 

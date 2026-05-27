@@ -1,0 +1,24 @@
+sequenceDiagram
+    participant P  as PROFILE_LOADED
+    participant H  as useMessageParser<br/>(history fetch)
+    participant PO as BOOK_PROGRESS_UPDATED<br/>(5s poll)
+    participant R  as Reducer state
+
+    Note over R: mount — stage=greeting
+
+    P->>R: PROFILE_LOADED<br/>status=checkpoint → stage=checkpoint<br/>data = {step, advance_url, ...checkpointData}<br/>⚠️ API checkpointData is usually null → NO characters
+    Note over R: stage=checkpoint<br/>step data = {step, advance_url}  ← no chars
+
+    par history fetch (async, takes 1–3s)
+        H-->>R: STEP_ACTIVATED checkpoint_character_review<br/>data = {step, characters:[...]} from old run msg
+        Note over R: data = old chars ✓ (may be wrong run)
+        H-->>R: STEP_ACTIVATED checkpoint_character_review<br/>data = {step, characters:[...]} from CURRENT run msg
+        Note over R: data = current chars ✓ (correct!)
+    and poll fires after 5s
+        PO->>R: BOOK_PROGRESS_UPDATED<br/>status=checkpoint, checkpointData=null<br/>data = {step, advance_url}   ← OVERWRITES
+        Note over R: ❌ data WIPED — characters gone
+    end
+
+    Note over R: 5s poll keeps firing every 5s<br/>Each poll wipes step data if checkpointData is null
+
+    Note over R: Wizard shows checkpoint stage<br/>but character list is empty/stale
