@@ -2197,9 +2197,12 @@ export default function OnboardingWizard({
                 setProfile(p);
                 if (p.reviews?.length > 0) setLocalReviewCount(p.reviews.length);
                 stageRestored.current = true;
-                // Use saved wizardStep as source of truth; fall back to pipeline inference
                 const ws = p.wizardStep as string | undefined;
-                if (ws?.startsWith("checkpoint_")) {
+                const lastBook = p.books?.[p.books.length - 1];
+                // Active pipeline run always takes priority over saved wizard state
+                if (lastBook?.status === "running") {
+                    setStage("upload_done");
+                } else if (ws?.startsWith("checkpoint_")) {
                     setFocusedCheckpointId(ws);
                     setStage("checkpoint");
                 } else if (ws?.startsWith("milestone_")) {
@@ -2210,11 +2213,8 @@ export default function OnboardingWizard({
                 } else if (ws === "form_book") {
                     setStage("upload_done");
                 } else {
-                    const lastBook = p.books?.[p.books.length - 1];
                     if (lastBook?.status === "checkpoint") {
                         setStage("checkpoint");
-                    } else if (lastBook?.status === "running") {
-                        setStage("upload_done");
                     } else if (p.reviews?.length > 0) {
                         setStage("done");
                     } else if (p.bookFilename) {
@@ -2291,10 +2291,10 @@ export default function OnboardingWizard({
         return () => clearInterval(id);
     }, [bookProgress?.status, fetchBookProgress]);
 
-    // If the job is restarted externally while the wizard shows "done", snap back to processing view
+    // If the job is restarted externally while the wizard shows a post-processing state, snap back
     useEffect(() => {
         if (bookProgress?.status !== "running") return;
-        if (stage !== "done") return;
+        if (stage !== "done" && stage !== "milestone") return;
         setStage("upload_done");
     }, [bookProgress?.status, stage]);
 
