@@ -1816,11 +1816,10 @@ function CharDescEditorModal({
     );
 }
 
-function CharacterReviewCheckpoint({ step, jobId, serverId, portraitsUrl, onDone }: {
+function CharacterReviewCheckpoint({ step, jobId, serverId, onDone }: {
     step: WizardStep;
     jobId: string;
     serverId: string;
-    portraitsUrl?: string;
     onDone: () => void;
 }) {
     type CharAppearanceEntry = { introduction?: string; imagePrompt?: string };
@@ -1851,24 +1850,6 @@ function CharacterReviewCheckpoint({ step, jobId, serverId, portraitsUrl, onDone
     const [addOpen,    setAddOpen]    = useState(false);
     const [confirming, setConfirming] = useState(false);
 
-    useEffect(() => {
-        if (!step.done || chars.length > 0 || !portraitsUrl) return;
-        fetch(portraitsUrl)
-            .then(r => r.ok ? r.json() : null)
-            .catch(() => null)
-            .then(data => {
-                const list: any[] = data?.characters ?? (Array.isArray(data) ? data : []);
-                if (list.length > 0)
-                    setChars(list.map(c => ({
-                        name:        c.name ?? "",
-                        role:        c.role ?? "Supporting",
-                        description: c.description ?? "",
-                        entityType:  c.entityType,
-                        portraitUrl: c.portraitUrl,
-                        appearance:  c.appearance,
-                    })));
-            });
-    }, [step.done, portraitsUrl]);
 
     async function handleConfirm() {
         if (confirming) return;
@@ -2431,9 +2412,19 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
             if (lastBook?.sceneStillsUrl) {
                 steps = patchStep(steps, "milestone_portraits", { done: true, data: { url: lastBook.portraitsUrl ?? "" } });
                 steps = patchStep(steps, "milestone_scenes",    { done: true, data: { url: lastBook.sceneStillsUrl } });
+                const cpParsed = parseRawCheckpointData(lastBook.checkpointData);
+                steps = patchStep(steps, "checkpoint_character_review", {
+                    done: true, needsAction: false,
+                    ...(cpParsed?.characters?.length ? { data: { ...cpParsed, step: "character_review", advance_url: `${OTTO_API}/onboarding/${action.serverId}/advance` } } : {}),
+                });
                 stage = "scenes";
             } else if (lastBook?.portraitsUrl) {
                 steps = patchStep(steps, "milestone_portraits", { done: true, data: { url: lastBook.portraitsUrl } });
+                const cpParsed = parseRawCheckpointData(lastBook.checkpointData);
+                steps = patchStep(steps, "checkpoint_character_review", {
+                    done: true, needsAction: false,
+                    ...(cpParsed?.characters?.length ? { data: { ...cpParsed, step: "character_review", advance_url: `${OTTO_API}/onboarding/${action.serverId}/advance` } } : {}),
+                });
                 stage = "portraits";
             } else if (lastBook?.status === "checkpoint" && lastBook.checkpointStep) {
                 const targetId = `checkpoint_${lastBook.checkpointStep}`;
@@ -2962,7 +2953,6 @@ export default function OnboardingWizard({
                             step={displayCheckpoint}
                             jobId={bookProgress?.jobId ?? ""}
                             serverId={serverId}
-                            portraitsUrl={bookProgress?.portraitsUrl}
                             onDone={onCheckpointDone}
                         />
                     );
