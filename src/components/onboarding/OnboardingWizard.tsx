@@ -2329,6 +2329,7 @@ type WizardAction =
     | { type: "SCENES_CONTINUE" }
     | { type: "VOICE_SUBMITTED" }
     | { type: "NAVIGATE_TO";           stage: Stage; checkpointId?: string }
+    | { type: "BOOKS_CLEARED" }
     | { type: "RESET" };
 
 function patchStep(steps: WizardStep[], id: string, patch: Partial<WizardStep>): WizardStep[] {
@@ -2553,6 +2554,15 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                 ...(action.checkpointId !== undefined ? { checkpointId: action.checkpointId } : {}),
             };
 
+        case "BOOKS_CLEARED":
+            return {
+                ...initialState,
+                profile:        state.profile,
+                invitationName: state.invitationName,
+                steps:          patchStep(makeFixedSteps(), "greeting", { done: true }),
+                stage:          "upload",
+            };
+
         case "RESET":
             return { ...initialState, invitationName: state.invitationName };
 
@@ -2615,6 +2625,12 @@ export default function OnboardingWizard({
             .then(r => r.ok ? r.json() : null)
             .catch(() => null)
             .then(p => {
+                if (!p) return;
+                if (p.resetNeeded) {
+                    dispatch({ type: "BOOKS_CLEARED" });
+                    fetch(`${OTTO_API}/onboarding/${serverId}/ack-reset`, { method: "POST" }).catch(() => {});
+                    return;
+                }
                 const prog: BookProgress | undefined = p?.books?.[p.books.length - 1];
                 if (prog) dispatch({ type: "BOOK_PROGRESS_UPDATED", progress: prog, serverId: serverId! });
             });
@@ -2626,6 +2642,13 @@ export default function OnboardingWizard({
         const id = setInterval(fetchBookProgress, active ? 5000 : 15000);
         return () => clearInterval(id);
     }, [bookProgress?.status, fetchBookProgress]);
+
+    // Always poll for reset signal even when no active job
+    useEffect(() => {
+        if (!serverId) return;
+        const id = setInterval(fetchBookProgress, 10000);
+        return () => clearInterval(id);
+    }, [serverId, fetchBookProgress]);
 
     // Effect 4: stage side effects — analytics, persist, complete
     const persistWizardStep = useCallback((stepId: string) => {
