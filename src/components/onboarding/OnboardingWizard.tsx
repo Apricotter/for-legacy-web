@@ -2288,8 +2288,9 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                 stage = "scenes";
             } else if (prog.portraitsUrl && stageOrder(stage) < stageOrder("portraits")) {
                 stage = "portraits";
-            } else if (prog.status === "running" && (stage === "portraits" || stage === "scenes" || stage === "done")) {
-                stage = "waiting";  // restart snap-back
+            } else if (prog.status === "running" && !prog.sceneStillsUrl && !prog.portraitsUrl
+                       && (stage === "portraits" || stage === "scenes" || stage === "done")) {
+                stage = "waiting";  // restart snap-back (only when URLs are cleared)
             } else if (prog.status === "running" && stageOrder(stage) < stageOrder("waiting")) {
                 stage = "waiting";
             }
