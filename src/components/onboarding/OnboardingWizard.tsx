@@ -2710,10 +2710,12 @@ export default function OnboardingWizard({
             .catch(() => null)
             .then(p => {
                 if (!p) return;
-                if (p.resetNeeded) {
+                if (p.exists === false || p.resetNeeded) {
                     track("onboarding_reset_detected", { serverId });
                     dispatch({ type: "BOOKS_CLEARED" });
-                    fetch(`${OTTO_API}/onboarding/${serverId}/ack-reset`, { method: "POST" }).catch(() => {});
+                    if (p.resetNeeded) {
+                        fetch(`${OTTO_API}/onboarding/${serverId}/ack-reset`, { method: "POST" }).catch(() => {});
+                    }
                     return;
                 }
                 const prog: BookProgress | undefined = p?.books?.[p.books.length - 1];
