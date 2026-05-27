@@ -2489,9 +2489,9 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                 stage = stageOrder(stage) >= stageOrder("portraits") ? stage : "portraits";
             } else if (isTerminal) {
                 stage = state.voiceDone ? "done" : "voice";
-            } else if (prog.sceneStillsUrl && stageOrder(stage) < stageOrder("scenes")) {
+            } else if (prog.sceneStillsUrl && stage === "waiting") {
                 stage = "scenes";
-            } else if (prog.portraitsUrl && stageOrder(stage) < stageOrder("portraits")) {
+            } else if (prog.portraitsUrl && stage === "waiting") {
                 stage = "portraits";
             } else if (prog.status === "running" && !prog.sceneStillsUrl && !prog.portraitsUrl
                        && (stage === "portraits" || stage === "scenes" || stage === "voice" || stage === "done")) {
