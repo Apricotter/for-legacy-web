@@ -497,6 +497,18 @@ const CharRoleTag = styled.span<{ $role: string }>`
         p.$role === "Supporting" ? "#93c5fd"  :
         "rgba(255,255,255,0.3)"};
 `;
+const EntityTag = styled.span<{ $color: string }>`
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: ${p => p.$color};
+    background: ${p => p.$color}22;
+    border: 1px solid ${p => p.$color}55;
+    border-radius: 20px;
+    padding: 1px 7px;
+    flex-shrink: 0;
+`;
 const CheckpointActions = styled.div`
     display: flex;
     gap: 10px;
@@ -1806,15 +1818,20 @@ function CharacterReviewCheckpoint({ step, jobId, serverId, onDone }: {
         name: string;
         role: string;
         description: string;
+        entityType?: string;
         portraitUrl?: string;
         appearance?: CharAppearanceEntry;
     };
+
+    const ENTITY_LABELS: Record<string, string> = { animal: "Animal", mythological: "Mythological", other: "Other" };
+    const ENTITY_COLORS: Record<string, string> = { animal: "#f59e0b", mythological: "#8b5cf6", other: "#6b7280" };
 
     const data = step.data;
     const initial: CharEntry[] = (data?.characters ?? []).map((c: any) => ({
         name:        c.name ?? "",
         role:        c.role ?? "Supporting",
         description: c.description ?? "",
+        entityType:  c.entityType,
         portraitUrl: c.portraitUrl,
         appearance:  c.appearance,
     }));
@@ -1861,6 +1878,9 @@ function CharacterReviewCheckpoint({ step, jobId, serverId, onDone }: {
                             <RosterRowHeader>
                                 <RosterRowName>{c.name}</RosterRowName>
                                 <CharRoleTag $role={c.role}>{c.role}</CharRoleTag>
+                                {c.entityType && c.entityType !== "person" && ENTITY_COLORS[c.entityType] && (
+                                    <EntityTag $color={ENTITY_COLORS[c.entityType]}>{ENTITY_LABELS[c.entityType] ?? c.entityType}</EntityTag>
+                                )}
                             </RosterRowHeader>
                             {c.description && <RosterRowDesc>{c.description}</RosterRowDesc>}
                         </RosterRow>
@@ -1881,6 +1901,9 @@ function CharacterReviewCheckpoint({ step, jobId, serverId, onDone }: {
                         <RosterRowHeader>
                             <RosterRowName>{c.name}</RosterRowName>
                             <CharRoleTag $role={c.role}>{c.role}</CharRoleTag>
+                            {c.entityType && c.entityType !== "person" && ENTITY_COLORS[c.entityType] && (
+                                <EntityTag $color={ENTITY_COLORS[c.entityType]}>{ENTITY_LABELS[c.entityType] ?? c.entityType}</EntityTag>
+                            )}
                             <RosterRowBtn
                                 onClick={() => setEditIdx(i)}
                                 style={{ color: "#F5A623" }}
