@@ -859,6 +859,24 @@ function CheckpointStep({
     const data = step.data;
     const advanceUrl: string | undefined = data?.advance_url;
 
+    type CharEntry = { name: string; role: "Main" | "Supporting" | "Minor" };
+    const [chars, setChars] = useState<CharEntry[]>(() =>
+        (data?.characters ?? [])
+            .filter((c: any) => c.role !== "Background")
+            .map((c: any) => ({ name: c.name as string, role: c.role as "Main" | "Supporting" | "Minor" }))
+    );
+
+    const [checked, setChecked] = useState<Record<string, boolean>>(() =>
+        Object.fromEntries(chars.map(c => [c.name, true]))
+    );
+    const toggle = (name: string) => setChecked(prev => ({ ...prev, [name]: !prev[name] }));
+    const remove = (name: string, e: Event) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setChars(prev => prev.filter(c => c.name !== name));
+        track("roster_character_removed", { serverId, name });
+    };
+
     async function handleConfirm() {
         if (confirming || confirmed) return;
         setConfirming(true);
@@ -889,31 +907,22 @@ function CheckpointStep({
 
     if (confirmed) {
         return (
-            <ConfirmCard>
-                <ConfirmIcon>✓</ConfirmIcon>
-                <ConfirmHeading>Confirmed</ConfirmHeading>
-                <ConfirmBody>Pipeline continuing to the next stage.</ConfirmBody>
-            </ConfirmCard>
+            <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                    <CheckpointTitle style={{ marginBottom: 0 }}>Your Cast</CheckpointTitle>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#65e572", background: "rgba(101,229,114,0.1)", border: "1px solid rgba(101,229,114,0.28)", borderRadius: 20, padding: "2px 9px" }}>✓ Confirmed</span>
+                </div>
+                <CharScrollList>
+                    {chars.map(({ name, role }) => (
+                        <CharRow key={name}>
+                            <CharRowName>{name}</CharRowName>
+                            <CharRoleTag $role={role}>{role}</CharRoleTag>
+                        </CharRow>
+                    ))}
+                </CharScrollList>
+            </div>
         );
     }
-
-    type CharEntry = { name: string; role: "Main" | "Supporting" | "Minor" };
-    const [chars, setChars] = useState<CharEntry[]>(() =>
-        (data?.characters ?? [])
-            .filter((c: any) => c.role !== "Background")
-            .map((c: any) => ({ name: c.name as string, role: c.role as "Main" | "Supporting" | "Minor" }))
-    );
-
-    const [checked, setChecked] = useState<Record<string, boolean>>(() =>
-        Object.fromEntries(chars.map(c => [c.name, true]))
-    );
-    const toggle = (name: string) => setChecked(prev => ({ ...prev, [name]: !prev[name] }));
-    const remove = (name: string, e: Event) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setChars(prev => prev.filter(c => c.name !== name));
-        track("roster_character_removed", { serverId, name });
-    };
 
     return (
         <div>
