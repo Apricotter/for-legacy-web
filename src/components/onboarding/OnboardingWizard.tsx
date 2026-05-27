@@ -2046,7 +2046,6 @@ function PortraitGallery({ url, serverId, onContinue }: { url: string; serverId:
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        track("milestone_viewed", { serverId, milestone: "portraits" });
         fetch(url)
             .then(r => r.ok ? r.json() : null)
             .catch(() => null)
@@ -2088,7 +2087,6 @@ function SceneStillsGallery({ url, serverId, onContinue }: { url: string; server
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        track("milestone_viewed", { serverId, milestone: "scenes" });
         fetch(url)
             .then(r => r.ok ? r.json() : null)
             .catch(() => null)
@@ -2408,6 +2406,7 @@ export default function OnboardingWizard({
     const lastStepRef             = useRef<string | null>(null);
     const lastAnnouncedCheckpoint = useRef<string | null>(null);
     const lastViewedCheckpoint    = useRef<string | null>(null);
+    const lastViewedMilestone     = useRef<string | null>(null);
     const lastProgressRef         = useRef(0);
 
     useMessageParser(channelId, dispatch);
@@ -2472,6 +2471,13 @@ export default function OnboardingWizard({
             fetch(`${OTTO_API}/onboarding/${serverId}/complete`, { method: "POST" }).catch(() => {});
         }
         if (stage !== "greeting") persistWizardStep(stage);
+    }, [stage]);
+
+    useEffect(() => {
+        if (stage !== "portraits" && stage !== "scenes") return;
+        if (stage === lastViewedMilestone.current) return;
+        lastViewedMilestone.current = stage;
+        track("milestone_viewed", { serverId, milestone: stage });
     }, [stage]);
 
     // Analytics
