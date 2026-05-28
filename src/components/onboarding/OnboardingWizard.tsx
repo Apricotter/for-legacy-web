@@ -2828,6 +2828,8 @@ export default function OnboardingWizard({
         if (resetting) return;
         track("wizard_reset", { serverId, stage });
         setResetting(true);
+        lastProgressRef.current   = 0;
+        highestStepIdxRef.current = -1;
         dispatch({ type: "RESET" });
         persistWizardStep("");
         try {
@@ -3096,7 +3098,7 @@ export default function OnboardingWizard({
     } else if (stepIdx >= 0) {
         if (stepIdx > highestStepIdxRef.current) highestStepIdxRef.current = stepIdx;
         progressFraction = Math.max((stepIdx + 1) / PIPELINE_STEPS.length, lastProgressRef.current);
-        lastProgressRef.current = progressFraction;
+        if (bookProgress?.status === "running") lastProgressRef.current = progressFraction;
     } else if (!bookProgress || bookProgress.currentStep === "starting") {
         progressFraction = 0;
     } else {
