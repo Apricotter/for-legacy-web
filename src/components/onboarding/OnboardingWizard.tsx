@@ -2717,6 +2717,8 @@ export default function OnboardingWizard({
                 if (!p) return;
                 if (p.exists === false || p.resetNeeded) {
                     track("onboarding_reset_detected", { serverId });
+                    lastProgressRef.current   = 0;
+                    highestStepIdxRef.current = -1;
                     dispatch({ type: "BOOKS_CLEARED" });
                     if (p.resetNeeded) {
                         fetch(`${OTTO_API}/onboarding/${serverId}/ack-reset`, { method: "POST" }).catch(() => {});
@@ -3092,13 +3094,19 @@ export default function OnboardingWizard({
     const stepIdx = bookProgress?.currentStep
         ? PIPELINE_STEPS.indexOf(bookProgress.currentStep as any)
         : -1;
+    // Reset progress refs whenever there is no active job so stale values
+    // from a prior run never bleed into the next upload.
+    if (!bookProgress) {
+        lastProgressRef.current   = 0;
+        highestStepIdxRef.current = -1;
+    }
     let progressFraction: number;
     if (bookProgress?.status === "complete") {
         progressFraction = 0.99;
-    } else if (stepIdx >= 0) {
+    } else if (bookProgress?.status === "running" && stepIdx >= 0) {
         if (stepIdx > highestStepIdxRef.current) highestStepIdxRef.current = stepIdx;
         progressFraction = Math.max((stepIdx + 1) / PIPELINE_STEPS.length, lastProgressRef.current);
-        if (bookProgress?.status === "running") lastProgressRef.current = progressFraction;
+        lastProgressRef.current = progressFraction;
     } else if (!bookProgress || bookProgress.currentStep === "starting") {
         progressFraction = 0;
     } else {
