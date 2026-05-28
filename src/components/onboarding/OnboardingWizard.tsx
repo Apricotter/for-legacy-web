@@ -2524,8 +2524,11 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
             if (curIdx > PIPELINE_STEPS.indexOf("character_review"))
                 steps = patchStep(steps, "checkpoint_character_review", { done: true, needsAction: false });
 
-            // Server always drives forward; checkpoint is a hard interrupt
-            if (prog.status === "checkpoint" && prog.checkpointStep) {
+            // Server always drives forward; checkpoint is a hard interrupt.
+            // Guard: only activate if we're past upload — a checkpoint while at greeting/upload
+            // is a stale poll from the previous run (race with cancel after Start Over).
+            if (prog.status === "checkpoint" && prog.checkpointStep
+                && stageOrder(state.stage) >= stageOrder("waiting")) {
                 const targetId = `checkpoint_${prog.checkpointStep}`;
                 if (!state.confirmedCheckpoints.has(targetId)) {
                     const parsed   = parseRawCheckpointData(prog.checkpointData);
