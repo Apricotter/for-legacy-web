@@ -2543,6 +2543,8 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                     checkpointId = targetId;
                     stage = "checkpoint";
                 }
+            } else if (isTerminal && prog.status === "cancelled") {
+                // Cancelled job (reset/start-over) — don't drive stage forward
             } else if (isTerminal && prog.sceneStillsUrl) {
                 stage = stageOrder(stage) >= stageOrder("scenes") ? stage : "scenes";
             } else if (isTerminal && prog.portraitsUrl) {
