@@ -2679,15 +2679,6 @@ export default function OnboardingWizard({
     const lastViewedMilestone     = useRef<string | null>(null);
     const lastProgressRef         = useRef(0);
     const highestStepIdxRef       = useRef(-1);
-    const trackedJobIdRef         = useRef<string | null>(null);
-
-    // Reset progress refs when a new job starts so stale highestStepIdx
-    // from a prior run doesn't bleed into the ticker of the new run.
-    if (bookProgress?.jobId && bookProgress.jobId !== trackedJobIdRef.current) {
-        trackedJobIdRef.current    = bookProgress.jobId;
-        highestStepIdxRef.current  = -1;
-        lastProgressRef.current    = 0;
-    }
 
     useMessageParser(channelId, dispatch);
 
@@ -3111,9 +3102,7 @@ export default function OnboardingWizard({
     } else {
         progressFraction = lastProgressRef.current;
     }
-    const tickerStep = stepIdx >= highestStepIdxRef.current
-        ? bookProgress?.currentStep
-        : PIPELINE_STEPS[highestStepIdxRef.current];
+    const tickerStep = bookProgress?.currentStep;
 
     const debugChip = (
         <DebugChip>
