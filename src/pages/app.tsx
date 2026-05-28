@@ -15,6 +15,8 @@ const Login = lazy(() => import("./login/Login"));
 const ConfirmDelete = lazy(() => import("./login/ConfirmDelete"));
 const RevoltApp = lazy(() => import("./RevoltApp"));
 const Landing = lazy(() => import("./landing/Landing"));
+const Dashboard = lazy(() => import("./dashboard/Dashboard"));
+const DevWizard = lazy(() => import("./DevWizard"));
 
 const IS_HUB =
     typeof window !== "undefined" &&
@@ -67,6 +69,16 @@ export function App() {
                                 <Login />
                             </LoadSuspense>
                         </CheckAuth>
+                    </Route>
+                    <Route path="/dashboard">
+                        <LoadSuspense>
+                            <Dashboard />
+                        </LoadSuspense>
+                    </Route>
+                    <Route path="/dev-wizard">
+                        <LoadSuspense>
+                            <DevWizard />
+                        </LoadSuspense>
                     </Route>
                     <Route path="/">
                         {IS_HUB ? (
