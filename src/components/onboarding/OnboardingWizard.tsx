@@ -2559,7 +2559,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
             } else if (prog.portraitsUrl && stage === "waiting") {
                 stage = "portraits";
             } else if (prog.status === "running" && !prog.sceneStillsUrl && !prog.portraitsUrl
-                       && (stage === "portraits" || stage === "scenes" || stage === "voice" || stage === "done")) {
+                       && (stage === "portraits" || stage === "scenes" || stage === "voice" || stage === "done" || stage === "checkpoint")) {
                 stage = "waiting";  // restart snap-back (only when URLs are cleared)
             } else if (prog.status === "running" && stageOrder(stage) < stageOrder("waiting")) {
                 stage = "waiting";
