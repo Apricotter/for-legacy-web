@@ -8,8 +8,13 @@ import { uploadFile } from "../../controllers/client/jsx/legacy/FileUploads";
 import { useClient } from "../../controllers/client/ClientController";
 import { ModalProps } from "../../controllers/modals/types";
 
-import SubwayMap from "./SubwayMap";
 import { useMessageParser, makeFixedSteps, WizardStep } from "./useOnboardingMessages";
+import { ProgressBar } from "../shared/ProgressBar";
+import { PrimaryCTA } from "../shared/PrimaryCTA";
+import { WizardModal, WizardHeader, WizardTitle, WizardCloseBtn, WizardContent, WizardDomeBtn } from "../shared/WizardModal";
+import { GhostButton } from "../shared/GhostButton";
+import { InputLabel, InputField } from "../shared/InputField";
+import { ChatBubble } from "../shared/ChatBubble";
 
 // ── pipeline step registry ────────────────────────────────────────────────────
 
@@ -70,74 +75,6 @@ type BookProgress = {
 
 // ── overlay ───────────────────────────────────────────────────────────────────
 
-const Overlay = styled.div`
-    position: fixed;
-    inset: 0;
-    z-index: 200;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    &::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: url("/assets/web/bg-library.webp") center / cover no-repeat;
-        transform: scaleX(-1);
-        z-index: 0;
-    }
-    &::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: rgba(8, 5, 1, 0.72);
-        z-index: 1;
-    }
-`;
-
-const Shell = styled.div`
-    position: relative;
-    z-index: 2;
-    background: rgba(14, 8, 2, 0.88);
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    border-top: 1px solid rgba(244, 185, 120, 0.35);
-    backdrop-filter: blur(32px);
-    -webkit-backdrop-filter: blur(32px);
-    border-radius: 20px;
-    width: min(600px, calc(100vw - 32px));
-    max-height: calc(100vh - 64px);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0,0,0,0.4);
-`;
-
-const Header = styled.div`
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 22px 0;
-`;
-
-const WizardTitle = styled.div`
-    font-size: 10px;
-    font-weight: 700;
-    color: #F5A623;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-`;
-
-const CloseBtn = styled.button`
-    background: none;
-    border: none;
-    color: rgba(255,255,255,0.4);
-    font-size: 20px;
-    cursor: pointer;
-    padding: 0 4px;
-    line-height: 1;
-    transition: color 0.15s;
-    &:hover { color: rgba(255,255,255,0.9); }
-`;
 
 const ResetBtn = styled.button<{ $resetting?: boolean }>`
     background: none;
@@ -150,55 +87,6 @@ const ResetBtn = styled.button<{ $resetting?: boolean }>`
     opacity: ${p => p.$resetting ? 0.5 : 1};
     transition: color 0.15s;
     &:hover { color: rgba(255,255,255,0.65); }
-`;
-
-const Content = styled.div`
-    flex: 1;
-    overflow-y: auto;
-    padding: 22px 26px 26px;
-    min-height: 180px;
-    color: rgba(255,255,255,0.92);
-
-    p, h1, h2, h3, h4 {
-        color: rgba(255,255,255,0.92);
-    }
-`;
-
-const ModalWrapper = styled.div`
-    position: relative;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-`;
-
-const DomeBtn = styled.button<{ $side: "left" | "right" }>`
-    position: absolute;
-    ${p => p.$side === "left" ? "right: 100%;" : "left: 100%;"}
-    top: 50%;
-    transform: translateY(-50%);
-    width: 44px;
-    height: 80px;
-    background: rgba(245, 166, 35, 0.15);
-    border: 1px solid rgba(245, 166, 35, 0.45);
-    ${p => p.$side === "left"
-        ? "border-radius: 40px 0 0 40px; border-right: none;"
-        : "border-radius: 0 40px 40px 0; border-left: none;"}
-    color: #F5A623;
-    font-size: 16px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    padding: 0;
-    box-shadow: 0 0 16px rgba(245, 166, 35, 0.22);
-    &:hover {
-        background: rgba(245, 166, 35, 0.28);
-        color: #fff;
-        box-shadow: 0 4px 22px rgba(245, 166, 35, 0.5);
-    }
 `;
 
 
@@ -265,25 +153,6 @@ const FormField = styled.div`
     gap: 6px;
     margin-bottom: 14px;
 `;
-const FormLabel = styled.label`
-    font-size: 11px;
-    font-weight: 700;
-    color: rgba(255,255,255,0.38);
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-`;
-const FormInput = styled.input`
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 8px;
-    color: rgba(255,255,255,0.92);
-    font-size: 14px;
-    padding: 9px 13px;
-    outline: none;
-    transition: border-color 0.15s;
-    &::placeholder { color: rgba(255,255,255,0.28); }
-    &:focus { border-color: #F4B978; }
-`;
 const FormTextarea = styled.textarea`
     background: rgba(255,255,255,0.06);
     border: 1px solid rgba(255,255,255,0.12);
@@ -336,26 +205,6 @@ const UploadCta = styled.div`
     box-shadow: 0 3px 14px rgba(245,166,35,0.4);
     pointer-events: none;
 `;
-const SubmitBtn = styled.button<{ $sending?: boolean; $disabled?: boolean }>`
-    background: ${p => p.$disabled ? "rgba(245,166,35,0.25)" : p.$sending ? "rgba(245,166,35,0.6)" : "#F5A623"};
-    color: ${p => p.$disabled ? "rgba(255,255,255,0.3)" : "#1a0e00"};
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 700;
-    padding: 12px 0;
-    width: 100%;
-    cursor: ${p => p.$disabled ? "not-allowed" : p.$sending ? "wait" : "pointer"};
-    margin-top: 8px;
-    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
-    letter-spacing: 0.02em;
-    box-shadow: ${p => p.$disabled ? "none" : "0 4px 20px rgba(245, 166, 35, 0.35)"};
-    &:hover:not([disabled]) {
-        background: ${p => p.$disabled ? undefined : "#f9b830"};
-        box-shadow: ${p => p.$disabled ? "none" : "0 6px 28px rgba(245, 166, 35, 0.5)"};
-    }
-    &:active { transform: ${p => p.$disabled ? "none" : "scale(0.99)"}; }
-`;
 // Star rating
 const StarRow = styled.div`
     display: flex;
@@ -372,19 +221,6 @@ const StarBtn = styled.button<{ $active: boolean }>`
     color: ${p => p.$active ? "#F5A623" : "rgba(255,255,255,0.18)"};
     transition: color 0.12s, transform 0.1s;
     &:hover { color: #F5A623; transform: scale(1.15); }
-`;
-const SecondaryBtn = styled.button`
-    background: transparent;
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 8px;
-    color: rgba(255,255,255,0.55);
-    font-size: 14px;
-    font-weight: 600;
-    padding: 12px 0;
-    flex: 1;
-    cursor: pointer;
-    transition: border-color 0.15s, color 0.15s;
-    &:hover { border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.85); }
 `;
 
 const ConfirmCard = styled.div`
@@ -687,8 +523,8 @@ function GreetingStep({ data, channelId, onDone, prefillName }: { data: any; cha
             )}
 
             <div style={{ marginBottom: 20 }}>
-                <FormLabel as="div" style={{ marginBottom: 6 }}>What should we call you?</FormLabel>
-                <FormInput
+                <InputLabel as="div" style={{ marginBottom: 6 }}>What should we call you?</InputLabel>
+                <InputField
                     ref={nameRef}
                     type="text"
                     value={name}
@@ -698,9 +534,9 @@ function GreetingStep({ data, channelId, onDone, prefillName }: { data: any; cha
                 />
             </div>
 
-            <SubmitBtn $sending={sending} $disabled={!canStart} onClick={handleStart}>
+            <PrimaryCTA $loading={sending} $disabled={!canStart} onClick={handleStart}>
                 {sending ? "Starting…" : "Get Started"}
-            </SubmitBtn>
+            </PrimaryCTA>
         </div>
     );
 }
@@ -779,7 +615,7 @@ function FormStep({
             {schema?.title && <FormTitle>{schema.title}</FormTitle>}
             {(schema?.fields ?? []).map((field: any) => (
                 <FormField key={field.key}>
-                    <FormLabel>{field.field}</FormLabel>
+                    <InputLabel>{field.field}</InputLabel>
                     {field.type === "upload" || field.type === "file" ? (
                         <UploadZone
                             $dragging={dragging}
@@ -842,7 +678,7 @@ function FormStep({
                             onInput={set(field.key)}
                         />
                     ) : field.type === "date" ? (
-                        <FormInput
+                        <InputField
                             type="date"
                             value={values[field.key] ?? ""}
                             onInput={set(field.key)}
@@ -856,7 +692,7 @@ function FormStep({
                             ))}
                         </FormSelect>
                     ) : field.type === "text" || field.type === "input" ? (
-                        <FormInput
+                        <InputField
                             type="text"
                             value={values[field.key] ?? ""}
                             placeholder={field.placeholder ?? ""}
@@ -867,15 +703,15 @@ function FormStep({
             ))}
             {onSkip ? (
                 <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                    <SecondaryBtn onClick={onSkip}>Skip</SecondaryBtn>
-                    <SubmitBtn $sending={sending} $disabled={!canSubmit} style={{ flex: 1 }} onClick={handleSubmit}>
+                    <GhostButton onClick={onSkip}>Skip</GhostButton>
+                    <PrimaryCTA $loading={sending} $disabled={!canSubmit} style={{ flex: 1 }} onClick={handleSubmit}>
                         {sending ? "Sending…" : (schema?.submit ?? "Submit")}
-                    </SubmitBtn>
+                    </PrimaryCTA>
                 </div>
             ) : (
-                <SubmitBtn $sending={sending} $disabled={!canSubmit} onClick={handleSubmit}>
+                <PrimaryCTA $loading={sending} $disabled={!canSubmit} onClick={handleSubmit}>
                     {sending ? "Sending…" : (schema?.submit ?? "Submit")}
-                </SubmitBtn>
+                </PrimaryCTA>
             )}
         </div>
     );
@@ -986,9 +822,9 @@ function CheckpointStep({
             </CharScrollList>
 
             <CheckpointActions>
-                <SubmitBtn $sending={confirming} onClick={handleConfirm}>
+                <PrimaryCTA $loading={confirming} onClick={handleConfirm}>
                     {confirming ? "Confirming…" : "Looks good →"}
-                </SubmitBtn>
+                </PrimaryCTA>
             </CheckpointActions>
         </div>
     );
@@ -1262,17 +1098,6 @@ const ChatThread = styled.div`
     display: flex;
     flex-direction: column;
     gap: 10px;
-`;
-const ChatBubble = styled.div<{ $role: "user" | "assistant" }>`
-    max-width: 92%;
-    align-self: ${p => p.$role === "user" ? "flex-end" : "flex-start"};
-    background: ${p => p.$role === "user" ? "rgba(245,166,35,0.13)" : "rgba(255,255,255,0.05)"};
-    border: 1px solid ${p => p.$role === "user" ? "rgba(245,166,35,0.28)" : "rgba(255,255,255,0.09)"};
-    border-radius: ${p => p.$role === "user" ? "12px 12px 2px 12px" : "12px 12px 12px 2px"};
-    padding: 8px 12px;
-    font-size: 13px;
-    color: rgba(255,255,255,0.78);
-    line-height: 1.5;
 `;
 const EditorChatRow = styled.div`
     padding: 10px 22px;
@@ -1580,7 +1405,7 @@ function CharacterEditorModal({
                             )}
                         </EditorScrollArea>
                         <EditorChatRow>
-                            <FormInput
+                            <InputField
                                 ref={chatInputRef}
                                 type="text"
                                 value={instruction}
@@ -1589,14 +1414,14 @@ function CharacterEditorModal({
                                 onKeyDown={(e: any) => e.key === "Enter" && handleInstruction()}
                                 style={{ flex: 1 }}
                             />
-                            <SubmitBtn
-                                $sending={sending}
+                            <PrimaryCTA
+                                $loading={sending}
                                 $disabled={!instruction.trim() || sending}
                                 onClick={handleInstruction}
                                 style={{ width: "auto", padding: "9px 16px", margin: 0, flexShrink: 0 }}
                             >
                                 {sending ? "…" : "→"}
-                            </SubmitBtn>
+                            </PrimaryCTA>
                         </EditorChatRow>
                         <PromptToggleBtn onClick={() => setPromptOpen(p => !p)}>
                             {promptOpen ? "▾" : "▸"} Prompt
@@ -1610,25 +1435,25 @@ function CharacterEditorModal({
                                     placeholder="Diffusion prompt…"
                                     style={{ flex: 1, resize: "none", minHeight: 0, overflowY: "auto" as any }}
                                 />
-                                <SecondaryBtn
+                                <GhostButton
                                     style={{ flex: "none" as any, padding: "9px 0" }}
                                     onClick={() => setPromptOpen(false)}
                                 >
                                     Close
-                                </SecondaryBtn>
+                                </GhostButton>
                             </PromptPopoverInner>
                         </PromptPopoverPanel>
                     </EditorRight>
                 </EditorBody>
                 <EditorFooter>
                     <div style={{ display: "flex", gap: 10 }}>
-                        <SecondaryBtn style={{ width: 130 }} onClick={onClose}>Cancel</SecondaryBtn>
-                        <SubmitBtn
+                        <GhostButton style={{ width: 130 }} onClick={onClose}>Cancel</GhostButton>
+                        <PrimaryCTA
                             style={{ width: 130, margin: 0 }}
                             onClick={() => { onSave({ description: localDesc, imagePrompt: localPrompt }); onClose(); }}
                         >
                             Save changes
-                        </SubmitBtn>
+                        </PrimaryCTA>
                     </div>
                 </EditorFooter>
             </EditorShell>
@@ -1787,15 +1612,15 @@ function CharDescEditorModal({
                 <EditorScrollArea style={{ padding: "20px 22px 12px" }}>
                     <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
                         <FormField style={{ flex: 2, margin: 0 }}>
-                            <FormLabel>Name</FormLabel>
-                            <FormInput
+                            <InputLabel>Name</InputLabel>
+                            <InputField
                                 type="text"
                                 value={localName}
                                 onInput={(e: any) => setLocalName(e.target.value)}
                             />
                         </FormField>
                         <FormField style={{ flex: 1, margin: 0 }}>
-                            <FormLabel>Role</FormLabel>
+                            <InputLabel>Role</InputLabel>
                             <FormSelect value={localRole} onChange={(e: any) => setLocalRole(e.target.value)}>
                                 <option value="Main" style={{ color: "#000" }}>Main</option>
                                 <option value="Supporting" style={{ color: "#000" }}>Supporting</option>
@@ -1804,7 +1629,7 @@ function CharDescEditorModal({
                         </FormField>
                     </div>
                     <FormField style={{ margin: 0, marginBottom: 14 }}>
-                        <FormLabel>Description</FormLabel>
+                        <InputLabel>Description</InputLabel>
                         <FormTextarea
                             value={localDesc}
                             onInput={(e: any) => setLocalDesc(e.target.value)}
@@ -1822,7 +1647,7 @@ function CharDescEditorModal({
                     )}
                 </EditorScrollArea>
                 <EditorChatRow>
-                    <FormInput
+                    <InputField
                         ref={chatInputRef}
                         type="text"
                         value={instruction}
@@ -1831,24 +1656,24 @@ function CharDescEditorModal({
                         onKeyDown={(e: any) => e.key === "Enter" && handleInstruction()}
                         style={{ flex: 1 }}
                     />
-                    <SubmitBtn
-                        $sending={sending}
+                    <PrimaryCTA
+                        $loading={sending}
                         $disabled={!instruction.trim() || sending}
                         onClick={handleInstruction}
                         style={{ width: "auto", padding: "9px 16px", margin: 0, flexShrink: 0 }}
                     >
                         {sending ? "…" : "→"}
-                    </SubmitBtn>
+                    </PrimaryCTA>
                 </EditorChatRow>
                 <EditorFooter>
                     <div style={{ display: "flex", gap: 10 }}>
-                        <SecondaryBtn style={{ width: 120 }} onClick={onClose}>Cancel</SecondaryBtn>
-                        <SubmitBtn
+                        <GhostButton style={{ width: 120 }} onClick={onClose}>Cancel</GhostButton>
+                        <PrimaryCTA
                             style={{ width: 120, margin: 0 }}
                             onClick={() => { onSave(localName.trim() || initialName, localRole, localDesc); onClose(); }}
                         >
                             {isNew ? "Add" : "Save"}
-                        </SubmitBtn>
+                        </PrimaryCTA>
                     </div>
                 </EditorFooter>
             </DescEditorShell>
@@ -1981,9 +1806,9 @@ function CharacterReviewCheckpoint({ step, jobId, serverId, onDone }: {
                 + Add character
             </RosterAddRow>
 
-            <SubmitBtn $sending={confirming} onClick={handleConfirm}>
+            <PrimaryCTA $loading={confirming} onClick={handleConfirm}>
                 {confirming ? "Saving…" : "Confirm Cast →"}
-            </SubmitBtn>
+            </PrimaryCTA>
 
             {editIdx !== null && (
                 <CharDescEditorModal
@@ -2148,7 +1973,7 @@ function PortraitGallery({ url, serverId, onContinue }: { url: string; serverId:
             </GalleryGrid>
             {onContinue && (
                 <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
-                    <SubmitBtn onClick={onContinue}>Continue →</SubmitBtn>
+                    <PrimaryCTA onClick={onContinue}>Continue →</PrimaryCTA>
                 </div>
             )}
         </div>
@@ -2190,7 +2015,7 @@ function SceneStillsGallery({ url, serverId, onContinue }: { url: string; server
             </SceneGrid>
             {onContinue && (
                 <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
-                    <SubmitBtn onClick={onContinue}>Continue →</SubmitBtn>
+                    <PrimaryCTA onClick={onContinue}>Continue →</PrimaryCTA>
                 </div>
             )}
         </div>
@@ -2354,10 +2179,10 @@ function VoiceFormStep({ serverId, onDone, onSkip }: {
             </VoiceSection>
 
             <VoiceBtnRow>
-                <SecondaryBtn onClick={onSkip}>Skip for now</SecondaryBtn>
-                <SubmitBtn onClick={() => onDone(v)} $disabled={!hasAny} disabled={!hasAny}>
+                <GhostButton onClick={onSkip}>Skip for now</GhostButton>
+                <PrimaryCTA onClick={() => onDone(v)} $disabled={!hasAny} disabled={!hasAny}>
                     Save &amp; Continue
-                </SubmitBtn>
+                </PrimaryCTA>
             </VoiceBtnRow>
         </VoiceWrap>
     );
@@ -2682,6 +2507,29 @@ export default function OnboardingWizard({
 
     useMessageParser(channelId, dispatch);
 
+    // Dev: ?dev_mode=1 — activate mock steps so the wizard is browsable without a live channel
+    useEffect(() => {
+        if (!new URLSearchParams(window.location.search).has("dev_mode")) return;
+        dispatch({ type: "STEP_ACTIVATED", stepId: "greeting", data: {
+            title: "Welcome to your studio",
+            steps: ["Upload your book", "Review characters", "Choose your voice", "Create content"],
+        }});
+        dispatch({ type: "STEP_ACTIVATED", stepId: "form_book", data: {
+            fields: [{ type: "upload", key: "book_file", field: "Your Book",
+                description: "Drag and drop your book file here, or click to browse.",
+                accept: ".epub,.pdf,.mobi,.docx" }],
+        }});
+        dispatch({ type: "STEP_ACTIVATED", stepId: "checkpoint_character_review", data: {
+            step: "character_review",
+            characters: [
+                { name: "Doc",      role: "Main",       description: "Late 20s, short brown hair, sardonic guarded expression." },
+                { name: "Renard",   role: "Supporting", description: "Older, calculating, cold eyes, immaculate dress." },
+                { name: "Marie",    role: "Supporting", description: "Sharp, perceptive, trusted contact." },
+                { name: "Leclerc",  role: "Supporting", description: "Mid-50s, weathered, weary." },
+            ],
+        }});
+    }, []);
+
     // Effect 1: load profile on mount
     useEffect(() => {
         if (!serverId) return;
@@ -2919,6 +2767,7 @@ export default function OnboardingWizard({
 
             case "upload":
                 if (!uploadStep?.data) return <WaitingDots />;
+                const isDevMode = new URLSearchParams(window.location.search).has("dev_mode");
                 return (
                     <FormStep
                         step={uploadStep}
@@ -2932,6 +2781,7 @@ export default function OnboardingWizard({
                             dispatch({ type: "BOOK_UPLOADED" });
                             fetchBookProgress();
                         }}
+                        onSkip={isDevMode ? () => dispatch({ type: "NAVIGATE_TO", stage: "checkpoint", checkpointId: "checkpoint_character_review" }) : undefined}
                     />
                 );
 
@@ -2970,9 +2820,9 @@ export default function OnboardingWizard({
                             <ConfirmIcon>★</ConfirmIcon>
                             <ConfirmHeading>Review added</ConfirmHeading>
                             <ConfirmBody>Add another review or wait for processing to complete.</ConfirmBody>
-                            <SecondaryBtn onClick={() => dispatch({ type: "ADD_ANOTHER_REVIEW" })}>
+                            <GhostButton onClick={() => dispatch({ type: "ADD_ANOTHER_REVIEW" })}>
                                 Add another
-                            </SecondaryBtn>
+                            </GhostButton>
                         </ConfirmCard>
                     );
                 }
@@ -3112,50 +2962,78 @@ export default function OnboardingWizard({
         </DebugChip>
     );
 
+    const bookProgressSteps = steps
+        .filter(s => s.line === "book" && s.type !== "processing")
+        .map(s => ({ id: s.id, label: s.label, done: s.done }));
+
+    const authorProgressSteps = steps
+        .filter(s => s.line === "author" && s.type !== "processing")
+        .map(s => ({ id: s.id, label: s.label, done: s.done }));
+
+    const stageToStepId: Record<Stage, string> = {
+        greeting:   "greeting",
+        upload:     "form_book",
+        waiting:    "form_book",
+        checkpoint: checkpointId ?? "checkpoint_character_review",
+        portraits:  "milestone_portraits",
+        scenes:     "milestone_scenes",
+        voice:      "form_voice",
+        done:       "form_voice",
+    };
+
     return (
         <>
-        <Overlay>
-            <ModalWrapper>
-                {canPrev && (
-                    <DomeBtn $side="left" onClick={prev} title="Back">‹</DomeBtn>
-                )}
-                <Shell>
-                    <Header>
-                        <WizardTitle>Studio Setup</WizardTitle>
-                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                            <ResetBtn $resetting={resetting} onClick={handleReset}>
-                                {resetting ? "Resetting…" : "Start over"}
-                            </ResetBtn>
-                            <CloseBtn onClick={() => { track("wizard_closed", { serverId, stage }); onClose(); }}>×</CloseBtn>
-                        </div>
-                    </Header>
+        <WizardModal
+            backgroundImage="/assets/web/bg-library.webp"
+            dimOpacity={0.72}
+            flipBackground
+            leftNav={canPrev && (
+                <WizardDomeBtn $side="left" onClick={prev} title="Back">‹</WizardDomeBtn>
+            )}
+        >
+            <WizardHeader>
+                <WizardTitle>Studio Setup</WizardTitle>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <ResetBtn $resetting={resetting} onClick={handleReset}>
+                        {resetting ? "Resetting…" : "Start over"}
+                    </ResetBtn>
+                    <WizardCloseBtn onClick={() => { track("wizard_closed", { serverId, stage }); onClose(); }}>×</WizardCloseBtn>
+                </div>
+            </WizardHeader>
 
-                    {stage !== "greeting" && (
-                        <SubwayMap
-                            steps={steps}
-                            activeIndex={subwayActiveIndex}
-                            onSelectStep={onSelectStep}
-                            bookFilename={profile?.bookFilename}
-                            reviewCount={localReviewCount}
-                        />
-                    )}
-
-                    <Content>
-                        {renderContent()}
-                    </Content>
-                    {bookProgress?.status === "running" && tickerStep && !bookProgress.sceneStillsUrl && (
-                        <StepTicker>
-                            <MiniSpinner />
-                            <span>{STEP_LABELS[tickerStep as typeof PIPELINE_STEPS[number]] ?? tickerStep}</span>
-                        </StepTicker>
-                    )}
-                    <PipelineBar
-                        $active={pipelineActive || processingSteps.some(s => !s.done)}
-                        $progress={progressFraction}
+            {stage !== "greeting" && (
+                <div>
+                    <ProgressBar
+                        steps={bookProgressSteps}
+                        activeId={stageToStepId[stage]}
+                        color="amber"
+                        rowLabel="Book"
+                        colCount={4}
                     />
-                </Shell>
-            </ModalWrapper>
-        </Overlay>
+                    <ProgressBar
+                        steps={authorProgressSteps}
+                        activeId={stageToStepId[stage]}
+                        color="blue"
+                        rowLabel="Author"
+                        colCount={4}
+                    />
+                </div>
+            )}
+
+            <WizardContent>
+                {renderContent()}
+            </WizardContent>
+            {bookProgress?.status === "running" && tickerStep && !bookProgress.sceneStillsUrl && (
+                <StepTicker>
+                    <MiniSpinner />
+                    <span>{STEP_LABELS[tickerStep as typeof PIPELINE_STEPS[number]] ?? tickerStep}</span>
+                </StepTicker>
+            )}
+            <PipelineBar
+                $active={pipelineActive || processingSteps.some(s => !s.done)}
+                $progress={progressFraction}
+            />
+        </WizardModal>
         {createPortal(debugChip, document.body)}
         </>
     );

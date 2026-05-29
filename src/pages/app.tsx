@@ -17,6 +17,7 @@ const RevoltApp = lazy(() => import("./RevoltApp"));
 const Landing = lazy(() => import("./landing/Landing"));
 const Dashboard = lazy(() => import("./dashboard/Dashboard"));
 const DevWizard = lazy(() => import("./DevWizard"));
+const DevOnboarding = lazy(() => import("./DevOnboarding"));
 
 const IS_HUB =
     typeof window !== "undefined" &&
@@ -78,6 +79,11 @@ export function App() {
                     <Route path="/dev-wizard">
                         <LoadSuspense>
                             <DevWizard />
+                        </LoadSuspense>
+                    </Route>
+                    <Route path="/dev-onboarding">
+                        <LoadSuspense>
+                            <DevOnboarding />
                         </LoadSuspense>
                     </Route>
                     <Route path="/">

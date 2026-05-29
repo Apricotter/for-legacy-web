@@ -1,8 +1,15 @@
 import { useState, useReducer, useEffect, useRef } from "preact/hooks";
-import { createPortal } from "preact/compat";
-import styled, { css } from "styled-components/macro";
+import styled from "styled-components/macro";
 import { UserCircle, Play, ChevronDown, ArrowLeft } from "lucide-react";
 import { EditAlt } from "@styled-icons/boxicons-regular";
+import { ProgressBar } from "../shared/ProgressBar";
+import { PrimaryCTA } from "../shared/PrimaryCTA";
+import { WizardModal, WizardHeader, WizardTitle, WizardCloseBtn, WizardContent, WizardDomeBtn } from "../shared/WizardModal";
+import { InputField } from "../shared/InputField";
+import { Card } from "../shared/Card";
+import { ChatBubble } from "../shared/ChatBubble";
+import { AccentLabel } from "../shared/AccentLabel";
+import { Collapsible } from "../shared/Collapsible";
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -104,6 +111,8 @@ const STAGE_LABELS: Record<Stage, string> = {
     content_studio:           "Studio",
 };
 
+const PROGRESS_STEPS = STAGES.map(s => ({ id: s, label: STAGE_LABELS[s] }));
+
 const DEV_MOCK_QUOTES: Quote[] = [
     {
         id: "q1",
@@ -160,169 +169,6 @@ function ccReducer(state: CCState, action: CCAction): CCState {
 
 // ── styled components ─────────────────────────────────────────────────────────
 
-const Overlay = styled.div`
-    position: fixed;
-    inset: 0;
-    z-index: 200;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    &::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: url("/assets/web/bg-art-studio.png") center / cover no-repeat;
-        z-index: 0;
-    }
-    &::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: rgba(8, 5, 1, 0.48);
-        z-index: 1;
-    }
-`;
-
-const Shell = styled.div`
-    position: relative;
-    z-index: 2;
-    background: rgba(14, 8, 2, 0.88);
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    border-top: 1px solid rgba(244, 185, 120, 0.35);
-    backdrop-filter: blur(32px);
-    -webkit-backdrop-filter: blur(32px);
-    border-radius: 20px;
-    width: min(600px, calc(100vw - 32px));
-    height: min(540px, calc(100vh - 64px));
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0,0,0,0.4);
-`;
-
-const Header = styled.div`
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 22px 0;
-`;
-
-const WizardTitle = styled.div`
-    font-size: 10px;
-    font-weight: 700;
-    color: #F5A623;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-`;
-
-const CloseBtn = styled.button`
-    background: none;
-    border: none;
-    color: rgba(255,255,255,0.4);
-    font-size: 20px;
-    cursor: pointer;
-    padding: 0 4px;
-    line-height: 1;
-    transition: color 0.15s;
-    &:hover { color: rgba(255,255,255,0.9); }
-`;
-
-const Content = styled.div`
-    flex: 1;
-    overflow-y: auto;
-    padding: 22px 26px 26px;
-    min-height: 180px;
-    color: rgba(255,255,255,0.92);
-`;
-
-// ── progress bar ──────────────────────────────────────────────────────────────
-
-const ProgressBar = styled.div`
-    display: flex;
-    align-items: center;
-    padding: 14px 22px 0;
-    gap: 0;
-`;
-
-const ProgressStep = styled.div<{ $active: boolean; $done: boolean }>`
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-    flex: 1;
-    position: relative;
-
-    &:not(:last-child)::after {
-        content: "";
-        position: absolute;
-        top: 10px;
-        left: 50%;
-        width: 100%;
-        height: 1px;
-        background: ${p => p.$done ? "rgba(245,166,35,0.6)" : "rgba(255,255,255,0.1)"};
-        transition: background 0.3s;
-    }
-`;
-
-const ProgressDot = styled.div<{ $active: boolean; $done: boolean }>`
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 9px;
-    font-weight: 700;
-    position: relative;
-    z-index: 1;
-    transition: all 0.2s;
-
-    ${p => p.$done && css`
-        background: rgba(245,166,35,0.25);
-        border: 1.5px solid #F5A623;
-        color: #F5A623;
-    `}
-    ${p => p.$active && !p.$done && css`
-        background: rgba(245,166,35,0.15);
-        border: 1.5px solid rgba(245,166,35,0.7);
-        color: #F5A623;
-        box-shadow: 0 0 10px rgba(245,166,35,0.3);
-    `}
-    ${p => !p.$active && !p.$done && css`
-        background: rgba(255,255,255,0.04);
-        border: 1.5px solid rgba(255,255,255,0.12);
-        color: rgba(255,255,255,0.25);
-    `}
-`;
-
-const ProgressLabel = styled.div<{ $active: boolean; $done: boolean }>`
-    font-size: 9px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    white-space: nowrap;
-    color: ${p => p.$active ? "#F5A623" : p.$done ? "rgba(245,166,35,0.5)" : "rgba(255,255,255,0.2)"};
-    transition: color 0.2s;
-`;
-
-function CCProgressBar({ stage }: { stage: Stage }) {
-    const currentIdx = STAGES.indexOf(stage);
-    return (
-        <ProgressBar>
-            {STAGES.map((s, i) => (
-                <ProgressStep key={s} $active={i === currentIdx} $done={i < currentIdx}>
-                    <ProgressDot $active={i === currentIdx} $done={i < currentIdx}>
-                        {i < currentIdx ? "✓" : i + 1}
-                    </ProgressDot>
-                    <ProgressLabel $active={i === currentIdx} $done={i < currentIdx}>
-                        {STAGE_LABELS[s]}
-                    </ProgressLabel>
-                </ProgressStep>
-            ))}
-        </ProgressBar>
-    );
-}
 
 // ── character select ──────────────────────────────────────────────────────────
 
@@ -533,32 +379,8 @@ const FieldText = styled.div`
     line-height: 1.5;
 `;
 
-const ProfileCard = styled.div`
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 10px;
-    padding: 14px;
-    margin-bottom: 12px;
-`;
 
 
-const ContinueBtn = styled.button`
-    width: 100%;
-    margin-top: 4px;
-    padding: 11px;
-    background: rgba(245,166,35,0.15);
-    border: 1px solid rgba(245,166,35,0.45);
-    border-radius: 8px;
-    color: #F5A623;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.15s, box-shadow 0.15s;
-    &:hover {
-        background: rgba(245,166,35,0.25);
-        box-shadow: 0 0 18px rgba(245,166,35,0.3);
-    }
-`;
 
 function CharacterProfileReviewStep({
     character,
@@ -577,7 +399,7 @@ function CharacterProfileReviewStep({
                     ? <ProfilePortrait src={character.portraitUrl} alt={character.name} />
                     : <ProfilePortraitPlaceholder><UserCircle size={40} /></ProfilePortraitPlaceholder>}
                 <ProfileDetails>
-                    <ProfileCard style={{ position: "relative" }}>
+                    <Card style={{ position: "relative", marginBottom: 12 }}>
                         <button style={{ background: "none", border: "none", cursor: "pointer", padding: "2px 5px", borderRadius: 5, position: "absolute", top: 8, right: 8 }}>
                             <EditAlt size={13} style={{ color: "#F5A623" }} />
                         </button>
@@ -603,11 +425,11 @@ function CharacterProfileReviewStep({
                                 </div>
                             )}
                         </div>
-                    </ProfileCard>
+                    </Card>
                 </ProfileDetails>
             </ProfileRow>
 
-            <ContinueBtn onClick={onContinue}>Continue</ContinueBtn>
+            <PrimaryCTA onClick={onContinue} style={{ marginTop: 4 }}>Continue</PrimaryCTA>
         </div>
     );
 }
@@ -634,14 +456,6 @@ const QuoteCard = styled.div`
     }
 `;
 
-const QuoteScene = styled.div`
-    font-size: 9px;
-    font-weight: 700;
-    color: #F5A623;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 3px;
-`;
 
 const QuoteText = styled.div`
     font-size: 12px;
@@ -666,7 +480,7 @@ function SceneQuoteStep({ onSelect }: { onSelect: (q: Quote) => void }) {
             <QuoteGrid>
                 {DEV_MOCK_QUOTES.map(q => (
                     <QuoteCard key={q.id} onClick={() => onSelect(q)}>
-                        <QuoteScene>{q.scene}</QuoteScene>
+                        <AccentLabel>{q.scene}</AccentLabel>
                         <QuoteText>"{q.text}"</QuoteText>
                         {q.chapter && <QuoteChapter>{q.chapter}</QuoteChapter>}
                     </QuoteCard>
@@ -702,15 +516,6 @@ const VoiceClipTab = styled.button<{ $active: boolean }>`
     transition: all 0.15s;
 `;
 
-const VoicePlayerCard = styled.div`
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 12px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-`;
 
 const VoiceCharName = styled.div`
     font-size: 15px;
@@ -884,15 +689,6 @@ const ArtBubble = styled.div`
     max-width: 90%;
 `;
 
-const ArtLabel = styled.span`
-    font-size: 9px;
-    font-weight: 700;
-    color: #F5A623;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    display: block;
-    margin-bottom: 3px;
-`;
 
 const ArtInputRow = styled.div`
     display: flex;
@@ -900,20 +696,6 @@ const ArtInputRow = styled.div`
     align-items: center;
 `;
 
-const ArtInput = styled.input`
-    flex: 1;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px;
-    color: rgba(255,255,255,0.85);
-    font-size: 12px;
-    padding: 7px 12px;
-    outline: none;
-    font-family: inherit;
-    transition: border-color 0.15s;
-    &:focus { border-color: rgba(245,166,35,0.5); }
-    &::placeholder { color: rgba(255,255,255,0.2); }
-`;
 
 const ArtSendBtn = styled.button`
     background: rgba(245,166,35,0.15);
@@ -929,43 +711,6 @@ const ArtSendBtn = styled.button`
     &:hover { background: rgba(245,166,35,0.25); }
 `;
 
-const CollapseHeader = styled.button`
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 8px;
-    padding: 9px 12px;
-    cursor: pointer;
-    transition: background 0.15s;
-    &:hover { background: rgba(255,255,255,0.06); }
-`;
-
-const CollapseLabel = styled.div`
-    font-size: 10px;
-    font-weight: 700;
-    color: #F5A623;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-`;
-
-const CollapseBody = styled.div<{ $open: boolean }>`
-    overflow: hidden;
-    max-height: ${p => p.$open ? "200px" : "0"};
-    opacity: ${p => p.$open ? 1 : 0};
-    transition: max-height 0.25s ease, opacity 0.2s ease;
-    border: ${p => p.$open ? "1px solid rgba(255,255,255,0.08)" : "none"};
-    border-top: none;
-    border-radius: 0 0 8px 8px;
-    background: rgba(255,255,255,0.02);
-    padding: ${p => p.$open ? "10px 12px" : "0 12px"};
-    font-size: 11px;
-    color: rgba(255,255,255,0.5);
-    line-height: 1.6;
-    font-style: italic;
-`;
 
 const ArtToast = styled.div<{ $visible: boolean }>`
     position: absolute;
@@ -1009,7 +754,7 @@ function artResponse(msg: string): string {
 function VoiceReviewStep({ character, quote, onContinue }: { character: Character; quote: Quote | null; onContinue: () => void }) {
     const [clipIdx,   setClipIdx]   = useState(0);
     const [playing,   setPlaying]   = useState(false);
-    const [promptOpen, setPromptOpen] = useState(false);
+
     const [progress,  setProgress]  = useState(0);
     const [input,     setInput]     = useState("");
     const [artMsg,    setArtMsg]    = useState("Hey! How's this voice sample? Would you like to change anything?");
@@ -1060,7 +805,7 @@ function VoiceReviewStep({ character, quote, onContinue }: { character: Characte
         <VoiceShell style={{ position: "relative" }}>
             <ArtToast $visible={toastVis}>{toast}</ArtToast>
 
-            <VoicePlayerCard>
+            <Card style={{ borderRadius: 12, padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
                 <VoiceCharName>{character.name}</VoiceCharName>
                 {quote && (
                     <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontStyle: "italic", lineHeight: 1.45 }}>
@@ -1085,11 +830,11 @@ function VoiceReviewStep({ character, quote, onContinue }: { character: Characte
 
                 <ArtChatArea>
                     <ArtBubble>
-                        <ArtLabel>Art</ArtLabel>
+                        <AccentLabel>Art</AccentLabel>
                         {artMsg}
                     </ArtBubble>
                     <ArtInputRow>
-                        <ArtInput
+                        <InputField $compact style={{ flex: 1 }}
                             value={input}
                             onInput={(e: any) => setInput(e.target.value)}
                             placeholder="Tell Art what to adjust…"
@@ -1098,19 +843,13 @@ function VoiceReviewStep({ character, quote, onContinue }: { character: Characte
                         <ArtSendBtn onClick={sendToArt}>Send</ArtSendBtn>
                     </ArtInputRow>
                 </ArtChatArea>
-            </VoicePlayerCard>
+            </Card>
 
-            <div>
-                <CollapseHeader onClick={() => setPromptOpen(o => !o)}>
-                    <CollapseLabel>Voice Prompt</CollapseLabel>
-                    <ChevronDown size={13} style={{ color: "#F5A623", transform: promptOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
-                </CollapseHeader>
-                <CollapseBody $open={promptOpen}>
-                    Speak in a low, measured cadence. The character is guarded — never rushed. Slight roughness in the mid-register. Avoid brightness or warmth in the upper range. Sardonic undertone without being theatrical.
-                </CollapseBody>
-            </div>
+            <Collapsible label="Voice Prompt">
+                Speak in a low, measured cadence. The character is guarded — never rushed. Slight roughness in the mid-register. Avoid brightness or warmth in the upper range. Sardonic undertone without being theatrical.
+            </Collapsible>
 
-            <ContinueBtn onClick={onContinue}>Confirm Voice</ContinueBtn>
+            <PrimaryCTA onClick={onContinue} style={{ marginTop: 4 }}>Confirm Voice</PrimaryCTA>
         </VoiceShell>
     );
 }
@@ -1200,26 +939,6 @@ const StudioCaption = styled.div`
 `;
 
 
-const ActionBtn = styled.button<{ $primary?: boolean }>`
-    flex: 1;
-    padding: 10px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.15s, box-shadow 0.15s;
-    ${p => p.$primary ? css`
-        background: rgba(245,166,35,0.18);
-        border: 1px solid rgba(245,166,35,0.5);
-        color: #F5A623;
-        &:hover { background: rgba(245,166,35,0.28); box-shadow: 0 0 16px rgba(245,166,35,0.3); }
-    ` : css`
-        background: rgba(255,255,255,0.04);
-        border: 1px solid rgba(255,255,255,0.1);
-        color: rgba(255,255,255,0.5);
-        &:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
-    `}
-`;
 
 function ContentStudioStep({
     character,
@@ -1262,7 +981,7 @@ function ContentStudioStep({
                     </StudioPreview>
                 </RightCol>
             </StudioMainRow>
-            <ActionBtn $primary style={{ width: "100%", flexShrink: 0 }}>Approve</ActionBtn>
+            <PrimaryCTA style={{ width: "100%", flexShrink: 0 }}>Approve</PrimaryCTA>
         </StudioShell>
     );
 }
@@ -1430,7 +1149,7 @@ function ArtChatPanel({
             )}
 
             <ArtInputRow>
-                <ArtInput
+                <InputField $compact
                     value={input}
                     onInput={(e: any) => setInput(e.target.value)}
                     placeholder="Tell Art what to change…"
@@ -1466,40 +1185,6 @@ function PlaceholderStep({ label }: { label: string }) {
 
 // ── dome nav buttons ──────────────────────────────────────────────────────────
 
-const ModalWrapper = styled.div`
-    position: relative;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-`;
-
-const DomeBtn = styled.button<{ $side: "left" | "right" }>`
-    position: absolute;
-    ${p => p.$side === "left" ? "right: 100%;" : "left: 100%;"}
-    top: 50%;
-    transform: translateY(-50%);
-    width: 44px;
-    height: 80px;
-    background: rgba(245, 166, 35, 0.15);
-    border: 1px solid rgba(245, 166, 35, 0.45);
-    ${p => p.$side === "left"
-        ? "border-radius: 40px 0 0 40px; border-right: none;"
-        : "border-radius: 0 40px 40px 0; border-left: none;"}
-    color: #F5A623;
-    font-size: 16px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.15s, box-shadow 0.15s;
-    backdrop-filter: blur(8px);
-    padding: 0;
-    box-shadow: 0 0 16px rgba(245, 166, 35, 0.22);
-    &:hover {
-        background: rgba(245, 166, 35, 0.28);
-        box-shadow: 0 4px 22px rgba(245, 166, 35, 0.5);
-    }
-`;
 
 // ── main component ────────────────────────────────────────────────────────────
 
@@ -1578,37 +1263,36 @@ export default function ContentCreationWizard({
         }
     }
 
-    return createPortal(
-        <Overlay>
-            <ModalWrapper>
-                {canPrev && !artPanel && (
-                    <DomeBtn $side="left" onClick={prev}>‹</DomeBtn>
-                )}
-                <Shell>
-                    <PageTrack $open={artPanel !== null}>
-                        <PagePane>
-                            <Header>
-                                <WizardTitle>Content Creation Wizard</WizardTitle>
-                                <CloseBtn onClick={onClose}>×</CloseBtn>
-                            </Header>
-                            <CCProgressBar stage={stage} />
-                            <Content>{renderContent()}</Content>
-                        </PagePane>
-                        <PagePane>
-                            {artPanel && (
-                                <ArtChatPanel
-                                    key={artPanel}
-                                    target={artPanel}
-                                    character={selectedCharacter ?? DEV_MOCK_CHARS[0]}
-                                    quote={selectedQuote}
-                                    onClose={() => setArtPanel(null)}
-                                />
-                            )}
-                        </PagePane>
-                    </PageTrack>
-                </Shell>
-            </ModalWrapper>
-        </Overlay>,
-        document.body,
+    return (
+        <WizardModal
+            backgroundImage="/assets/web/bg-art-studio.png"
+            dimOpacity={0.48}
+            fixedHeight
+            leftNav={canPrev && !artPanel && (
+                <WizardDomeBtn $side="left" onClick={prev}>‹</WizardDomeBtn>
+            )}
+        >
+            <PageTrack $open={artPanel !== null}>
+                <PagePane>
+                    <WizardHeader>
+                        <WizardTitle>Content Creation Wizard</WizardTitle>
+                        <WizardCloseBtn onClick={onClose}>×</WizardCloseBtn>
+                    </WizardHeader>
+                    <ProgressBar steps={PROGRESS_STEPS} activeId={stage} />
+                    <WizardContent>{renderContent()}</WizardContent>
+                </PagePane>
+                <PagePane>
+                    {artPanel && (
+                        <ArtChatPanel
+                            key={artPanel}
+                            target={artPanel}
+                            character={selectedCharacter ?? DEV_MOCK_CHARS[0]}
+                            quote={selectedQuote}
+                            onClose={() => setArtPanel(null)}
+                        />
+                    )}
+                </PagePane>
+            </PageTrack>
+        </WizardModal>
     );
 }
