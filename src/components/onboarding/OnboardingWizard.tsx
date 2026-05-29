@@ -2477,6 +2477,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                     steps = patchStep(steps, targetId, {
                         data: { ...merged, step: lastBook.checkpointStep, advance_url: `${OTTO_API}/onboarding/${action.serverId}/advance` },
                         needsAction: true,
+                        done: false,
                     });
                     checkpointId = targetId;
                     stage = "checkpoint";
@@ -2542,6 +2543,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                     steps = patchStep(steps, targetId, {
                         data: { ...merged, step: prog.checkpointStep, advance_url: `${OTTO_API}/onboarding/${action.serverId}/advance` },
                         needsAction: true,
+                        done: false,
                     });
                     checkpointId = targetId;
                     stage = "checkpoint";
