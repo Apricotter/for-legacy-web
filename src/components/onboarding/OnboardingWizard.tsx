@@ -2468,22 +2468,18 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                 stage = "portraits";
             } else if (lastBook?.status === "checkpoint" && lastBook.checkpointStep) {
                 const targetId = `checkpoint_${lastBook.checkpointStep}`;
-                if (!state.confirmedCheckpoints.has(targetId)) {
-                    const parsed   = parseRawCheckpointData(lastBook.checkpointData);
-                    const existing = steps.find(s => s.id === targetId);
-                    const merged   = parsed?.characters?.length
-                        ? { ...parsed }
-                        : { ...(existing?.data ?? {}), ...parsed };
-                    steps = patchStep(steps, targetId, {
-                        data: { ...merged, step: lastBook.checkpointStep, advance_url: `${OTTO_API}/onboarding/${action.serverId}/advance` },
-                        needsAction: true,
-                        done: false,
-                    });
-                    checkpointId = targetId;
-                    stage = "checkpoint";
-                } else {
-                    stage = "waiting";
-                }
+                const parsed   = parseRawCheckpointData(lastBook.checkpointData);
+                const existing = steps.find(s => s.id === targetId);
+                const merged   = parsed?.characters?.length
+                    ? { ...parsed }
+                    : { ...(existing?.data ?? {}), ...parsed };
+                steps = patchStep(steps, targetId, {
+                    data: { ...merged, step: lastBook.checkpointStep, advance_url: `${OTTO_API}/onboarding/${action.serverId}/advance` },
+                    needsAction: true,
+                    done: false,
+                });
+                checkpointId = targetId;
+                stage = "checkpoint";
             } else if (lastBook?.status === "complete" || lastBook?.status === "cancelled" || lastBook?.status === "error") {
                 stage = voiceDone ? "done" : "voice";
             } else if (lastBook) {
@@ -2492,16 +2488,20 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                 stage = "upload";
             }
 
+            const confirmedCheckpoints = lastBook?.status === "checkpoint" && lastBook.checkpointStep
+                ? new Set([...state.confirmedCheckpoints].filter(id => id !== `checkpoint_${lastBook.checkpointStep}`))
+                : state.confirmedCheckpoints;
             return {
                 ...state,
-                profile:          p,
-                bookProgress:     lastBook ?? state.bookProgress,
+                profile:              p,
+                bookProgress:         lastBook ?? state.bookProgress,
                 steps,
                 stage,
                 checkpointId,
-                reviewsDone:      (p.reviews?.length ?? 0) > 0,
-                localReviewCount: p.reviews?.length ?? 0,
+                reviewsDone:          (p.reviews?.length ?? 0) > 0,
+                localReviewCount:     p.reviews?.length ?? 0,
                 voiceDone,
+                confirmedCheckpoints,
             };
         }
 
@@ -2531,23 +2531,21 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
             if (prog.status === "checkpoint" && prog.checkpointStep
                 && stageOrder(state.stage) >= stageOrder("waiting")) {
                 const targetId = `checkpoint_${prog.checkpointStep}`;
-                if (!state.confirmedCheckpoints.has(targetId)) {
-                    const parsed   = parseRawCheckpointData(prog.checkpointData);
-                    const existing = steps.find(s => s.id === targetId);
-                    // Preserve existing character data from STEP_ACTIVATED (channel message) if the
-                    // API poll returns empty checkpointData — polls fire every 5s and would otherwise
-                    // wipe the character list the message parser already set.
-                    const merged = parsed?.characters?.length
-                        ? { ...parsed }
-                        : { ...(existing?.data ?? {}), ...parsed };
-                    steps = patchStep(steps, targetId, {
-                        data: { ...merged, step: prog.checkpointStep, advance_url: `${OTTO_API}/onboarding/${action.serverId}/advance` },
-                        needsAction: true,
-                        done: false,
-                    });
-                    checkpointId = targetId;
-                    stage = "checkpoint";
-                }
+                const parsed   = parseRawCheckpointData(prog.checkpointData);
+                const existing = steps.find(s => s.id === targetId);
+                // Preserve existing character data from STEP_ACTIVATED (channel message) if the
+                // API poll returns empty checkpointData — polls fire every 5s and would otherwise
+                // wipe the character list the message parser already set.
+                const merged = parsed?.characters?.length
+                    ? { ...parsed }
+                    : { ...(existing?.data ?? {}), ...parsed };
+                steps = patchStep(steps, targetId, {
+                    data: { ...merged, step: prog.checkpointStep, advance_url: `${OTTO_API}/onboarding/${action.serverId}/advance` },
+                    needsAction: true,
+                    done: false,
+                });
+                checkpointId = targetId;
+                stage = "checkpoint";
             } else if (isTerminal && prog.status === "cancelled") {
                 // Cancelled job (reset/start-over) — don't drive stage forward
             } else if (isTerminal && prog.sceneStillsUrl) {
@@ -2567,7 +2565,10 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                 stage = "waiting";
             }
 
-            return { ...state, bookProgress: prog, steps, stage, checkpointId };
+            const confirmedCheckpoints = prog.status === "checkpoint" && prog.checkpointStep
+                ? new Set([...state.confirmedCheckpoints].filter(id => id !== `checkpoint_${prog.checkpointStep}`))
+                : state.confirmedCheckpoints;
+            return { ...state, bookProgress: prog, steps, stage, checkpointId, confirmedCheckpoints };
         }
 
         case "INVITATION_LOADED":
