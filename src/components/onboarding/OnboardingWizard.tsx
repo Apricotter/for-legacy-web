@@ -1720,6 +1720,7 @@ function CharDescEditorModal({
     name: initialName,
     role,
     description: initialDesc,
+    appearance,
     jobId,
     isNew,
     onSave,
@@ -1728,6 +1729,7 @@ function CharDescEditorModal({
     name: string;
     role: string;
     description: string;
+    appearance?: { introduction?: string; imagePrompt?: string; traits?: Record<string, string> };
     jobId: string;
     isNew?: boolean;
     onSave: (name: string, role: string, description: string) => void;
@@ -1812,6 +1814,27 @@ function CharDescEditorModal({
                             style={{ minHeight: 100 }}
                         />
                     </FormField>
+                    {appearance?.traits && Object.keys(appearance.traits).length > 0 && (
+                        <div style={{ marginBottom: 14 }}>
+                            <FormLabel>Attributes</FormLabel>
+                            <div style={{
+                                display: "grid",
+                                gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+                                gap: "6px 10px",
+                                background: "rgba(255,255,255,0.04)",
+                                border: "1px solid rgba(255,255,255,0.08)",
+                                borderRadius: 8,
+                                padding: "10px 12px",
+                            }}>
+                                {Object.entries(appearance.traits).map(([k, v]) => (
+                                    <div key={k} style={{ fontSize: 12, lineHeight: 1.4 }}>
+                                        <span style={{ color: "rgba(255,255,255,0.45)", textTransform: "uppercase", letterSpacing: "0.05em", fontSize: 10 }}>{k}</span>
+                                        <div style={{ color: "#e2e8f0", marginTop: 1 }}>{v}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     {chat.length > 0 && (
                         <ChatThread style={{ marginBottom: 8 }}>
                             {chat.map((m, i) => (
@@ -1862,7 +1885,7 @@ function CharacterReviewCheckpoint({ step, jobId, serverId, onDone }: {
     serverId: string;
     onDone: () => void;
 }) {
-    type CharAppearanceEntry = { introduction?: string; imagePrompt?: string };
+    type CharAppearanceEntry = { introduction?: string; imagePrompt?: string; traits?: Record<string, string> };
     type CharEntry = {
         name: string;
         role: string;
@@ -1990,6 +2013,7 @@ function CharacterReviewCheckpoint({ step, jobId, serverId, onDone }: {
                     name={chars[editIdx].name}
                     role={chars[editIdx].role}
                     description={chars[editIdx].description}
+                    appearance={chars[editIdx].appearance}
                     jobId={jobId}
                     onSave={(name, role, description) => {
                         track("cast_character_edited", { serverId, name, jobId });
