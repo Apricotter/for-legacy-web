@@ -1835,6 +1835,24 @@ function CharDescEditorModal({
                             </div>
                         </div>
                     )}
+                    {appearance?.imagePrompt && (
+                        <div style={{ marginBottom: 14 }}>
+                            <FormLabel>Image Prompt</FormLabel>
+                            <div style={{
+                                fontSize: 12,
+                                lineHeight: 1.5,
+                                color: "rgba(255,255,255,0.6)",
+                                background: "rgba(255,255,255,0.04)",
+                                border: "1px solid rgba(255,255,255,0.08)",
+                                borderRadius: 8,
+                                padding: "10px 12px",
+                                fontFamily: "monospace",
+                                wordBreak: "break-word",
+                            }}>
+                                {appearance.imagePrompt}
+                            </div>
+                        </div>
+                    )}
                     {chat.length > 0 && (
                         <ChatThread style={{ marginBottom: 8 }}>
                             {chat.map((m, i) => (
