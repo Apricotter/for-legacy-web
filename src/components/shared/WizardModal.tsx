@@ -2,13 +2,14 @@ import { ComponentChildren } from "preact";
 import { createPortal } from "preact/compat";
 import styled from "styled-components/macro";
 
-const Overlay = styled.div<{ $bg: string; $dim: number; $flipBg?: boolean }>`
+const Overlay = styled.div<{ $bg: string; $dim: number; $flipBg?: boolean; $align?: "center" | "right" }>`
     position: fixed;
     inset: 0;
     z-index: 200;
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: ${p => p.$align === "right" ? "flex-end" : "center"};
+    ${p => p.$align === "right" ? "padding-right: 48px;" : ""}
 
     &::before {
         content: "";
@@ -34,7 +35,7 @@ const ModalWrapper = styled.div`
     align-items: center;
 `;
 
-const Shell = styled.div<{ $fixedHeight?: boolean }>`
+const Shell = styled.div<{ $fixedHeight?: boolean; $maxWidth?: string }>`
     position: relative;
     z-index: 2;
     background: rgba(14, 8, 2, 0.88);
@@ -43,7 +44,7 @@ const Shell = styled.div<{ $fixedHeight?: boolean }>`
     backdrop-filter: blur(32px);
     -webkit-backdrop-filter: blur(32px);
     border-radius: 20px;
-    width: min(600px, calc(100vw - 32px));
+    width: min(${p => p.$maxWidth ?? "600px"}, calc(100vw - 32px));
     ${p => p.$fixedHeight
         ? "height: min(540px, calc(100vh - 64px));"
         : "max-height: calc(100vh - 64px);"}
@@ -127,6 +128,8 @@ export function WizardModal({
     dimOpacity = 0.6,
     flipBackground = false,
     fixedHeight = false,
+    maxWidth,
+    align = "center",
     leftNav,
     children,
 }: {
@@ -134,14 +137,16 @@ export function WizardModal({
     dimOpacity?: number;
     flipBackground?: boolean;
     fixedHeight?: boolean;
+    maxWidth?: string;
+    align?: "center" | "right";
     leftNav?: ComponentChildren;
     children: ComponentChildren;
 }) {
     return createPortal(
-        <Overlay $bg={backgroundImage} $dim={dimOpacity} $flipBg={flipBackground}>
+        <Overlay $bg={backgroundImage} $dim={dimOpacity} $flipBg={flipBackground} $align={align}>
             <ModalWrapper>
                 {leftNav}
-                <Shell $fixedHeight={fixedHeight}>
+                <Shell $fixedHeight={fixedHeight} $maxWidth={maxWidth}>
                     {children}
                 </Shell>
             </ModalWrapper>

@@ -2400,6 +2400,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@stripe/react-stripe-js@npm:^6.5.0":
+  version: 6.5.0
+  resolution: "@stripe/react-stripe-js@npm:6.5.0"
+  dependencies:
+    prop-types: ^15.7.2
+  peerDependencies:
+    "@stripe/stripe-js": ">=9.5.0 <10.0.0"
+    react: ">=16.8.0 <20.0.0"
+    react-dom: ">=16.8.0 <20.0.0"
+  checksum: 981c026d0ca48b76b79e4aef34fdfd7f7d4d19fc5b93daf55ca16de8aa752098f04b48325f905fa68a85e30d6f239c75afeda5f28fbd1b048ac6157e5433c0db
+  languageName: node
+  linkType: hard
+
+"@stripe/stripe-js@npm:^9.7.0":
+  version: 9.7.0
+  resolution: "@stripe/stripe-js@npm:9.7.0"
+  checksum: 05d4f4f925ce71335b189c412fc7833eef279790ad4150c1d2a31bfede48b2bc9f81d60eeb040788467891024013fc5a58e60c8116966e597bd92bb3c6b5cf9e
+  languageName: node
+  linkType: hard
+
 "@styled-icons/boxicons-logos@npm:^10.38.0":
   version: 10.38.0
   resolution: "@styled-icons/boxicons-logos@npm:10.38.0"
@@ -3712,6 +3732,8 @@ __metadata:
     "@revoltchat/rehype-katex": 6.0.3-patch.1
     "@revoltchat/ui": ^1.0.77
     "@rollup/plugin-replace": ^2.4.2
+    "@stripe/react-stripe-js": ^6.5.0
+    "@stripe/stripe-js": ^9.7.0
     "@styled-icons/boxicons-logos": ^10.38.0
     "@styled-icons/boxicons-regular": ^10.38.0
     "@styled-icons/boxicons-solid": ^10.38.0
