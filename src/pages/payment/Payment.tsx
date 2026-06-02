@@ -322,6 +322,9 @@ function CheckoutForm({ name, email }: { name: string; email: string }) {
                         defaultValues: {
                             billingDetails: { name, email },
                         },
+                        fields: {
+                            billingDetails: { phone: "never" },
+                        },
                         layout: "tabs",
                     }}
                 />
