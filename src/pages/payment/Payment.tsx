@@ -163,6 +163,57 @@ const Loading = styled.div`
     padding: 20px 0;
 `;
 
+const Disclaimer = styled.div`
+    display: flex;
+    gap: 10px;
+    padding: 10px 13px;
+    background: rgba(244, 185, 120, 0.06);
+    border: 1px solid rgba(244, 185, 120, 0.18);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.52);
+    line-height: 1.55;
+
+    strong { color: rgba(255, 255, 255, 0.75); font-weight: 600; }
+`;
+
+const DisclaimerIcon = styled.div`
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: rgba(244, 185, 120, 0.6);
+`;
+
+const CheckboxRow = styled.label`
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    cursor: pointer;
+    margin-bottom: 12px;
+    font-size: 11.5px;
+    color: rgba(255, 255, 255, 0.45);
+    line-height: 1.5;
+
+    input[type="checkbox"] {
+        margin-top: 2px;
+        flex-shrink: 0;
+        width: 14px;
+        height: 14px;
+        accent-color: #f4b978;
+        cursor: pointer;
+    }
+`;
+
+const TcLink = styled.a`
+    color: #f4b978;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    opacity: 0.85;
+    transition: opacity 0.15s;
+    &:hover { opacity: 1; }
+`;
+
 const SuccessWrap = styled.div`
     display: flex;
     flex-direction: column;
@@ -227,6 +278,7 @@ function CheckoutForm({
     const [localEmail, setLocalEmail] = useState(initialEmail);
     const [zip, setZip] = useState("");
     const [focused, setFocused] = useState<string | null>(null);
+    const [agreed, setAgreed] = useState(false);
 
     const handleSubmit = async (e: Event) => {
         e.preventDefault();
@@ -401,13 +453,38 @@ function CheckoutForm({
                 </PayPalNote>
             )}
 
+            <Disclaimer>
+                <DisclaimerIcon>{"ⓘ"}</DisclaimerIcon>
+                <div>
+                    <strong>{"Your card will not be charged today."}</strong>
+                    {" This is a pre-authorization hold only. We use it to secure your spot while Otto prepares your character gallery. You'll review watermarked previews first — and only approve the $20 charge if you want to unlock and download your full package."}
+                </div>
+            </Disclaimer>
+
+            <CheckboxRow>
+                <input
+                    type="checkbox"
+                    checked={agreed}
+                    onChange={(e) => setAgreed((e.target as HTMLInputElement).checked)}
+                />
+                {"I agree to the "}
+                <TcLink href="/docs/terms-of-service.pdf" target="_blank" rel="noopener noreferrer">
+                    {"Terms of Service"}
+                </TcLink>
+                {" and "}
+                <TcLink href="/docs/privacy-policy.pdf" target="_blank" rel="noopener noreferrer">
+                    {"Privacy Policy"}
+                </TcLink>
+                {"."}
+            </CheckboxRow>
+
             {error && <ErrorMsg>{error}</ErrorMsg>}
 
             <PrimaryCTA
                 type="submit"
                 $loading={loading}
-                $disabled={!stripe || loading}>
-                {loading ? "Authorizing…" : "Authorize $20 →"}
+                $disabled={!stripe || loading || !agreed}>
+                {loading ? "Authorizing…" : "Authorize →"}
             </PrimaryCTA>
         </form>
     );
