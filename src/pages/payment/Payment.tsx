@@ -2,11 +2,15 @@ import { useEffect, useState } from "preact/hooks";
 import { loadStripe } from "@stripe/stripe-js";
 import {
     Elements,
-    PaymentElement,
+    CardNumberElement,
+    CardExpiryElement,
+    CardCvcElement,
     useStripe,
     useElements,
 } from "@stripe/react-stripe-js";
 import styled from "styled-components/macro";
+import { CreditCard } from "@styled-icons/boxicons-regular";
+import { Paypal } from "@styled-icons/simple-icons";
 
 import {
     WizardModal,
@@ -14,11 +18,11 @@ import {
     WizardTitle,
     WizardContent,
 } from "../../components/shared/WizardModal";
+import { PrimaryCTA } from "../../components/shared/PrimaryCTA";
 
 const CompactContent = styled(WizardContent)`
-    padding: 10px 18px 12px;
+    padding: 8px 18px 10px;
 `;
-import { PrimaryCTA } from "../../components/shared/PrimaryCTA";
 
 const stripePromise = loadStripe(
     import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string,
@@ -27,95 +31,119 @@ const stripePromise = loadStripe(
 const PAYMENT_INTENT_URL = "/api/payment-intent";
 const BG = "/assets/web/bg-gallery-payment.png";
 
+const elementStyle = {
+    style: {
+        base: {
+            color: "#f0e8d8",
+            fontFamily: "Inter, -apple-system, sans-serif",
+            fontSize: "13px",
+            fontSmoothing: "antialiased",
+            "::placeholder": { color: "rgba(240,232,216,0.35)" },
+        },
+        invalid: { color: "#ff6b6b" },
+    },
+};
+
 // ── Styled helpers ────────────────────────────────────────────────────────────
 
-const OrderRow = styled.div`
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 10px;
-    background: rgba(244, 185, 120, 0.08);
-    border: 1px solid rgba(244, 185, 120, 0.2);
-    border-radius: 8px;
-    margin-bottom: 6px;
-`;
-
-const OrderLabel = styled.div`
-    font-size: 12px;
+const OrderTitle = styled.div`
+    font-size: 15px;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.88);
+    margin-bottom: 14px;
 `;
 
-const OrderSub = styled.div`
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.38);
-    margin-top: 1px;
-`;
-
-const OrderPrice = styled.div`
-    font-size: 18px;
-    font-weight: 800;
-    color: #f4b978;
-    line-height: 1;
-`;
-
-const CustomerBox = styled.div`
+const CustomerRow = styled.div`
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 9px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 7px;
-    margin-bottom: 6px;
+    gap: 12px;
+    margin-bottom: 14px;
 `;
 
-const Avatar = styled.div`
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: rgba(244, 185, 120, 0.15);
-    border: 1px solid rgba(244, 185, 120, 0.3);
-    color: #f4b978;
-    font-size: 11px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-`;
-
-const CustomerInfo = styled.div`
+const CustomerCol = styled.div`
+    flex: 1;
     min-width: 0;
 `;
 
-const CustomerName = styled.div`
-    font-size: 12px;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.88);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-`;
-
-const CustomerEmail = styled.div`
-    font-size: 10.5px;
-    color: rgba(255, 255, 255, 0.4);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-`;
-
-const RowLabel = styled.div`
+const FieldLabel = styled.div`
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.07em;
     color: rgba(255, 255, 255, 0.32);
-    margin-bottom: 5px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 `;
 
-const StripeWrap = styled.div`
-    margin-bottom: 10px;
+
+const TextInput = styled.input`
+    width: 100%;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    color: #f0e8d8;
+    font-size: 13px;
+    font-family: Inter, -apple-system, sans-serif;
+    padding: 7px 11px;
+    outline: none;
+    box-sizing: border-box;
+    &:focus {
+        border-color: rgba(244, 185, 120, 0.55);
+        box-shadow: 0 0 0 3px rgba(244, 185, 120, 0.12);
+    }
+    &::placeholder { color: rgba(240, 232, 216, 0.35); }
+`;
+
+const PayTabRow = styled.div`
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+`;
+
+const PayTab = styled.button<{ $active: boolean }>`
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid ${p => p.$active ? "rgba(244,185,120,0.5)" : "rgba(255,255,255,0.1)"};
+    background: ${p => p.$active ? "rgba(244,185,120,0.1)" : "rgba(255,255,255,0.04)"};
+    color: ${p => p.$active ? "#f4b978" : "rgba(240,232,216,0.5)"};
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+    &:hover {
+        border-color: rgba(244, 185, 120, 0.35);
+        color: rgba(244, 185, 120, 0.8);
+    }
+`;
+
+const CardGrid = styled.div`
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+`;
+
+const StripeFieldWrap = styled.div<{ $focused?: boolean }>`
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid ${p => p.$focused ? "rgba(244,185,120,0.55)" : "rgba(255,255,255,0.14)"};
+    border-radius: 8px;
+    padding: 9px 11px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    ${p => p.$focused ? "box-shadow: 0 0 0 3px rgba(244,185,120,0.12);" : ""}
+`;
+
+const PayPalNote = styled.div`
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.45);
+    text-align: center;
+    padding: 18px 0 10px;
+    line-height: 1.6;
 `;
 
 const ErrorMsg = styled.div`
@@ -126,14 +154,6 @@ const ErrorMsg = styled.div`
     border: 1px solid rgba(255, 107, 107, 0.22);
     border-radius: 7px;
     margin-bottom: 10px;
-`;
-
-const Fine = styled.p`
-    margin: 7px 0 0;
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.22);
-    text-align: center;
-    line-height: 1.5;
 `;
 
 const Loading = styled.div`
@@ -186,93 +206,90 @@ const SuccessHint = styled.div`
     max-width: 300px;
 `;
 
-// ── Stripe appearance ─────────────────────────────────────────────────────────
-
-const stripeAppearance = {
-    theme: "flat" as const,
-    variables: {
-        colorPrimary: "#F4B978",
-        colorBackground: "#1c1108",
-        colorText: "#f0e8d8",
-        colorTextPlaceholder: "rgba(240,232,216,0.35)",
-        colorTextSecondary: "rgba(240,232,216,0.55)",
-        colorDanger: "#ff6b6b",
-        borderRadius: "8px",
-        fontFamily: "Inter, -apple-system, sans-serif",
-        fontSizeBase: "13px",
-        spacingUnit: "3px",
-        spacingGridRow: "10px",
-    },
-    rules: {
-        ".Input": {
-            border: "1px solid rgba(255,255,255,0.14)",
-            backgroundColor: "rgba(255,255,255,0.07)",
-            color: "#f0e8d8",
-            padding: "7px 11px",
-            boxShadow: "none",
-        },
-        ".Input:focus": {
-            border: "1px solid rgba(244,185,120,0.55)",
-            boxShadow: "0 0 0 3px rgba(244,185,120,0.12)",
-        },
-        ".Label": {
-            color: "rgba(240,232,216,0.45)",
-            fontSize: "11px",
-            fontWeight: "700",
-            textTransform: "uppercase",
-            letterSpacing: "0.07em",
-            marginBottom: "6px",
-        },
-        ".Tab": {
-            border: "1px solid rgba(255,255,255,0.1)",
-            backgroundColor: "rgba(255,255,255,0.04)",
-            color: "rgba(240,232,216,0.6)",
-        },
-        ".Tab--selected": {
-            border: "1px solid rgba(244,185,120,0.4)",
-            backgroundColor: "rgba(244,185,120,0.08)",
-            color: "#f4b978",
-        },
-        ".TabIcon": { fill: "rgba(240,232,216,0.6)" },
-        ".TabIcon--selected": { fill: "#f4b978" },
-    },
-};
-
 // ── Checkout form ─────────────────────────────────────────────────────────────
 
-function CheckoutForm({ name, email }: { name: string; email: string }) {
+function CheckoutForm({
+    initialName,
+    initialEmail,
+    clientSecret,
+}: {
+    initialName: string;
+    initialEmail: string;
+    clientSecret: string;
+}) {
     const stripe = useStripe();
     const elements = useElements();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [done, setDone] = useState(false);
+    const [payMethod, setPayMethod] = useState<"card" | "paypal">("card");
+    const [localName, setLocalName] = useState(initialName);
+    const [localEmail, setLocalEmail] = useState(initialEmail);
+    const [zip, setZip] = useState("");
+    const [focused, setFocused] = useState<string | null>(null);
 
     const handleSubmit = async (e: Event) => {
         e.preventDefault();
-        if (!stripe || !elements) return;
+        if (!stripe) return;
         setLoading(true);
         setError(null);
 
-        const { error: submitError } = await elements.submit();
-        if (submitError) {
-            setError(submitError.message ?? "Something went wrong.");
-            setLoading(false);
-            return;
-        }
+        if (payMethod === "card") {
+            if (!elements) { setLoading(false); return; }
+            const cardElement = elements.getElement(CardNumberElement);
+            if (!cardElement) { setLoading(false); return; }
 
-        const { error: confirmError } = await stripe.confirmPayment({
-            elements,
-            confirmParams: {
-                payment_method_data: { billing_details: { name, email } },
+            const { error: confirmError } = await stripe.confirmCardPayment(clientSecret, {
+                payment_method: {
+                    card: cardElement,
+                    billing_details: {
+                        name: localName,
+                        email: localEmail,
+                        address: { postal_code: zip, country: "US" },
+                    },
+                },
+            });
+
+            if (confirmError) {
+                setError(confirmError.message ?? "Payment failed.");
+                setLoading(false);
+                return;
+            }
+        } else {
+            // PayPal: create a separate PI (no manual capture) then redirect
+            let paypalSecret: string | null = null;
+            try {
+                const res = await fetch(PAYMENT_INTENT_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: localName, email: localEmail, paymentMethod: "paypal" }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+                paypalSecret = data.client_secret ?? null;
+            } catch (err: any) {
+                setError(`PayPal unavailable: ${err.message}`);
+                setLoading(false);
+                return;
+            }
+
+            if (!paypalSecret) {
+                setError("Could not initialize PayPal.");
+                setLoading(false);
+                return;
+            }
+
+            // confirmPayPalPayment redirects the browser to PayPal
+            const { error: confirmError } = await (stripe as any).confirmPayPalPayment(paypalSecret, {
                 return_url: `${window.location.origin}/gallery/confirmed`,
-            },
-            redirect: "if_required",
-        });
+            });
 
-        if (confirmError) {
-            setError(confirmError.message ?? "Payment failed.");
-            setLoading(false);
-            return;
+            if (confirmError) {
+                setError(confirmError.message ?? "PayPal payment failed.");
+                setLoading(false);
+                return;
+            }
+            return; // redirect in progress
         }
 
         setDone(true);
@@ -286,7 +303,7 @@ function CheckoutForm({ name, email }: { name: string; email: string }) {
                 <SuccessTitle>{"You're in the queue."}</SuccessTitle>
                 <SuccessBody>
                     {"Your $20 is on hold — nothing charged yet. Check "}
-                    <strong>{email}</strong>
+                    <strong>{localEmail}</strong>
                     {" for your invitation from Otto."}
                 </SuccessBody>
                 <SuccessHint>
@@ -298,37 +315,91 @@ function CheckoutForm({ name, email }: { name: string; email: string }) {
 
     return (
         <form onSubmit={handleSubmit}>
-            <OrderRow>
-                <div>
-                    <OrderLabel>{"Your Character Gallery"}</OrderLabel>
-                    <OrderSub>{"One-time · Pre-authorization"}</OrderSub>
-                </div>
-                <OrderPrice>{"$20"}</OrderPrice>
-            </OrderRow>
+            <OrderTitle>{"Your Character Gallery"}</OrderTitle>
 
-            <RowLabel>{"Ordering for"}</RowLabel>
-            <CustomerBox>
-                <Avatar>{"✦"}</Avatar>
-                <CustomerInfo>
-                    <CustomerName>{name || "—"}</CustomerName>
-                    <CustomerEmail>{email || "—"}</CustomerEmail>
-                </CustomerInfo>
-            </CustomerBox>
+            {/* Name + Email — side by side inputs, pre-filled from URL */}
+            <CustomerRow>
+                <CustomerCol>
+                    <FieldLabel>{"Name"}</FieldLabel>
+                    <TextInput
+                        value={localName}
+                        onInput={(e) => setLocalName((e.target as HTMLInputElement).value)}
+                        placeholder="Full name"
+                    />
+                </CustomerCol>
+                <CustomerCol>
+                    <FieldLabel>{"Email"}</FieldLabel>
+                    <TextInput
+                        value={localEmail}
+                        onInput={(e) => setLocalEmail((e.target as HTMLInputElement).value)}
+                        placeholder="Email address"
+                        type="email"
+                    />
+                </CustomerCol>
+            </CustomerRow>
 
-            <RowLabel>{"Card details"}</RowLabel>
-            <StripeWrap>
-                <PaymentElement
-                    options={{
-                        defaultValues: {
-                            billingDetails: { name, email },
-                        },
-                        fields: {
-                            billingDetails: { phone: "never" },
-                        },
-                        layout: "tabs",
-                    }}
-                />
-            </StripeWrap>
+            {/* Payment method tabs */}
+            <PayTabRow>
+                <PayTab type="button" $active={payMethod === "card"} onClick={() => setPayMethod("card")}>
+                    <CreditCard size={15} />
+                    {"Card"}
+                </PayTab>
+                <PayTab type="button" $active={payMethod === "paypal"} onClick={() => setPayMethod("paypal")}>
+                    <Paypal size={13} />
+                    {"PayPal"}
+                </PayTab>
+            </PayTabRow>
+
+            {/* Card fields — 2×2 grid */}
+            {payMethod === "card" && (
+                <CardGrid>
+                    <div>
+                        <FieldLabel>{"Card number"}</FieldLabel>
+                        <StripeFieldWrap $focused={focused === "cardNumber"}>
+                            <CardNumberElement
+                                options={elementStyle}
+                                onFocus={() => setFocused("cardNumber")}
+                                onBlur={() => setFocused(null)}
+                            />
+                        </StripeFieldWrap>
+                    </div>
+                    <div>
+                        <FieldLabel>{"Expiry"}</FieldLabel>
+                        <StripeFieldWrap $focused={focused === "expiry"}>
+                            <CardExpiryElement
+                                options={elementStyle}
+                                onFocus={() => setFocused("expiry")}
+                                onBlur={() => setFocused(null)}
+                            />
+                        </StripeFieldWrap>
+                    </div>
+                    <div>
+                        <FieldLabel>{"Zip code"}</FieldLabel>
+                        <TextInput
+                            value={zip}
+                            onInput={(e) => setZip((e.target as HTMLInputElement).value)}
+                            placeholder="10001"
+                            maxLength={10}
+                        />
+                    </div>
+                    <div>
+                        <FieldLabel>{"Security code"}</FieldLabel>
+                        <StripeFieldWrap $focused={focused === "cvc"}>
+                            <CardCvcElement
+                                options={elementStyle}
+                                onFocus={() => setFocused("cvc")}
+                                onBlur={() => setFocused(null)}
+                            />
+                        </StripeFieldWrap>
+                    </div>
+                </CardGrid>
+            )}
+
+            {payMethod === "paypal" && (
+                <PayPalNote>
+                    {"You'll be redirected to PayPal to complete your $20 pre-authorization."}
+                </PayPalNote>
+            )}
 
             {error && <ErrorMsg>{error}</ErrorMsg>}
 
@@ -338,10 +409,6 @@ function CheckoutForm({ name, email }: { name: string; email: string }) {
                 $disabled={!stripe || loading}>
                 {loading ? "Authorizing…" : "Authorize $20 →"}
             </PrimaryCTA>
-
-            <Fine>
-                {"Pre-authorization only — your card is not charged now. You approve the charge after reviewing your gallery."}
-            </Fine>
         </form>
     );
 }
@@ -379,7 +446,7 @@ export default function Payment() {
     }, []);
 
     return (
-        <WizardModal backgroundImage={BG} dimOpacity={0.45} maxWidth="540px" align="right">
+        <WizardModal backgroundImage={BG} dimOpacity={0.45} maxWidth="620px" align="right">
             <WizardHeader>
                 <WizardTitle>{"Apricotter · Character Gallery"}</WizardTitle>
             </WizardHeader>
@@ -391,10 +458,12 @@ export default function Payment() {
                 )}
 
                 {clientSecret && (
-                    <Elements
-                        stripe={stripePromise}
-                        options={{ clientSecret, appearance: stripeAppearance }}>
-                        <CheckoutForm name={name} email={email} />
+                    <Elements stripe={stripePromise}>
+                        <CheckoutForm
+                            initialName={name}
+                            initialEmail={email}
+                            clientSecret={clientSecret}
+                        />
                     </Elements>
                 )}
             </CompactContent>

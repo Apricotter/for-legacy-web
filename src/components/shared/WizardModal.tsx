@@ -11,6 +11,12 @@ const Overlay = styled.div<{ $bg: string; $dim: number; $flipBg?: boolean; $alig
     justify-content: ${p => p.$align === "right" ? "flex-end" : "center"};
     ${p => p.$align === "right" ? "padding-right: 48px;" : ""}
 
+    @media (max-width: 768px) {
+        justify-content: center;
+        padding-right: 0;
+        align-items: flex-end;
+    }
+
     &::before {
         content: "";
         position: absolute;
@@ -52,6 +58,13 @@ const Shell = styled.div<{ $fixedHeight?: boolean; $maxWidth?: string }>`
     flex-direction: column;
     overflow: hidden;
     box-shadow: 0 32px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(0,0,0,0.4);
+
+    @media (max-width: 768px) {
+        width: 100vw;
+        max-height: 92vh;
+        border-radius: 20px 20px 0 0;
+        border-bottom: none;
+    }
 `;
 
 export const WizardHeader = styled.div`
