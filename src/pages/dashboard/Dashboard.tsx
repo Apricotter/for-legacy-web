@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "preact/hooks";
-import { ClipboardList, Hand, UserCircle, Image, Palette, Folder, Film, Mic, FileText, Plus, Bot } from "lucide-react";
+import { ClipboardList, Hand, UserCircle, Image, Palette, Folder, Film, Mic, FileText, Plus, Bot } from "lucide-preact";
 import "./Dashboard.css";
 
 export default function Dashboard() {
