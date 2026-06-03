@@ -129,6 +129,13 @@ export default defineConfig({
         watch: {
             ignored: ["!**/external/**"],
         },
+        proxy: {
+            "/api/payment-intent": {
+                target: "http://localhost:3003",
+                changeOrigin: true,
+                rewrite: () => "/api/stripe/create-payment-intent",
+            },
+        },
     },
     resolve: {
         preserveSymlinks: true,
