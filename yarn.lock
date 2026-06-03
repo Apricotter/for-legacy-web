@@ -3777,6 +3777,7 @@ __metadata:
     lodash.isequal: ^4.5.0
     long: ^5.2.0
     lottie-react: ^2.4.0
+    lucide-react: ^1.17.0
     mdast-util-to-hast: ^12.1.2
     mediasoup-client: "npm:@insertish/mediasoup-client@3.6.36-esnext"
     mobx: ^6.6.0
@@ -6324,6 +6325,15 @@ __metadata:
   version: 7.8.1
   resolution: "lru-cache@npm:7.8.1"
   checksum: 31ea67388c9774300331d70f4affd5a433869bcf0fae5405f967d19d7b447930b713b0566a2e95362c9082034a8b496f3671ccf8f0c061d8e8048412663f9432
+  languageName: node
+  linkType: hard
+
+"lucide-react@npm:^1.17.0":
+  version: 1.17.0
+  resolution: "lucide-react@npm:1.17.0"
+  peerDependencies:
+    react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+  checksum: 5a3a18fa6d7f9a3098e8a91c6f1b934e4d01eb222884076607d0fef9bf4fc7ee3bf4dc16433582413f74a6d4bcc22172ac02f0f2a95495c9cc6c9be7be3c2023
   languageName: node
   linkType: hard
 
