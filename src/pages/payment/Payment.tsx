@@ -312,6 +312,7 @@ function CheckoutForm({
 
             if (paymentIntent?.id) {
                 localStorage.setItem("apricotter_pi_id", paymentIntent.id);
+                localStorage.setItem("apricotter_preauth_done", "1");
             }
         } else {
             // PayPal: create a separate PI (no manual capture) then redirect
