@@ -2199,28 +2199,53 @@ const PaymentNote = styled.div`
     text-align: center;
 `;
 
-function PaymentStep({ onContinue }: { onContinue: () => void }) {
+function AuthorizeStep({ onContinue }: { onContinue: () => void }) {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const piId = typeof localStorage !== "undefined" ? localStorage.getItem("apricotter_pi_id") : null;
+
+    async function handleAuthorize() {
+        if (!piId) {
+            setError("No pre-authorization found. Please contact support.");
+            return;
+        }
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await fetch("/api/stripe-capture", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ payment_intent_id: piId }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+            localStorage.removeItem("apricotter_pi_id");
+            onContinue();
+        } catch (err: any) {
+            setError(err.message ?? "Capture failed. Please try again.");
+            setLoading(false);
+        }
+    }
+
     return (
         <PaymentWrap>
             <PaymentCard>
-                <PaymentTitle>Unlock your book world</PaymentTitle>
+                <PaymentTitle>Your gallery is ready</PaymentTitle>
                 <PaymentPrice>
                     <PaymentAmount>$20</PaymentAmount>
-                    <PaymentPeriod>/ month</PaymentPeriod>
+                    <PaymentPeriod>one-time</PaymentPeriod>
                 </PaymentPrice>
                 <PaymentDivider />
                 <PaymentFeatures>
                     <PaymentFeature>All character portraits — full gallery</PaymentFeature>
                     <PaymentFeature>All scene stills — every chapter</PaymentFeature>
-                    <PaymentFeature>Commercial video generation</PaymentFeature>
-                    <PaymentFeature>Social media content automation</PaymentFeature>
-                    <PaymentFeature>Cancel anytime</PaymentFeature>
                 </PaymentFeatures>
                 <PaymentDivider />
-                <PrimaryCTA onClick={onContinue} style={{ width: "100%", justifyContent: "center" }}>
-                    Subscribe &amp; Continue →
+                {error && <div style={{ fontSize: "12px", color: "#ff6b6b" }}>{error}</div>}
+                <PrimaryCTA onClick={handleAuthorize} $loading={loading} $disabled={loading} style={{ width: "100%", justifyContent: "center" }}>
+                    {loading ? "Authorizing…" : "Authorize $20 →"}
                 </PrimaryCTA>
-                <PaymentNote>Stripe payment — coming soon</PaymentNote>
+                <PaymentNote>Your card was pre-authorized — this completes the one-time $20 charge</PaymentNote>
             </PaymentCard>
         </PaymentWrap>
     );
@@ -3116,7 +3141,7 @@ export default function OnboardingWizard({
 
             case "payment":
                 return (
-                    <PaymentStep
+                    <AuthorizeStep
                         onContinue={() => dispatch({ type: "PAYMENT_COMPLETE" })}
                     />
                 );

@@ -1,0 +1,9 @@
+{
+  "scenes": [
+    { "title": "The Cathedral Square",    "imageUrl": "https://picsum.photos/seed/s1/800/450" },
+    { "title": "Interrogation Room",      "imageUrl": "https://picsum.photos/seed/s2/800/450" },
+    { "title": "Paris Rooftop Chase",     "imageUrl": "https://picsum.photos/seed/s3/800/450" },
+    { "title": "The Catacombs",           "imageUrl": "https://picsum.photos/seed/s4/800/450" },
+    { "title": "Airport Confrontation",   "imageUrl": "https://picsum.photos/seed/s5/800/450" }
+  ]
+}
