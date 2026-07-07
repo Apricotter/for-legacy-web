@@ -2408,7 +2408,7 @@ function VoiceFormStep({ serverId, onDone, onSkip }: {
             </VoiceSection>
 
             <VoiceBtnRow>
-                <GhostButton onClick={onSkip}>Skip for now</GhostButton>
+                <GhostButton onClick={onSkip} style={{ flex: "none", padding: "10px 20px" }}>Skip for now</GhostButton>
                 <PrimaryCTA onClick={() => onDone(v)} $disabled={!hasAny} disabled={!hasAny}>
                     Save &amp; Continue
                 </PrimaryCTA>
@@ -2507,6 +2507,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
             if (lastBook?.sceneStillsUrl) {
                 steps = patchStep(steps, "milestone_portraits", { done: true, data: { url: lastBook.portraitsUrl ?? "" } });
                 steps = patchStep(steps, "milestone_scenes",    { done: true, data: { url: lastBook.sceneStillsUrl } });
+                steps = patchStep(steps, "form_author",         { done: true });
                 const cpParsed = parseRawCheckpointData(lastBook.checkpointData);
                 steps = patchStep(steps, "checkpoint_character_review", {
                     done: true, needsAction: false,
@@ -2515,6 +2516,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                 stage = "scenes";
             } else if (lastBook?.portraitsUrl) {
                 steps = patchStep(steps, "milestone_portraits", { done: true, data: { url: lastBook.portraitsUrl } });
+                steps = patchStep(steps, "form_author",         { done: true });
                 const cpParsed = parseRawCheckpointData(lastBook.checkpointData);
                 steps = patchStep(steps, "checkpoint_character_review", {
                     done: true, needsAction: false,
@@ -3167,29 +3169,40 @@ export default function OnboardingWizard({
 
             case "done":
                 return (
-                    <ConfirmCard>
-                        <ConfirmIcon>✓</ConfirmIcon>
-                        <ConfirmHeading>Your studio is ready</ConfirmHeading>
-                        {bookProgress?.portraitsUrl || bookProgress?.sceneStillsUrl ? (
-                            <ConfirmBody style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
-                                <span>Processing complete. Your book world is live.</span>
-                                {bookProgress.portraitsUrl && (
-                                    <a href={bookProgress.portraitsUrl} target="_blank" rel="noopener noreferrer"
-                                        style={{ color: "#2980b9", textDecoration: "underline" }}>
-                                        View character portraits
-                                    </a>
-                                )}
-                                {bookProgress.sceneStillsUrl && (
-                                    <a href={bookProgress.sceneStillsUrl} target="_blank" rel="noopener noreferrer"
-                                        style={{ color: "#2980b9", textDecoration: "underline" }}>
-                                        View scene stills
-                                    </a>
-                                )}
-                            </ConfirmBody>
-                        ) : (
-                            <ConfirmBody>Processing complete. Portraits and scene stills will appear here shortly.</ConfirmBody>
-                        )}
-                    </ConfirmCard>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24, padding: "8px 0" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(244,185,120,0.7)" }}>Complete</div>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: "rgba(255,255,255,0.95)", letterSpacing: "-0.02em" }}>Your book world is live.</div>
+                            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
+                                Everything is set up. Explore your character portraits and scene stills below.
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+                            {bookProgress?.portraitsUrl && (
+                                <PrimaryCTA
+                                    as="a"
+                                    href={bookProgress.portraitsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ textDecoration: "none", textAlign: "center", display: "block" }}>
+                                    Character portraits →
+                                </PrimaryCTA>
+                            )}
+                            {bookProgress?.sceneStillsUrl && (
+                                <GhostButton
+                                    as="a"
+                                    href={bookProgress.sceneStillsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ textDecoration: "none", padding: "12px 20px", flex: "none", width: "100%", textAlign: "center" }}>
+                                    Scene stills →
+                                </GhostButton>
+                            )}
+                            {!bookProgress?.portraitsUrl && !bookProgress?.sceneStillsUrl && (
+                                <ConfirmBody>Your portraits and scene stills will appear here shortly.</ConfirmBody>
+                            )}
+                        </div>
+                    </div>
                 );
         }
     }
@@ -3260,7 +3273,13 @@ export default function OnboardingWizard({
                     <ResetBtn $resetting={resetting} onClick={handleReset}>
                         {resetting ? "Resetting…" : "Start over"}
                     </ResetBtn>
-                    <WizardCloseBtn onClick={() => { track("wizard_closed", { serverId, stage }); onClose(); }}>×</WizardCloseBtn>
+                    <WizardCloseBtn
+                        onClick={() => { track("wizard_closed", { serverId, stage }); onClose(); }}
+                        disabled={!!localStorage.getItem("apricotter_pi_id")}
+                        title={localStorage.getItem("apricotter_pi_id") ? "Complete payment to continue" : undefined}
+                        style={localStorage.getItem("apricotter_pi_id") ? { opacity: 0.3, cursor: "not-allowed", pointerEvents: "none" } : undefined}>
+                        ×
+                    </WizardCloseBtn>
                 </div>
             </WizardHeader>
 

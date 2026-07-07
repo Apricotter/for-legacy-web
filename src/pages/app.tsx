@@ -97,9 +97,11 @@ export function App() {
                         </LoadSuspense>
                     </Route>
                     <Route path="/gallery/payment">
-                        <LoadSuspense>
-                            <Payment />
-                        </LoadSuspense>
+                        <CheckAuth auth>
+                            <LoadSuspense>
+                                <Payment />
+                            </LoadSuspense>
+                        </CheckAuth>
                     </Route>
                     <Route path="/">
                         {IS_HUB ? (
