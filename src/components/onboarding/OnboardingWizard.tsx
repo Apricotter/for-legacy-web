@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useReducer } from "preact/hooks";
 import { createPortal } from "preact/compat";
 import { EditAlt, Bulb, Refresh } from "@styled-icons/boxicons-regular";
+import { Lock } from "lucide-react";
 import styled from "styled-components/macro";
 import { track, identify } from "../../lib/analytics";
 
@@ -577,6 +578,11 @@ function FormStep({
 
     async function handleSubmit() {
         if (sending || submitted || !canSubmit) return;
+        if (new URLSearchParams(window.location.search).has("dev_mode")) {
+            setSubmitted(true);
+            onDone({ ...values, _filename: uploadFile_?.name ?? "" });
+            return;
+        }
         setSending(true);
         try {
             const ch = (client as any)?.channels?.get(channelId);
@@ -1641,7 +1647,7 @@ function CharDescEditorModal({
                     </FormField>
                     {appearance?.traits && Object.keys(appearance.traits).length > 0 && (
                         <div style={{ marginBottom: 14 }}>
-                            <FormLabel>Attributes</FormLabel>
+                            <InputLabel>Attributes</InputLabel>
                             <div style={{
                                 display: "grid",
                                 gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
@@ -1662,7 +1668,7 @@ function CharDescEditorModal({
                     )}
                     {appearance?.imagePrompt && (
                         <div style={{ marginBottom: 14 }}>
-                            <FormLabel>Image Prompt</FormLabel>
+                            <InputLabel>Image Prompt</InputLabel>
                             <div style={{
                                 fontSize: 12,
                                 lineHeight: 1.5,
@@ -1757,6 +1763,7 @@ function CharacterReviewCheckpoint({ step, jobId, serverId, onDone }: {
     const [confirming, setConfirming] = useState(false);
 
 
+
     async function handleConfirm() {
         if (confirming) return;
         setConfirming(true);
@@ -1813,7 +1820,7 @@ function CharacterReviewCheckpoint({ step, jobId, serverId, onDone }: {
 
             <RosterList>
                 {chars.map((c, i) => (
-                    <RosterRow key={i}>
+                    <RosterRow key={c.name}>
                         <RosterRowHeader>
                             <RosterRowName>{c.name}</RosterRowName>
                             <CharRoleTag $role={c.role}>{c.role}</CharRoleTag>
@@ -1823,7 +1830,7 @@ function CharacterReviewCheckpoint({ step, jobId, serverId, onDone }: {
                             <RosterRowBtn
                                 onClick={() => setEditIdx(i)}
                                 style={{ color: "#F5A623" }}
-                                title="Edit"
+                                title="Edit character name, role and description"
                             >
                                 <EditAlt size={13} />
                             </RosterRowBtn>
@@ -1910,6 +1917,7 @@ const GalleryCard = styled.div`
     background: rgba(255,255,255,0.02);
     display: flex;
     flex-direction: column;
+    position: relative;
 `;
 const GalleryImg = styled.img`
     width: 100%;
@@ -1957,6 +1965,7 @@ const SceneCard = styled.div`
     overflow: hidden;
     border: 1px solid rgba(255,255,255,0.07);
     background: rgba(255,255,255,0.02);
+    position: relative;
 `;
 const SceneImg = styled.img`
     width: 100%;
@@ -1979,6 +1988,35 @@ const GalleryTitle = styled.div`
     color: rgba(255,255,255,0.95);
     margin-bottom: 14px;
     letter-spacing: -0.01em;
+`;
+const LockOverlay = styled.div`
+    position: absolute;
+    inset: 0;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    z-index: 2;
+    border-radius: 10px;
+    cursor: default;
+`;
+const LockIcon = styled.div`
+    line-height: 1;
+    opacity: 0.9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+`;
+const LockLabel = styled.div`
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.5);
 `;
 
 function PortraitGallery({ url, serverId, onContinue }: { url: string; serverId: string; onContinue?: () => void }) {
@@ -2003,15 +2041,25 @@ function PortraitGallery({ url, serverId, onContinue }: { url: string; serverId:
         <div>
             <GalleryTitle>Character Portraits</GalleryTitle>
             <GalleryGrid>
-                {chars.map((c: any, i: number) => (
-                    <GalleryCard key={i}>
-                        {c.portraitUrl
-                            ? <GalleryImg src={c.portraitUrl} alt={c.name} loading="lazy" />
-                            : <GalleryImgPlaceholder>👤</GalleryImgPlaceholder>}
-                        <GalleryName title={c.name}>{c.name}</GalleryName>
-                        <GalleryRole>{c.role}</GalleryRole>
-                    </GalleryCard>
-                ))}
+                {chars.map((c: any, i: number) => {
+                    const mainCount = chars.filter((x: any) => x.role === "Main").indexOf(c);
+                    const unlocked = c.role === "Main" && mainCount < 4;
+                    return (
+                        <GalleryCard key={i}>
+                            {c.portraitUrl
+                                ? <GalleryImg src={c.portraitUrl} alt={c.name} loading="lazy" />
+                                : <GalleryImgPlaceholder>👤</GalleryImgPlaceholder>}
+                            <GalleryName title={c.name}>{c.name}</GalleryName>
+                            <GalleryRole>{c.role}</GalleryRole>
+                            {!unlocked && (
+                                <LockOverlay>
+                                    <LockIcon><Lock size={20} strokeWidth={2} /></LockIcon>
+                                    <LockLabel>Unlock</LockLabel>
+                                </LockOverlay>
+                            )}
+                        </GalleryCard>
+                    );
+                })}
             </GalleryGrid>
             {onContinue && (
                 <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
@@ -2052,6 +2100,12 @@ function SceneStillsGallery({ url, serverId, onContinue }: { url: string; server
                         {(s.title || s.description) && (
                             <SceneLabel title={s.title ?? s.description}>{s.title ?? s.description}</SceneLabel>
                         )}
+                        {i >= 4 && (
+                            <LockOverlay>
+                                <LockIcon><Lock size={20} strokeWidth={2} /></LockIcon>
+                                <LockLabel>Unlock</LockLabel>
+                            </LockOverlay>
+                        )}
                     </SceneCard>
                 ))}
             </SceneGrid>
@@ -2061,6 +2115,139 @@ function SceneStillsGallery({ url, serverId, onContinue }: { url: string; server
                 </div>
             )}
         </div>
+    );
+}
+
+// ── payment step ──────────────────────────────────────────────────────────────
+
+const PaymentWrap = styled.div`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    padding: 8px 0;
+`;
+const PaymentCard = styled.div`
+    width: 100%;
+    max-width: 420px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 28px 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+`;
+const PaymentTitle = styled.div`
+    font-size: 22px;
+    font-weight: 800;
+    color: rgba(255,255,255,0.97);
+    letter-spacing: -0.02em;
+    text-align: center;
+`;
+const PaymentPrice = styled.div`
+    text-align: center;
+`;
+const PaymentAmount = styled.span`
+    font-size: 42px;
+    font-weight: 800;
+    color: rgba(255,255,255,0.97);
+    letter-spacing: -0.04em;
+`;
+const PaymentPeriod = styled.span`
+    font-size: 14px;
+    color: rgba(255,255,255,0.4);
+    margin-left: 4px;
+`;
+const PaymentFeatures = styled.ul`
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+`;
+const PaymentFeature = styled.li`
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.75);
+    &::before {
+        content: "✓";
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: rgba(100,200,120,0.2);
+        color: #6ec87a;
+        font-size: 10px;
+        font-weight: 800;
+        flex-shrink: 0;
+    }
+`;
+const PaymentDivider = styled.div`
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+    margin: 4px 0;
+`;
+const PaymentNote = styled.div`
+    font-size: 11px;
+    color: rgba(255,255,255,0.3);
+    text-align: center;
+`;
+
+function AuthorizeStep({ onContinue }: { onContinue: () => void }) {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const piId = typeof localStorage !== "undefined" ? localStorage.getItem("apricotter_pi_id") : null;
+
+    async function handleAuthorize() {
+        if (!piId) {
+            setError("No pre-authorization found. Please contact support.");
+            return;
+        }
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await fetch("/api/stripe-capture", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ payment_intent_id: piId }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+            localStorage.removeItem("apricotter_pi_id");
+            onContinue();
+        } catch (err: any) {
+            setError(err.message ?? "Capture failed. Please try again.");
+            setLoading(false);
+        }
+    }
+
+    return (
+        <PaymentWrap>
+            <PaymentCard>
+                <PaymentTitle>Your gallery is ready</PaymentTitle>
+                <PaymentPrice>
+                    <PaymentAmount>$20</PaymentAmount>
+                    <PaymentPeriod>one-time</PaymentPeriod>
+                </PaymentPrice>
+                <PaymentDivider />
+                <PaymentFeatures>
+                    <PaymentFeature>All character portraits — full gallery</PaymentFeature>
+                    <PaymentFeature>All scene stills — every chapter</PaymentFeature>
+                </PaymentFeatures>
+                <PaymentDivider />
+                {error && <div style={{ fontSize: "12px", color: "#ff6b6b" }}>{error}</div>}
+                <PrimaryCTA onClick={handleAuthorize} $loading={loading} $disabled={loading} style={{ width: "100%", justifyContent: "center" }}>
+                    {loading ? "Authorizing…" : "Authorize $20 →"}
+                </PrimaryCTA>
+                <PaymentNote>Your card was pre-authorized — this completes the one-time $20 charge</PaymentNote>
+            </PaymentCard>
+        </PaymentWrap>
     );
 }
 
@@ -2221,7 +2408,7 @@ function VoiceFormStep({ serverId, onDone, onSkip }: {
             </VoiceSection>
 
             <VoiceBtnRow>
-                <GhostButton onClick={onSkip}>Skip for now</GhostButton>
+                <GhostButton onClick={onSkip} style={{ flex: "none", padding: "10px 20px" }}>Skip for now</GhostButton>
                 <PrimaryCTA onClick={() => onDone(v)} $disabled={!hasAny} disabled={!hasAny}>
                     Save &amp; Continue
                 </PrimaryCTA>
@@ -2232,7 +2419,7 @@ function VoiceFormStep({ serverId, onDone, onSkip }: {
 
 // ── state machine ─────────────────────────────────────────────────────────────
 
-type Stage = "greeting" | "upload" | "waiting" | "checkpoint" | "portraits" | "scenes" | "voice" | "done";
+type Stage = "greeting" | "upload" | "waiting" | "checkpoint" | "portraits" | "scenes" | "payment" | "voice" | "done";
 
 const OTTO_API = "https://otto.apricotter.com";
 
@@ -2267,6 +2454,7 @@ type WizardAction =
     | { type: "CHECKPOINT_CONFIRMED";  checkpointId: string }
     | { type: "PORTRAITS_CONTINUE" }
     | { type: "SCENES_CONTINUE" }
+    | { type: "PAYMENT_COMPLETE" }
     | { type: "VOICE_SUBMITTED" }
     | { type: "NAVIGATE_TO";           stage: Stage; checkpointId?: string }
     | { type: "BOOKS_CLEARED" }
@@ -2277,7 +2465,7 @@ function patchStep(steps: WizardStep[], id: string, patch: Partial<WizardStep>):
 }
 
 function stageOrder(s: Stage): number {
-    return (["greeting", "upload", "waiting", "checkpoint", "portraits", "scenes", "voice", "done"] as Stage[]).indexOf(s);
+    return (["greeting", "upload", "waiting", "checkpoint", "portraits", "scenes", "payment", "voice", "done"] as Stage[]).indexOf(s);
 }
 
 function parseRawCheckpointData(raw: any): any {
@@ -2319,6 +2507,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
             if (lastBook?.sceneStillsUrl) {
                 steps = patchStep(steps, "milestone_portraits", { done: true, data: { url: lastBook.portraitsUrl ?? "" } });
                 steps = patchStep(steps, "milestone_scenes",    { done: true, data: { url: lastBook.sceneStillsUrl } });
+                steps = patchStep(steps, "form_author",         { done: true });
                 const cpParsed = parseRawCheckpointData(lastBook.checkpointData);
                 steps = patchStep(steps, "checkpoint_character_review", {
                     done: true, needsAction: false,
@@ -2327,6 +2516,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
                 stage = "scenes";
             } else if (lastBook?.portraitsUrl) {
                 steps = patchStep(steps, "milestone_portraits", { done: true, data: { url: lastBook.portraitsUrl } });
+                steps = patchStep(steps, "form_author",         { done: true });
                 const cpParsed = parseRawCheckpointData(lastBook.checkpointData);
                 steps = patchStep(steps, "checkpoint_character_review", {
                     done: true, needsAction: false,
@@ -2383,7 +2573,7 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
             if (prog.sceneStillsUrl)
                 steps = patchStep(steps, "milestone_scenes", { done: true, data: { url: prog.sceneStillsUrl } });
 
-            const isTerminal = prog.status === "complete" || prog.status === "cancelled" || prog.status === "error";
+            const isTerminal = prog.status === "complete" || prog.status === "cancelled" || prog.status === "error" || (prog.status as string) === "failed";
 
             // Self-heal: mark character_review done if pipeline moved past it
             const curIdx = isTerminal
@@ -2492,9 +2682,12 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
         }
 
         case "PORTRAITS_CONTINUE":
-            return { ...state, stage: state.bookProgress?.sceneStillsUrl ? "scenes" : "voice" };
+            return { ...state, stage: state.bookProgress?.sceneStillsUrl ? "scenes" : "payment" };
 
         case "SCENES_CONTINUE":
+            return { ...state, stage: "payment" };
+
+        case "PAYMENT_COMPLETE":
             return { ...state, stage: "voice" };
 
         case "VOICE_SUBMITTED":
@@ -2573,6 +2766,8 @@ export default function OnboardingWizard({
                 { name: "Leclerc",  role: "Supporting", description: "Mid-50s, weathered, weary." },
             ],
         }});
+        dispatch({ type: "STEP_ACTIVATED", stepId: "milestone_portraits", data: { url: "/dev-portraits.json" } });
+        dispatch({ type: "STEP_ACTIVATED", stepId: "milestone_scenes",    data: { url: "/dev-scenes.json" } });
     }, []);
 
     // Effect 1: load profile on mount
@@ -2619,7 +2814,11 @@ export default function OnboardingWizard({
                     return;
                 }
                 const prog: BookProgress | undefined = p?.books?.[p.books.length - 1];
-                if (prog) dispatch({ type: "BOOK_PROGRESS_UPDATED", progress: prog, serverId: serverId! });
+                console.log("[Onboarding] poll response", JSON.stringify(p, null, 2));
+                if (prog) {
+                    console.log("[Onboarding] book progress", JSON.stringify(prog, null, 2));
+                    dispatch({ type: "BOOK_PROGRESS_UPDATED", progress: prog, serverId: serverId! });
+                }
             });
     }, [serverId]);
 
@@ -2787,6 +2986,8 @@ export default function OnboardingWizard({
     function prev() {
         if (stage === "upload")       dispatch({ type: "NAVIGATE_TO", stage: "greeting" });
         else if (stage === "waiting") dispatch({ type: "NAVIGATE_TO", stage: "upload" });
+        else if (stage === "scenes")  dispatch({ type: "NAVIGATE_TO", stage: "portraits" });
+        else if (stage === "portraits") dispatch({ type: "NAVIGATE_TO", stage: "waiting" });
     }
 
     function renderContent() {
@@ -2880,6 +3081,11 @@ export default function OnboardingWizard({
                         <ConfirmIcon>📖</ConfirmIcon>
                         <ConfirmHeading>Your book is on its way</ConfirmHeading>
                         <ConfirmBody>Quill is processing it in the background.</ConfirmBody>
+                        {new URLSearchParams(window.location.search).has("dev_mode") && (
+                            <GhostButton onClick={() => dispatch({ type: "NAVIGATE_TO", stage: "portraits" })}>
+                                [dev] Skip to portraits →
+                            </GhostButton>
+                        )}
                     </ConfirmCard>
                 );
             }
@@ -2937,6 +3143,13 @@ export default function OnboardingWizard({
                 );
             }
 
+            case "payment":
+                return (
+                    <AuthorizeStep
+                        onContinue={() => dispatch({ type: "PAYMENT_COMPLETE" })}
+                    />
+                );
+
             case "voice":
                 return (
                     <VoiceFormStep
@@ -2958,29 +3171,40 @@ export default function OnboardingWizard({
 
             case "done":
                 return (
-                    <ConfirmCard>
-                        <ConfirmIcon>✓</ConfirmIcon>
-                        <ConfirmHeading>Your studio is ready</ConfirmHeading>
-                        {bookProgress?.portraitsUrl || bookProgress?.sceneStillsUrl ? (
-                            <ConfirmBody style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
-                                <span>Processing complete. Your book world is live.</span>
-                                {bookProgress.portraitsUrl && (
-                                    <a href={bookProgress.portraitsUrl} target="_blank" rel="noopener noreferrer"
-                                        style={{ color: "#2980b9", textDecoration: "underline" }}>
-                                        View character portraits
-                                    </a>
-                                )}
-                                {bookProgress.sceneStillsUrl && (
-                                    <a href={bookProgress.sceneStillsUrl} target="_blank" rel="noopener noreferrer"
-                                        style={{ color: "#2980b9", textDecoration: "underline" }}>
-                                        View scene stills
-                                    </a>
-                                )}
-                            </ConfirmBody>
-                        ) : (
-                            <ConfirmBody>Processing complete. Portraits and scene stills will appear here shortly.</ConfirmBody>
-                        )}
-                    </ConfirmCard>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24, padding: "8px 0" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(244,185,120,0.7)" }}>Complete</div>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: "rgba(255,255,255,0.95)", letterSpacing: "-0.02em" }}>Your book world is live.</div>
+                            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.6 }}>
+                                Everything is set up. Explore your character portraits and scene stills below.
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+                            {bookProgress?.portraitsUrl && (
+                                <PrimaryCTA
+                                    as="a"
+                                    href={bookProgress.portraitsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ textDecoration: "none", textAlign: "center", display: "block" }}>
+                                    Character portraits →
+                                </PrimaryCTA>
+                            )}
+                            {bookProgress?.sceneStillsUrl && (
+                                <GhostButton
+                                    as="a"
+                                    href={bookProgress.sceneStillsUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ textDecoration: "none", padding: "12px 20px", flex: "none", width: "100%", textAlign: "center" }}>
+                                    Scene stills →
+                                </GhostButton>
+                            )}
+                            {!bookProgress?.portraitsUrl && !bookProgress?.sceneStillsUrl && (
+                                <ConfirmBody>Your portraits and scene stills will appear here shortly.</ConfirmBody>
+                            )}
+                        </div>
+                    </div>
                 );
         }
     }
@@ -3030,6 +3254,7 @@ export default function OnboardingWizard({
         checkpoint: checkpointId ?? "checkpoint_character_review",
         portraits:  "milestone_portraits",
         scenes:     "milestone_scenes",
+        payment:    "milestone_scenes",
         voice:      "form_voice",
         done:       "form_voice",
     };
@@ -3050,7 +3275,13 @@ export default function OnboardingWizard({
                     <ResetBtn $resetting={resetting} onClick={handleReset}>
                         {resetting ? "Resetting…" : "Start over"}
                     </ResetBtn>
-                    <WizardCloseBtn onClick={() => { track("wizard_closed", { serverId, stage }); onClose(); }}>×</WizardCloseBtn>
+                    <WizardCloseBtn
+                        onClick={() => { track("wizard_closed", { serverId, stage }); onClose(); }}
+                        disabled={!!localStorage.getItem("apricotter_pi_id")}
+                        title={localStorage.getItem("apricotter_pi_id") ? "Complete payment to continue" : undefined}
+                        style={localStorage.getItem("apricotter_pi_id") ? { opacity: 0.3, cursor: "not-allowed", pointerEvents: "none" } : undefined}>
+                        ×
+                    </WizardCloseBtn>
                 </div>
             </WizardHeader>
 

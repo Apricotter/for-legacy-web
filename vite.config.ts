@@ -131,9 +131,14 @@ export default defineConfig({
         },
         proxy: {
             "/api/payment-intent": {
-                target: "http://localhost:3003",
+                target: "http://localhost:8080",
                 changeOrigin: true,
-                rewrite: () => "/api/stripe/create-payment-intent",
+                rewrite: () => "/stripe/payment-intent",
+            },
+            "/api/stripe-capture": {
+                target: "http://localhost:8080",
+                changeOrigin: true,
+                rewrite: () => "/stripe/capture",
             },
         },
     },

@@ -1,6 +1,8 @@
 import { Redirect, Route, Switch } from "react-router-dom";
 
 import { lazy, Suspense } from "preact/compat";
+import { observer } from "mobx-react-lite";
+import { clientController } from "../controllers/client/ClientController";
 
 import { Masks, Preloader } from "@revoltchat/ui";
 
@@ -19,6 +21,13 @@ const Dashboard = lazy(() => import("./dashboard/Dashboard"));
 const DevWizard = lazy(() => import("./DevWizard"));
 const DevOnboarding = lazy(() => import("./DevOnboarding"));
 const Payment = lazy(() => import("./payment/Payment"));
+
+const PaymentGate = observer(({ children }: { children: preact.ComponentChildren }) => {
+    if (clientController.isLoggedIn() && !localStorage.getItem("apricotter_preauth_done")) {
+        return <Redirect to="/gallery/payment" />;
+    }
+    return <>{children}</>;
+});
 
 const IS_HUB =
     typeof window !== "undefined" &&
@@ -88,9 +97,11 @@ export function App() {
                         </LoadSuspense>
                     </Route>
                     <Route path="/gallery/payment">
-                        <LoadSuspense>
-                            <Payment />
-                        </LoadSuspense>
+                        <CheckAuth auth>
+                            <LoadSuspense>
+                                <Payment />
+                            </LoadSuspense>
+                        </CheckAuth>
                     </Route>
                     <Route path="/">
                         {IS_HUB ? (
@@ -101,16 +112,20 @@ export function App() {
                                     </LoadSuspense>
                                 </CheckAuth>
                                 <CheckAuth auth blockRender>
-                                    <LoadSuspense>
-                                        <RevoltApp />
-                                    </LoadSuspense>
+                                    <PaymentGate>
+                                        <LoadSuspense>
+                                            <RevoltApp />
+                                        </LoadSuspense>
+                                    </PaymentGate>
                                 </CheckAuth>
                             </>
                         ) : (
                             <CheckAuth auth>
-                                <LoadSuspense>
-                                    <RevoltApp />
-                                </LoadSuspense>
+                                <PaymentGate>
+                                    <LoadSuspense>
+                                        <RevoltApp />
+                                    </LoadSuspense>
+                                </PaymentGate>
                             </CheckAuth>
                         )}
                     </Route>

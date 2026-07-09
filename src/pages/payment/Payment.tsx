@@ -28,7 +28,9 @@ const stripePromise = loadStripe(
     import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string,
 );
 
-const PAYMENT_INTENT_URL = "/api/payment-intent";
+const PAYMENT_INTENT_URL =
+    (import.meta.env.VITE_PAYMENT_INTENT_URL as string | undefined) ??
+    "/api/payment-intent";
 const BG = "/assets/web/bg-gallery-payment.png";
 
 const elementStyle = {
@@ -291,7 +293,7 @@ function CheckoutForm({
             const cardElement = elements.getElement(CardNumberElement);
             if (!cardElement) { setLoading(false); return; }
 
-            const { error: confirmError } = await stripe.confirmCardPayment(clientSecret, {
+            const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
                 payment_method: {
                     card: cardElement,
                     billing_details: {
@@ -306,6 +308,11 @@ function CheckoutForm({
                 setError(confirmError.message ?? "Payment failed.");
                 setLoading(false);
                 return;
+            }
+
+            if (paymentIntent?.id) {
+                localStorage.setItem("apricotter_pi_id", paymentIntent.id);
+                localStorage.setItem("apricotter_preauth_done", "1");
             }
         } else {
             // PayPal: create a separate PI (no manual capture) then redirect
@@ -333,7 +340,7 @@ function CheckoutForm({
 
             // confirmPayPalPayment redirects the browser to PayPal
             const { error: confirmError } = await (stripe as any).confirmPayPalPayment(paypalSecret, {
-                return_url: `${window.location.origin}/gallery/confirmed`,
+                return_url: `${window.location.origin}/gallery/payment?confirmed=1`,
             });
 
             if (confirmError) {
@@ -349,20 +356,8 @@ function CheckoutForm({
     };
 
     if (done) {
-        return (
-            <SuccessWrap>
-                <SuccessIcon>{"✓"}</SuccessIcon>
-                <SuccessTitle>{"You're in the queue."}</SuccessTitle>
-                <SuccessBody>
-                    {"Your $20 is on hold — nothing charged yet. Check "}
-                    <strong>{localEmail}</strong>
-                    {" for your invitation from Otto."}
-                </SuccessBody>
-                <SuccessHint>
-                    {"Once you review your watermarked gallery, you'll approve the charge and download your full files."}
-                </SuccessHint>
-            </SuccessWrap>
-        );
+        window.location.href = "/";
+        return <Loading>{"Setting up your book world…"}</Loading>;
     }
 
     return (
@@ -457,7 +452,7 @@ function CheckoutForm({
                 <DisclaimerIcon>{"ⓘ"}</DisclaimerIcon>
                 <div>
                     <strong>{"Your card will not be charged today."}</strong>
-                    {" This is a pre-authorization hold only. We use it to secure your spot while Otto prepares your character gallery. You'll review watermarked previews first — and only approve the $20 charge if you want to unlock and download your full package."}
+                    {" This is a $20 pre-authorization hold. You'll review your watermarked portraits and scene stills first — and only approve the one-time charge if you want to unlock your full gallery."}
                 </div>
             </Disclaimer>
 
