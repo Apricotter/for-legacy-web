@@ -638,7 +638,7 @@ function FormStep({
                                 track("upload_book_clicked", { serverId });
                                 const inp = document.createElement("input");
                                 inp.type = "file";
-                                inp.accept = field.accept ?? ".pdf,.epub,.txt";
+                                inp.accept = field.accept ?? ".pdf";
                                 inp.onchange = ev => {
                                     const f = (ev.target as HTMLInputElement).files?.[0];
                                     if (f) { setUploadFile(f); track("upload_book_selected", { serverId, filename: f.name, method: "browse" }); }
@@ -655,7 +655,7 @@ function FormStep({
                             ) : (
                                 <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "center" }}>
                                     <div style={{ fontWeight: 700, color: "rgba(255,255,255,0.9)", fontSize: 15 }}>Let's start with your book</div>
-                                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", marginBottom: 2 }}>Drop it here or browse — PDF, EPUB or TXT</div>
+                                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", marginBottom: 2 }}>Drop it here or browse — PDF only</div>
                                     <UploadCta>Upload Book</UploadCta>
                                 </div>
                             )}
