@@ -2100,7 +2100,7 @@ function SceneStillsGallery({ url, serverId, onContinue }: { url: string; server
                         {(s.title || s.description) && (
                             <SceneLabel title={s.title ?? s.description}>{s.title ?? s.description}</SceneLabel>
                         )}
-                        {i >= 2 && (
+                        {i >= 4 && (
                             <LockOverlay>
                                 <LockIcon><Lock size={20} strokeWidth={2} /></LockIcon>
                                 <LockLabel>Unlock</LockLabel>
@@ -2986,6 +2986,8 @@ export default function OnboardingWizard({
     function prev() {
         if (stage === "upload")       dispatch({ type: "NAVIGATE_TO", stage: "greeting" });
         else if (stage === "waiting") dispatch({ type: "NAVIGATE_TO", stage: "upload" });
+        else if (stage === "scenes")  dispatch({ type: "NAVIGATE_TO", stage: "portraits" });
+        else if (stage === "portraits") dispatch({ type: "NAVIGATE_TO", stage: "waiting" });
     }
 
     function renderContent() {
