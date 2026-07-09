@@ -452,8 +452,8 @@ function CheckoutForm({
             <Disclaimer>
                 <DisclaimerIcon>{"ⓘ"}</DisclaimerIcon>
                 <div>
-                    <strong>{"Your card will not be charged today."}</strong>
-                    {" This is a $20 pre-authorization hold. You'll review your watermarked portraits and scene stills first — and only approve the one-time charge if you want to unlock your full gallery."}
+                    <strong>{"We place a temporary $1 hold to verify your card."}</strong>
+                    {" This is not a charge — it will be released automatically. You'll review your character portraits and scene stills first, and only pay $20 if you choose to unlock your full gallery."}
                 </div>
             </Disclaimer>
 
