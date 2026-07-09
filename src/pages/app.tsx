@@ -1,8 +1,9 @@
 import { Redirect, Route, Switch } from "react-router-dom";
 
 import { lazy, Suspense } from "preact/compat";
+import { useState, useEffect } from "preact/hooks";
 import { observer } from "mobx-react-lite";
-import { clientController } from "../controllers/client/ClientController";
+import { clientController, useClient } from "../controllers/client/ClientController";
 
 import { Masks, Preloader } from "@revoltchat/ui";
 
@@ -22,8 +23,26 @@ const DevWizard = lazy(() => import("./DevWizard"));
 const DevOnboarding = lazy(() => import("./DevOnboarding"));
 const Payment = lazy(() => import("./payment/Payment"));
 
+const ADMIN_EMAILS = (import.meta.env.VITE_SKIP_PAYMENT_FOR_EMAILS as string | undefined)
+    ?.split(",").map(s => s.trim().toLowerCase()) ?? [];
+
 const PaymentGate = observer(({ children }: { children: preact.ComponentChildren }) => {
-    if (clientController.isLoggedIn() && !localStorage.getItem("apricotter_preauth_done")) {
+    const client = useClient();
+    const [email, setEmail] = useState<string | null>(null);
+    const [emailLoaded, setEmailLoaded] = useState(false);
+    const loggedIn = clientController.isLoggedIn();
+
+    useEffect(() => {
+        if (!loggedIn || ADMIN_EMAILS.length === 0) { setEmailLoaded(true); return; }
+        client?.api.get("/auth/account/")
+            .then((acc: any) => setEmail(acc?.email?.toLowerCase() ?? ""))
+            .catch(() => setEmail(""))
+            .finally(() => setEmailLoaded(true));
+    }, [loggedIn]);
+
+    if (loggedIn && !emailLoaded) return <>{children}</>;
+    const isAdmin = ADMIN_EMAILS.length > 0 && !!email && ADMIN_EMAILS.includes(email);
+    if (loggedIn && !isAdmin && !localStorage.getItem("apricotter_preauth_done")) {
         return <Redirect to="/gallery/payment" />;
     }
     return <>{children}</>;
