@@ -10,7 +10,6 @@ import {
 } from "@stripe/react-stripe-js";
 import styled from "styled-components/macro";
 import { CreditCard } from "@styled-icons/boxicons-regular";
-import { Paypal } from "@styled-icons/simple-icons";
 
 import {
     WizardModal,
@@ -98,32 +97,6 @@ const TextInput = styled.input`
     &::placeholder { color: rgba(240, 232, 216, 0.35); }
 `;
 
-const PayTabRow = styled.div`
-    display: flex;
-    gap: 6px;
-    margin-bottom: 14px;
-`;
-
-const PayTab = styled.button<{ $active: boolean }>`
-    flex: 1;
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: 1px solid ${p => p.$active ? "rgba(244,185,120,0.5)" : "rgba(255,255,255,0.1)"};
-    background: ${p => p.$active ? "rgba(244,185,120,0.1)" : "rgba(255,255,255,0.04)"};
-    color: ${p => p.$active ? "#f4b978" : "rgba(240,232,216,0.5)"};
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    transition: border-color 0.15s, background 0.15s, color 0.15s;
-    &:hover {
-        border-color: rgba(244, 185, 120, 0.35);
-        color: rgba(244, 185, 120, 0.8);
-    }
-`;
 
 const CardGrid = styled.div`
     display: grid;
@@ -141,13 +114,6 @@ const StripeFieldWrap = styled.div<{ $focused?: boolean }>`
     ${p => p.$focused ? "box-shadow: 0 0 0 3px rgba(244,185,120,0.12);" : ""}
 `;
 
-const PayPalNote = styled.div`
-    font-size: 12.5px;
-    color: rgba(255, 255, 255, 0.45);
-    text-align: center;
-    padding: 18px 0 10px;
-    line-height: 1.6;
-`;
 
 const ErrorMsg = styled.div`
     font-size: 12px;
@@ -276,7 +242,7 @@ function CheckoutForm({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [done, setDone] = useState(false);
-    const [payMethod, setPayMethod] = useState<"card" | "paypal">("card");
+    const [payMethod] = useState<"card">("card");
     const [localName, setLocalName] = useState(initialName);
     const [localEmail, setLocalEmail] = useState(initialEmail);
     const [zip, setZip] = useState("");
@@ -315,41 +281,6 @@ function CheckoutForm({
                 localStorage.setItem("apricotter_pi_id", paymentIntent.id);
                 localStorage.setItem("apricotter_preauth_done", "1");
             }
-        } else {
-            // PayPal: create a separate PI (no manual capture) then redirect
-            let paypalSecret: string | null = null;
-            try {
-                const res = await fetch(PAYMENT_INTENT_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name: localName, email: localEmail, paymentMethod: "paypal" }),
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
-                paypalSecret = data.client_secret ?? null;
-            } catch (err: any) {
-                setError(`PayPal unavailable: ${err.message}`);
-                setLoading(false);
-                return;
-            }
-
-            if (!paypalSecret) {
-                setError("Could not initialize PayPal.");
-                setLoading(false);
-                return;
-            }
-
-            // confirmPayPalPayment redirects the browser to PayPal
-            const { error: confirmError } = await (stripe as any).confirmPayPalPayment(paypalSecret, {
-                return_url: `${window.location.origin}/gallery/payment?confirmed=1`,
-            });
-
-            if (confirmError) {
-                setError(confirmError.message ?? "PayPal payment failed.");
-                setLoading(false);
-                return;
-            }
-            return; // redirect in progress
         }
 
         setDone(true);
@@ -385,18 +316,6 @@ function CheckoutForm({
                     />
                 </CustomerCol>
             </CustomerRow>
-
-            {/* Payment method tabs */}
-            <PayTabRow>
-                <PayTab type="button" $active={payMethod === "card"} onClick={() => setPayMethod("card")}>
-                    <CreditCard size={15} />
-                    {"Card"}
-                </PayTab>
-                <PayTab type="button" $active={payMethod === "paypal"} onClick={() => setPayMethod("paypal")}>
-                    <Paypal size={13} />
-                    {"PayPal"}
-                </PayTab>
-            </PayTabRow>
 
             {/* Card fields — 2×2 grid */}
             {payMethod === "card" && (
@@ -441,12 +360,6 @@ function CheckoutForm({
                         </StripeFieldWrap>
                     </div>
                 </CardGrid>
-            )}
-
-            {payMethod === "paypal" && (
-                <PayPalNote>
-                    {"You'll be redirected to PayPal to complete your $20 pre-authorization."}
-                </PayPalNote>
             )}
 
             <Disclaimer>
