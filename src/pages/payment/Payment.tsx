@@ -28,9 +28,10 @@ const stripePromise = loadStripe(
     import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string,
 );
 
+const OTTO_URL = (import.meta.env.VITE_OTTO_URL as string | undefined) ?? "https://otto.apricotter.com";
 const PAYMENT_INTENT_URL =
     (import.meta.env.VITE_PAYMENT_INTENT_URL as string | undefined) ??
-    "/api/payment-intent";
+    `${OTTO_URL}/stripe/payment-intent`;
 const BG = "/assets/web/bg-gallery-payment.png";
 
 const elementStyle = {

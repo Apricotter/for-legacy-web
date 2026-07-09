@@ -2212,7 +2212,7 @@ function AuthorizeStep({ onContinue }: { onContinue: () => void }) {
         setLoading(true);
         setError(null);
         try {
-            const res = await fetch("/api/stripe-capture", {
+            const res = await fetch(`${OTTO_API}/stripe/capture`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ payment_intent_id: piId }),
