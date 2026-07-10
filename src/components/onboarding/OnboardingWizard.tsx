@@ -2421,7 +2421,7 @@ function VoiceFormStep({ serverId, onDone, onSkip }: {
 
 type Stage = "greeting" | "upload" | "waiting" | "checkpoint" | "portraits" | "scenes" | "payment" | "voice" | "done";
 
-const OTTO_API = "https://otto.apricotter.com";
+const OTTO_API = (import.meta.env.VITE_OTTO_URL as string | undefined) ?? "https://otto.apricotter.com";
 
 // ── reducer ───────────────────────────────────────────────────────────────────
 
