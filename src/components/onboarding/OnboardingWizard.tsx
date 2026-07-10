@@ -2247,6 +2247,11 @@ function AuthorizeStep({ onContinue }: { onContinue: () => void }) {
                     {loading ? "Authorizing…" : "Authorize $20 →"}
                 </PrimaryCTA>
                 <PaymentNote>Your card was pre-authorized — this completes the one-time $20 charge</PaymentNote>
+                {import.meta.env.DEV && (
+                    <button onClick={onContinue} style={{ marginTop: 8, background: "none", border: "none", color: "rgba(255,255,255,0.3)", fontSize: 11, cursor: "pointer", textDecoration: "underline" }}>
+                        [dev] skip →
+                    </button>
+                )}
             </PaymentCard>
         </PaymentWrap>
     );
@@ -2731,8 +2736,7 @@ export default function OnboardingWizard({
     const client = useClient();
     const [state, dispatch] = useReducer(wizardReducer, initialState);
     const [resetting, setResetting] = useState(false);
-    const [downloadingPortraits, setDownloadingPortraits] = useState(false);
-    const [downloadingScenes, setDownloadingScenes] = useState(false);
+    const [downloadingGallery, setDownloadingGallery] = useState(false);
 
     const {
         stage, steps, processingSteps, bookProgress, profile,
@@ -3183,62 +3187,65 @@ export default function OnboardingWizard({
                             </div>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
-                            {bookProgress?.portraitsUrl && (
+                            {(bookProgress?.portraitsUrl || bookProgress?.sceneStillsUrl) && (
                                 <PrimaryCTA
-                                    $loading={downloadingPortraits}
-                                    $disabled={downloadingPortraits}
+                                    $loading={downloadingGallery}
+                                    $disabled={downloadingGallery}
                                     onClick={async () => {
-                                        setDownloadingPortraits(true);
+                                        setDownloadingGallery(true);
                                         try {
-                                            const json = await fetch(bookProgress.portraitsUrl!).then(r => r.json());
                                             const zip = new JSZip();
-                                            await Promise.all((json.characters ?? []).map(async (c: any) => {
-                                                if (!c.portraitUrl) return;
-                                                const blob = await fetch(c.portraitUrl).then(r => r.blob());
-                                                const slug = c.name.toLowerCase().replace(/[^a-z0-9]+/g, "_");
-                                                zip.file(`${slug}.png`, blob);
-                                            }));
+                                            const fetchBlob = async (url: string) => {
+                                                try {
+                                                    const r = await fetch(url);
+                                                    if (!r.ok) return null;
+                                                    return r.blob();
+                                                } catch { return null; }
+                                            };
+                                            if (bookProgress.portraitsUrl) {
+                                                const r = await fetch(bookProgress.portraitsUrl);
+                                                if (!r.ok) throw new Error(`${r.status} fetching portraits manifest`);
+                                                const json = await r.json();
+                                                await Promise.all((json.characters ?? []).map(async (c: any) => {
+                                                    if (!c.portraitUrl) return;
+                                                    const blob = await fetchBlob(c.portraitUrl);
+                                                    if (!blob) return;
+                                                    const slug = c.name.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+                                                    zip.file(`portraits/${slug}.png`, blob);
+                                                }));
+                                            }
+                                            if (bookProgress.sceneStillsUrl) {
+                                                const r = await fetch(bookProgress.sceneStillsUrl);
+                                                if (!r.ok) throw new Error(`${r.status} fetching scenes manifest`);
+                                                const json = await r.json();
+                                                await Promise.all((json.scenes ?? []).map(async (s: any, i: number) => {
+                                                    const imgUrl = s.url ?? s.imageUrl;
+                                                    if (!imgUrl) return;
+                                                    const blob = await fetchBlob(imgUrl);
+                                                    if (!blob) return;
+                                                    const slug = (s.title ?? `scene_${i + 1}`).toLowerCase().replace(/[^a-z0-9]+/g, "_");
+                                                    zip.file(`scenes/${slug}.png`, blob);
+                                                }));
+                                            }
                                             const content = await zip.generateAsync({ type: "blob" });
+                                            const url = URL.createObjectURL(content);
                                             const a = document.createElement("a");
-                                            a.href = URL.createObjectURL(content);
-                                            a.download = "character-portraits.zip";
+                                            a.href = url;
+                                            a.download = "my-book-world.zip";
+                                            document.body.appendChild(a);
                                             a.click();
-                                            URL.revokeObjectURL(a.href);
+                                            document.body.removeChild(a);
+                                            setTimeout(() => URL.revokeObjectURL(url), 10000);
+                                        } catch (err: any) {
+                                            console.error("Download failed", err);
+                                            alert("Download failed: " + (err?.message ?? "unknown error"));
                                         } finally {
-                                            setDownloadingPortraits(false);
+                                            setDownloadingGallery(false);
                                         }
                                     }}
                                     style={{ textAlign: "center", display: "block", width: "100%" }}>
-                                    {downloadingPortraits ? "Downloading…" : "Download character portraits →"}
+                                    {downloadingGallery ? "Downloading…" : "Download your book world →"}
                                 </PrimaryCTA>
-                            )}
-                            {bookProgress?.sceneStillsUrl && (
-                                <GhostButton
-                                    disabled={downloadingScenes}
-                                    onClick={async () => {
-                                        setDownloadingScenes(true);
-                                        try {
-                                            const json = await fetch(bookProgress.sceneStillsUrl!).then(r => r.json());
-                                            const zip = new JSZip();
-                                            await Promise.all((json.scenes ?? []).map(async (s: any, i: number) => {
-                                                if (!s.imageUrl) return;
-                                                const blob = await fetch(s.imageUrl).then(r => r.blob());
-                                                const slug = (s.title ?? `scene_${i + 1}`).toLowerCase().replace(/[^a-z0-9]+/g, "_");
-                                                zip.file(`${slug}.png`, blob);
-                                            }));
-                                            const content = await zip.generateAsync({ type: "blob" });
-                                            const a = document.createElement("a");
-                                            a.href = URL.createObjectURL(content);
-                                            a.download = "scene-stills.zip";
-                                            a.click();
-                                            URL.revokeObjectURL(a.href);
-                                        } finally {
-                                            setDownloadingScenes(false);
-                                        }
-                                    }}
-                                    style={{ padding: "12px 20px", flex: "none", width: "100%", textAlign: "center" }}>
-                                    {downloadingScenes ? "Downloading…" : "Download scene stills →"}
-                                </GhostButton>
                             )}
                             {!bookProgress?.portraitsUrl && !bookProgress?.sceneStillsUrl && (
                                 <ConfirmBody>Your portraits and scene stills will appear here shortly.</ConfirmBody>
