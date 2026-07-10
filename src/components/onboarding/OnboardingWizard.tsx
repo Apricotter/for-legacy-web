@@ -3227,8 +3227,11 @@ export default function OnboardingWizard({
                                                     zip.file(`scenes/${slug}.png`, blob);
                                                 }));
                                             }
-                                            const content = await zip.generateAsync({ type: "blob" });
-                                            const url = URL.createObjectURL(content);
+                                            const fileCount = Object.keys(zip.files).length;
+                                            if (fileCount === 0) throw new Error("No images could be downloaded. They may still be processing.");
+                                            const bytes = await zip.generateAsync({ type: "uint8array" });
+                                            const blob = new Blob([bytes], { type: "application/zip" });
+                                            const url = URL.createObjectURL(blob);
                                             const a = document.createElement("a");
                                             a.href = url;
                                             a.download = "my-book-world.zip";
