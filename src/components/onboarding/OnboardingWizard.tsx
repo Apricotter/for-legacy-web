@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useReducer } from "preact/hooks";
+import JSZip from "jszip";
 import { createPortal } from "preact/compat";
 import { EditAlt, Bulb, Refresh } from "@styled-icons/boxicons-regular";
 import { Lock } from "lucide-react";
@@ -2421,7 +2422,7 @@ function VoiceFormStep({ serverId, onDone, onSkip }: {
 
 type Stage = "greeting" | "upload" | "waiting" | "checkpoint" | "portraits" | "scenes" | "payment" | "voice" | "done";
 
-const OTTO_API = (import.meta.env.VITE_OTTO_URL as string | undefined) ?? "https://otto.apricotter.com";
+const OTTO_API = (import.meta.env.VITE_OTTO_API_URL as string | undefined) ?? "https://otto.apricotter.com";
 
 // ── reducer ───────────────────────────────────────────────────────────────────
 
@@ -2730,6 +2731,8 @@ export default function OnboardingWizard({
     const client = useClient();
     const [state, dispatch] = useReducer(wizardReducer, initialState);
     const [resetting, setResetting] = useState(false);
+    const [downloadingPortraits, setDownloadingPortraits] = useState(false);
+    const [downloadingScenes, setDownloadingScenes] = useState(false);
 
     const {
         stage, steps, processingSteps, bookProgress, profile,
@@ -3182,22 +3185,59 @@ export default function OnboardingWizard({
                         <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
                             {bookProgress?.portraitsUrl && (
                                 <PrimaryCTA
-                                    as="a"
-                                    href={bookProgress.portraitsUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{ textDecoration: "none", textAlign: "center", display: "block" }}>
-                                    Character portraits →
+                                    $loading={downloadingPortraits}
+                                    $disabled={downloadingPortraits}
+                                    onClick={async () => {
+                                        setDownloadingPortraits(true);
+                                        try {
+                                            const json = await fetch(bookProgress.portraitsUrl!).then(r => r.json());
+                                            const zip = new JSZip();
+                                            await Promise.all((json.characters ?? []).map(async (c: any) => {
+                                                if (!c.portraitUrl) return;
+                                                const blob = await fetch(c.portraitUrl).then(r => r.blob());
+                                                const slug = c.name.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+                                                zip.file(`${slug}.png`, blob);
+                                            }));
+                                            const content = await zip.generateAsync({ type: "blob" });
+                                            const a = document.createElement("a");
+                                            a.href = URL.createObjectURL(content);
+                                            a.download = "character-portraits.zip";
+                                            a.click();
+                                            URL.revokeObjectURL(a.href);
+                                        } finally {
+                                            setDownloadingPortraits(false);
+                                        }
+                                    }}
+                                    style={{ textAlign: "center", display: "block", width: "100%" }}>
+                                    {downloadingPortraits ? "Downloading…" : "Download character portraits →"}
                                 </PrimaryCTA>
                             )}
                             {bookProgress?.sceneStillsUrl && (
                                 <GhostButton
-                                    as="a"
-                                    href={bookProgress.sceneStillsUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{ textDecoration: "none", padding: "12px 20px", flex: "none", width: "100%", textAlign: "center" }}>
-                                    Scene stills →
+                                    disabled={downloadingScenes}
+                                    onClick={async () => {
+                                        setDownloadingScenes(true);
+                                        try {
+                                            const json = await fetch(bookProgress.sceneStillsUrl!).then(r => r.json());
+                                            const zip = new JSZip();
+                                            await Promise.all((json.scenes ?? []).map(async (s: any, i: number) => {
+                                                if (!s.imageUrl) return;
+                                                const blob = await fetch(s.imageUrl).then(r => r.blob());
+                                                const slug = (s.title ?? `scene_${i + 1}`).toLowerCase().replace(/[^a-z0-9]+/g, "_");
+                                                zip.file(`${slug}.png`, blob);
+                                            }));
+                                            const content = await zip.generateAsync({ type: "blob" });
+                                            const a = document.createElement("a");
+                                            a.href = URL.createObjectURL(content);
+                                            a.download = "scene-stills.zip";
+                                            a.click();
+                                            URL.revokeObjectURL(a.href);
+                                        } finally {
+                                            setDownloadingScenes(false);
+                                        }
+                                    }}
+                                    style={{ padding: "12px 20px", flex: "none", width: "100%", textAlign: "center" }}>
+                                    {downloadingScenes ? "Downloading…" : "Download scene stills →"}
                                 </GhostButton>
                             )}
                             {!bookProgress?.portraitsUrl && !bookProgress?.sceneStillsUrl && (

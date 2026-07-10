@@ -48,6 +48,7 @@
         "@stripe/react-stripe-js": "^6.5.0",
         "@stripe/stripe-js": "^9.7.0",
         "fs-extra": "^10.0.0",
+        "jszip": "^3.10.1",
         "klaw": "^3.0.0",
         "lottie-react": "^2.4.0",
         "lucide-react": "^1.17.0",
